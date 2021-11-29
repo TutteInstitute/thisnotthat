@@ -15,7 +15,7 @@ def uniques_sorted(sortables: Iterable[T]) -> List[T]:
     return sorted(list(set(sortables)))
 
 
-class Labeler(wg.HBox):
+class Labeler(wg.GridBox):
     labels = tr.List()
     names = tr.Dict()
 
@@ -27,7 +27,21 @@ class Labeler(wg.HBox):
         names: Mapping[Hashable, Any] = {},
         colors: Mapping[Hashable, str] = {}
     ) -> None:
-        super().__init__(children=[], layout=wg.Layout(width="800px", height="600px", resize="both"))
+        super().__init__(
+            children=[],
+            layout=wg.Layout(
+                width="800px",
+                height="600px",
+                grid_template_rows="90% 10%",
+                grid_template_columns="75% 25%",
+                grid_template_areas="""
+                    "plot legend"
+                    "toolbar toolbar"
+                """,
+                align_content="stretch",
+                justify_content="space-between"
+            )
+        )
         assert data.shape[0] == len(labels)
         assert data.shape[1] == 2
         self.data = data
@@ -48,7 +62,11 @@ class Labeler(wg.HBox):
 
     def refresh(self) -> None:
         self.plot = self._make_plot()
-        self.children = [self.plot, self._make_legend()]
+        self.children = [
+            self.plot,
+            self._make_legend(),
+            self._make_toolbar()
+        ]
 
     def _make_plot(self) -> bq.Figure:
         scale_x = bq.LinearScale()
@@ -70,16 +88,50 @@ class Labeler(wg.HBox):
                 )
             )
 
-        return bq.Figure(
+        figure = bq.Figure(
             marks=scatters,
             axes=[
                 bq.Axis(scale=scale_x),
                 bq.Axis(scale=scale_y, orientation="vertical")
             ],
-            layout=wg.Layout(height="98%"),
+            layout=wg.Layout(grid_area="plot", height="98%"),
             fig_margin={"top": 15, "bottom": 15, "left": 15, "right": 15},
             min_aspect_ratio=1.0,
             max_aspect_ratio=1.0
+        )
+        return figure
+
+    def _make_toolbar(self) -> wg.DOMWidget:
+        button_reset = wg.Button(
+            description="Reset",
+            icon="home",
+            layout=wg.Layout(width="8em")
+        )
+        toggle_tools = wg.ToggleButtons(
+            options={"Explore ": 0, "Lasso ": 1},
+            icons=["hand-point-up", "circle-notch"],
+            index=0,
+            style=wg.ToggleButtonsStyle(button_width="6em")
+        )
+        button_split = wg.Button(
+            description="Split",
+            icon="cut",
+            layout=wg.Layout(width="8em")
+        )
+        dropdown_merge = wg.Dropdown(
+            description="Merge to",
+            options=["asdf", "qwer", "zxcv"],
+            layout=wg.Layout(width="auto"),
+            style={"description_width": "5em"}
+        )
+
+        def do_reset(*_):
+            toggle_tools.value = None
+
+        button_reset.on_click(do_reset)
+        return wg.HBox(
+            children=[button_reset, toggle_tools, button_split, dropdown_merge],
+            layout=wg.Layout(width="100%", grid_area="toolbar")
         )
 
     def _update_name(self, label: Hashable) -> None:
@@ -133,7 +185,7 @@ class Labeler(wg.HBox):
                     layout=wg.Layout(min_height="2.2em")
                 )
             )
-        return wg.VBox(children=items_legend, layout=wg.Layout(min_width="25%"))
+        return wg.VBox(children=items_legend, layout=wg.Layout(grid_area="legend"))
 
     @contextmanager
     def editing(self) -> Iterable["Labeler"]:
