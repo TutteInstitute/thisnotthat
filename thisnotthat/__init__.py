@@ -3,6 +3,7 @@ import itertools as it
 from typing import *
 
 import bqplot as bq
+import bqplot.interacts as bqi
 import ipywidgets as wg
 import numpy as np
 import traitlets as tr
@@ -58,19 +59,74 @@ class Labeler(wg.GridBox):
             if label not in self.colors:
                 self.colors[label] = color
 
+        self.plot = bq.Figure(
+            layout=wg.Layout(grid_area="plot", height="98%"),
+            fig_margin={"top": 15, "bottom": 15, "left": 15, "right": 15},
+            min_aspect_ratio=1.0,
+            max_aspect_ratio=1.0
+        )
+        self._pz = bqi.PanZoom()
+        self._legend = wg.VBox(children=[], layout=wg.Layout(grid_area="legend"))
+        self._toolbar = self._make_toolbar()
+        self.children = [self.plot, self._legend, self._toolbar]
+        self.reset()
+
+    def _make_toolbar(self) -> wg.DOMWidget:
+        self._button_reset = wg.Button(
+            description="Reset",
+            icon="home",
+            layout=wg.Layout(width="8em")
+        )
+        self._button_reset.on_click(self.reset)
+        self._toggle_tools = wg.ToggleButtons(
+            options={"Explore ": None, "Lasso ": None},
+            icons=["hand-point-up", "circle-notch"],
+            index=0,
+            style=wg.ToggleButtonsStyle(button_width="6em")
+        )
+        self._button_split = wg.Button(
+            description="Split",
+            icon="cut",
+            layout=wg.Layout(width="8em")
+        )
+        self._dropdown_merge = wg.Dropdown(
+            description="Merge to",
+            options=[],
+            layout=wg.Layout(width="auto"),
+            style={"description_width": "5em"}
+        )
+
+        tr.link((self._toggle_tools, "value"), (self.plot, "interaction"))
+        return wg.HBox(
+            children=[
+                self._button_reset,
+                self._toggle_tools,
+                self._button_split,
+                self._dropdown_merge
+            ],
+            layout=wg.Layout(width="100%", grid_area="toolbar")
+        )
+
+    @property
+    def labels_named(self) -> Sequence[str]:
+        return [self.names[i] for i in self.labels]
+
+    @contextmanager
+    def editing(self) -> Iterable["Labeler"]:
+        yield self
         self.refresh()
 
-    def refresh(self) -> None:
-        self.plot = self._make_plot()
-        self.children = [
-            self.plot,
-            self._make_legend(),
-            self._make_toolbar()
-        ]
+    def reset(self, *_) -> None:
+        self._reset_plot()
+        self._reset_legend()
+        self._reset_toolbar()
 
-    def _make_plot(self) -> bq.Figure:
-        scale_x = bq.LinearScale()
-        scale_y = bq.LinearScale()
+    def _reset_plot(self) -> None:
+        scale_x, scale_y = bq.LinearScale(), bq.LinearScale()
+        axis_x = bq.Axis(scale=scale_x)
+        axis_y = bq.Axis(scale=scale_y, orientation="vertical")
+        self.plot.axes = [axis_x, axis_y]
+
         scatters = []
         for label in uniques_sorted(self.labels):
             i_labeled = [i for i, l_ in enumerate(self.labels) if l_ == label]
@@ -87,52 +143,38 @@ class Labeler(wg.GridBox):
                     display_names=False
                 )
             )
+        self.plot.marks = scatters
 
-        figure = bq.Figure(
-            marks=scatters,
-            axes=[
-                bq.Axis(scale=scale_x),
-                bq.Axis(scale=scale_y, orientation="vertical")
-            ],
-            layout=wg.Layout(grid_area="plot", height="98%"),
-            fig_margin={"top": 15, "bottom": 15, "left": 15, "right": 15},
-            min_aspect_ratio=1.0,
-            max_aspect_ratio=1.0
-        )
-        return figure
+        self._pz = bqi.PanZoom(scales={"x": [scale_x], "y": [scale_y]})
 
-    def _make_toolbar(self) -> wg.DOMWidget:
-        button_reset = wg.Button(
-            description="Reset",
-            icon="home",
-            layout=wg.Layout(width="8em")
-        )
-        toggle_tools = wg.ToggleButtons(
-            options={"Explore ": 0, "Lasso ": 1},
-            icons=["hand-point-up", "circle-notch"],
-            index=0,
-            style=wg.ToggleButtonsStyle(button_width="6em")
-        )
-        button_split = wg.Button(
-            description="Split",
-            icon="cut",
-            layout=wg.Layout(width="8em")
-        )
-        dropdown_merge = wg.Dropdown(
-            description="Merge to",
-            options=["asdf", "qwer", "zxcv"],
-            layout=wg.Layout(width="auto"),
-            style={"description_width": "5em"}
-        )
+    def _reset_legend(self) -> None:
+        items_legend = []
+        for i, label in enumerate(uniques_sorted(self.labels)):
+            picker = wg.ColorPicker(
+                concise=True,
+                value=self.colors[label],
+                layout=wg.Layout(width="2em")
+            )
+            picker.observe(self._update_color(i, label), "value")
+            textbox = wg.Text(
+                value=self.names[label],
+                continuous_update=False,
+                layout=wg.Layout(width="10em")
+            )
+            textbox.observe(self._update_name(label), "value")
+            items_legend.append(
+                wg.HBox(
+                    children=[picker, textbox],
+                    layout=wg.Layout(min_height="2.2em")
+                )
+            )
+        self._legend.children = items_legend
 
-        def do_reset(*_):
-            toggle_tools.value = None
-
-        button_reset.on_click(do_reset)
-        return wg.HBox(
-            children=[button_reset, toggle_tools, button_split, dropdown_merge],
-            layout=wg.Layout(width="100%", grid_area="toolbar")
-        )
+    def _reset_toolbar(self) -> None:
+        self._toggle_tools.options = {
+            "Explore ": self._pz,
+            "Lasso ": bqi.LassoSelector()
+        }
 
     def _update_name(self, label: Hashable) -> None:
         def _update(change: Dict):
@@ -160,41 +202,6 @@ class Labeler(wg.GridBox):
             self.colors[label] = change['new']
             self.plot.marks[i].colors = [change['new']]
         return _update
-
-    def _make_legend(self) -> wg.DOMWidget:
-        out = wg.Output()
-        display(out)
-
-        items_legend = []
-        for i, label in enumerate(uniques_sorted(self.labels)):
-            picker = wg.ColorPicker(
-                concise=True,
-                value=self.colors[label],
-                layout=wg.Layout(width="2em")
-            )
-            picker.observe(self._update_color(i, label), "value")
-            textbox = wg.Text(
-                value=self.names[label],
-                continuous_update=False,
-                layout=wg.Layout(width="10em")
-            )
-            textbox.observe(self._update_name(label), "value")
-            items_legend.append(
-                wg.HBox(
-                    children=[picker, textbox],
-                    layout=wg.Layout(min_height="2.2em")
-                )
-            )
-        return wg.VBox(children=items_legend, layout=wg.Layout(grid_area="legend"))
-
-    @contextmanager
-    def editing(self) -> Iterable["Labeler"]:
-        yield self
-        self.refresh()
-
-    @property
-    def labels_named(self) -> Sequence[str]:
-        return [self.names[i] for i in self.labels]
 
 
 COLORS = """\
