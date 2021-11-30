@@ -94,7 +94,7 @@ class Labeler(wg.GridBox):
 
         def mark_selection(change: Dict) -> None:
             scatter = change["owner"]
-            if self.num_selected > 0:
+            if len(self.selected) > 0:
                 scatter.unselected_style = {"opacity": 0.1}
             else:
                 scatter.unselected_style = {}
@@ -107,6 +107,15 @@ class Labeler(wg.GridBox):
             display_names=False
         )
         scatter.observe(mark_selection, names="selected")
+
+        def on_click(sc: bq.Scatter, event: Dict) -> None:
+            index = event["data"]["index"]
+            if index in self.selected:
+                self.deselect([index])
+            else:
+                self.select([index])
+
+        scatter.on_element_click(on_click)
 
         return (
             bq.Figure(
@@ -170,7 +179,7 @@ class Labeler(wg.GridBox):
 
         def set_disabled(widget: wg.Widget) -> Callable[[Dict], None]:
             def _set(change: Dict):
-                widget.disabled = self.num_selected == 0
+                widget.disabled = (len(self.selected) == 0)
             return _set
 
         self._button_split = wg.Button(
@@ -201,6 +210,12 @@ class Labeler(wg.GridBox):
             layout=wg.Layout(width="100%", grid_area="toolbar")
         )
 
+    def select(self, indexes: Sequence[int]) -> None:
+        self.selected = np.hstack([self.selected, np.array(indexes)])
+
+    def deselect(self, indexes: Sequence[int]) -> None:
+        self.selected = np.array([i for i in self.selected if i not in indexes])
+
     @property
     def _scatter(self) -> bq.Scatter:
         return self.plot.marks[0]
@@ -218,7 +233,9 @@ class Labeler(wg.GridBox):
         self._scale_color.colors = colors
 
     @property
-    def selected(self) -> Optional[np.ndarray]:
+    def selected(self) -> np.ndarray:
+        if self._scatter.selected is None:
+            return np.array([])
         return self._scatter.selected
 
     @selected.setter
@@ -226,17 +243,11 @@ class Labeler(wg.GridBox):
         self._scatter.selected = selected
 
     @property
-    def num_selected(self) -> int:
-        if self.selected is None:
-            return 0
-        return len(self.selected)
-
-    @property
     def labels_named(self) -> Sequence[str]:
         return [self.names[i] for i in self.labels]
 
     def reset(self, *_) -> None:
-        if self.num_selected > 0:
+        if len(self.selected) > 0:
             self.selected = None
             interaction = self.plot.interaction
             self.plot.interaction = None
