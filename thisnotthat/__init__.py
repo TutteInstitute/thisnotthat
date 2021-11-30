@@ -266,6 +266,11 @@ class Labeler(wg.GridBox):
         for i in range(len(self.labels)):
             if self.labels[i] == label_from:
                 self.labels[i] = label_to
+        pivot = list(set(range(self._label_next)) - set(self.labels))[0]
+        for i in range(len(self.labels)):
+            if self.labels[i] > pivot:
+                self.labels[i] -= 1
+
         self.plot.marks[0].color = []
         self.plot.marks[0].color = self.labels
 
