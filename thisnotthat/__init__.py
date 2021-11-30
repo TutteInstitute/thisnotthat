@@ -236,9 +236,15 @@ class Labeler(wg.GridBox):
         return [self.names[i] for i in self.labels]
 
     def reset(self, *_) -> None:
-        self._reset_plot()
-        self._reset_legend()
-        self._reset_toolbar()
+        if self.num_selected > 0:
+            self.selected = None
+            interaction = self.plot.interaction
+            self.plot.interaction = None
+            self.plot.interaction = interaction
+        else:
+            for dim in ["x", "y"]:
+                self._scatter.scales[dim].min = None
+                self._scatter.scales[dim].max = None
 
     def merge_to(self, label_from: int, label_to: int) -> None:
         del self.names[label_from]
