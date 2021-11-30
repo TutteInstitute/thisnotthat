@@ -16,14 +16,28 @@ def uniques_sorted(sortables: Iterable[T]) -> List[T]:
     return sorted(list(set(sortables)))
 
 
+class Counter:
+
+    def __init__(self) -> None:
+        self.n = 0
+
+    def __int__(self) -> int:
+        self.n += 1
+        return self.n
+
+    def __repr__(self) -> str:
+        return f"Counter({self.n})"
+
+    def __str__(self) -> int:
+        return str(int(self))
+
+
 class Labeler(wg.GridBox):
-    labels = tr.List()
-    names = tr.Dict()
 
     def __init__(
         self,
         data: np.ndarray,
-        labels: Sequence[Hashable],
+        labels: Sequence[int],
         notes: Sequence[str] = [],
         names: Mapping[Hashable, Any] = {},
         colors: Mapping[Hashable, str] = {}
@@ -46,32 +60,88 @@ class Labeler(wg.GridBox):
         assert data.shape[0] == len(labels)
         assert data.shape[1] == 2
         self.data = data
-        self.labels = [*labels]
+        label_to_int: Mapping[Hashable, int] = {
+            ll: i
+            for i, ll in enumerate(uniques_sorted(labels))
+        }
+        self.labels = np.array([label_to_int[ll] for ll in labels])
+        self._label_next: int = max(list(label_to_int.values())) + 1
         self.notes = [*notes]
 
-        self.names = {**names}
-        self.colors = {**colors}
-        index_unknown = 0
-        for label, color in zip(uniques_sorted(self.labels), it.cycle(COLORS)):
-            if label not in self.names:
-                index_unknown += 1
-                self.names[label] = f"Cluster {index_unknown}"
-            if label not in self.colors:
-                self.colors[label] = color
+        self.names: List[str] = []
+        index_unknown = Counter()
+        colors_: List[str] = [c for _, c in zip(range(self._label_next), COLORS)]
+        for label, i in label_to_int.items():
+            self.names.append(names.get(label, "") or f"Cluster {index_unknown}")
+            if label in colors:
+                colors_[i] = colors[label]
 
-        self.plot = bq.Figure(
-            layout=wg.Layout(grid_area="plot", height="98%"),
-            fig_margin={"top": 15, "bottom": 15, "left": 15, "right": 15},
-            min_aspect_ratio=1.0,
-            max_aspect_ratio=1.0
-        )
+        self.plot, pan_zoom, lasso = self._make_elements_plot(colors_)
         self._pz = bqi.PanZoom()
-        self._legend = wg.VBox(children=[], layout=wg.Layout(grid_area="legend"))
-        self._toolbar = self._make_toolbar()
+        self._legend = self._make_legend(colors_)
+        self._toolbar = self._make_toolbar(pan_zoom, lasso)
         self.children = [self.plot, self._legend, self._toolbar]
-        self.reset()
 
-    def _make_toolbar(self) -> wg.DOMWidget:
+    def _make_elements_plot(
+        self,
+        colors: List[str]
+    ) -> Tuple[bq.Figure, bqi.Interaction, bqi.Interaction]:
+        scale_x, scale_y = bq.LinearScale(), bq.LinearScale()
+        scale_colors = bq.ColorScale(
+            colors=colors
+        )
+        axis_x = bq.Axis(scale=scale_x)
+        axis_y = bq.Axis(scale=scale_y, orientation="vertical")
+
+        scatter = bq.Scatter(
+            x=self.data[:, 0],
+            y=self.data[:, 1],
+            color=self.labels,
+            scales={"x": scale_x, "y": scale_y, "color": scale_colors},
+            display_names=False
+        )
+
+        return (
+            bq.Figure(
+                axes=[axis_x, axis_y],
+                marks=[scatter],
+                layout=wg.Layout(grid_area="plot", height="98%"),
+                fig_margin={"top": 15, "bottom": 15, "left": 15, "right": 15},
+                min_aspect_ratio=1.0,
+                max_aspect_ratio=1.0
+            ),
+            bqi.PanZoom(scales={"x": [scale_x], "y": [scale_y]}),
+            bqi.LassoSelector(marks=[scatter])
+        )
+
+    def _make_legend(self, colors: List[str]) -> wg.DOMWidget:
+        items_legend = []
+        for label, color in enumerate(colors):
+            picker = wg.ColorPicker(
+                concise=True,
+                value=color,
+                layout=wg.Layout(width="2em")
+            )
+            picker.observe(self._update_color(label), "value")
+            textbox = wg.Text(
+                value=self.names[label],
+                continuous_update=False,
+                layout=wg.Layout(width="10em")
+            )
+            textbox.observe(self._update_name(label), "value")
+            items_legend.append(
+                wg.HBox(
+                    children=[picker, textbox],
+                    layout=wg.Layout(min_height="2.2em")
+                )
+            )
+        return wg.VBox(children=items_legend, layout=wg.Layout(grid_area="legend"))
+
+    def _make_toolbar(
+        self,
+        pan_zoom: bqi.Interaction,
+        lasso: bqi.Interaction
+    ) -> wg.DOMWidget:
         self._button_reset = wg.Button(
             description="Reset",
             icon="home",
@@ -79,8 +149,8 @@ class Labeler(wg.GridBox):
         )
         self._button_reset.on_click(self.reset)
         self._toggle_tools = wg.ToggleButtons(
-            options={"Explore ": None, "Lasso ": None},
-            icons=["hand-point-up", "circle-notch"],
+            options={"Pan/Zoom ": pan_zoom, "Pick ": None, "Lasso ": lasso},
+            icons=["arrows", "crosshairs", "circle-notch"],
             index=0,
             style=wg.ToggleButtonsStyle(button_width="6em")
         )
@@ -123,69 +193,14 @@ class Labeler(wg.GridBox):
         self._reset_legend()
         self._reset_toolbar()
 
-    def _reset_plot(self) -> None:
-        scale_x, scale_y = bq.LinearScale(), bq.LinearScale()
-        axis_x = bq.Axis(scale=scale_x)
-        axis_y = bq.Axis(scale=scale_y, orientation="vertical")
-        self.plot.axes = [axis_x, axis_y]
-
-        scatters = []
-        for label in uniques_sorted(self.labels):
-            i_labeled = [i for i, l_ in enumerate(self.labels) if l_ == label]
-            data_labeled = self.data[i_labeled]
-            if self.notes:
-                raise NotImplementedError("Tooltips")
-            scatters.append(
-                bq.Scatter(
-                    name=label,
-                    x=data_labeled[:, 0],
-                    y=data_labeled[:, 1],
-                    colors=[self.colors[label]],
-                    scales={"x": scale_x, "y": scale_y},
-                    display_names=False
-                )
-            )
-        self.plot.marks = scatters
-
-        self._pz = bqi.PanZoom(scales={"x": [scale_x], "y": [scale_y]})
-
-    def _reset_legend(self) -> None:
-        items_legend = []
-        for i, label in enumerate(uniques_sorted(self.labels)):
-            picker = wg.ColorPicker(
-                concise=True,
-                value=self.colors[label],
-                layout=wg.Layout(width="2em")
-            )
-            picker.observe(self._update_color(i, label), "value")
-            textbox = wg.Text(
-                value=self.names[label],
-                continuous_update=False,
-                layout=wg.Layout(width="10em")
-            )
-            textbox.observe(self._update_name(label), "value")
-            items_legend.append(
-                wg.HBox(
-                    children=[picker, textbox],
-                    layout=wg.Layout(min_height="2.2em")
-                )
-            )
-        self._legend.children = items_legend
-
-    def _reset_toolbar(self) -> None:
-        self._toggle_tools.options = {
-            "Explore ": self._pz,
-            "Lasso ": bqi.LassoSelector()
-        }
-
-    def merge_to(self, label_from: Hashable, label_to: Hashable) -> None:
+    def merge_to(self, label_from: int, label_to: int) -> None:
         del self.names[label_from]
         del self.colors[label_from]
         for i in range(len(self.labels)):
             if self.labels[i] == label_from:
                 self.labels[i] = label_to
 
-    def _update_name(self, label: Hashable) -> None:
+    def _update_name(self, label: int) -> None:
         def _update(change: Dict):
             name_new = change["new"]
             merge_has_occured = False
@@ -202,7 +217,7 @@ class Labeler(wg.GridBox):
 
         return _update
 
-    def _update_color(self, i: int, label: Hashable) -> None:
+    def _update_color(self, label: int) -> None:
         def _update(change: Dict):
             self.colors[label] = change['new']
             self.plot.marks[i].colors = [change['new']]
