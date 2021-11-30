@@ -92,6 +92,17 @@ class Labeler(wg.GridBox):
         axis_x = bq.Axis(scale=scale_x)
         axis_y = bq.Axis(scale=scale_y, orientation="vertical")
 
+        def mark_selection(change: Dict) -> None:
+            scatter = change["owner"]
+            points_are_selected = False
+            if change["new"] is not None:
+                points_are_selected = len(change["new"]) > 0
+
+            if points_are_selected:
+                scatter.unselected_style = {"opacity": 0.2}
+            else:
+                scatter.unselected_style = {}
+
         scatter = bq.Scatter(
             x=self.data[:, 0],
             y=self.data[:, 1],
@@ -99,6 +110,7 @@ class Labeler(wg.GridBox):
             scales={"x": scale_x, "y": scale_y, "color": scale_colors},
             display_names=False
         )
+        scatter.observe(mark_selection, names="selected")
 
         return (
             bq.Figure(
@@ -159,12 +171,22 @@ class Labeler(wg.GridBox):
             index=0,
             style=wg.ToggleButtonsStyle(button_width="6em")
         )
+
+        def set_disabled(widget: wg.Widget) -> Callable[[Dict], None]:
+            def _set(change: Dict):
+                if change["new"] is None:
+                    widget.disabled = True
+                else:
+                    widget.disabled = len(change["new"]) == 0
+            return _set
+
         self._button_split = wg.Button(
             description="Split",
             icon="flag",
             disabled=True,
             layout=wg.Layout(width="8em")
         )
+        self._scatter.observe(set_disabled(self._button_split), names="selected")
         self._dropdown_merge = wg.Dropdown(
             description="Merge to",
             options=[],
@@ -201,6 +223,14 @@ class Labeler(wg.GridBox):
     @colors.setter
     def colors(self, colors: List[str]) -> None:
         self._scale_color.colors = colors
+
+    @property
+    def selected(self) -> Optional[np.ndarray]:
+        return self._scatter.selected
+
+    @selected.setter
+    def selected(self, selected: Optional[np.ndarray]) -> None:
+        self._scatter.selected = selected
 
     @property
     def labels_named(self) -> Sequence[str]:
