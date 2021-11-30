@@ -1,4 +1,3 @@
-from contextlib import contextmanager
 import itertools as it
 from typing import *
 
@@ -78,7 +77,7 @@ class Labeler(wg.GridBox):
 
         self.plot, pan_zoom, lasso = self._make_elements_plot(colors_)
         self._pz = bqi.PanZoom()
-        self._legend = self._make_legend(colors_)
+        self._legend = self._make_legend()
         self._toolbar = self._make_toolbar(pan_zoom, lasso)
         self.children = [self.plot, self._legend, self._toolbar]
 
@@ -114,9 +113,9 @@ class Labeler(wg.GridBox):
             bqi.LassoSelector(marks=[scatter])
         )
 
-    def _make_legend(self, colors: List[str]) -> wg.DOMWidget:
+    def _items_legend(self) -> List[wg.DOMWidget]:
         items_legend = []
-        for label, color in enumerate(colors):
+        for label, color in enumerate(self.colors):
             picker = wg.ColorPicker(
                 concise=True,
                 value=color,
@@ -135,7 +134,13 @@ class Labeler(wg.GridBox):
                     layout=wg.Layout(min_height="2.2em")
                 )
             )
-        return wg.VBox(children=items_legend, layout=wg.Layout(grid_area="legend"))
+        return items_legend
+
+    def _make_legend(self) -> wg.DOMWidget:
+        return wg.VBox(
+            children=self._items_legend(),
+            layout=wg.Layout(grid_area="legend")
+        )
 
     def _make_toolbar(
         self,
@@ -167,6 +172,8 @@ class Labeler(wg.GridBox):
             layout=wg.Layout(width="auto"),
             style={"description_width": "5em"}
         )
+        self._set_options_merge()
+        self._scatter.observe(set_disabled(self._dropdown_merge), names="selected")
 
         tr.link((self._toggle_tools, "value"), (self.plot, "interaction"))
         return wg.HBox(
@@ -180,13 +187,24 @@ class Labeler(wg.GridBox):
         )
 
     @property
+    def _scatter(self) -> bq.Scatter:
+        return self.plot.marks[0]
+
+    @property
+    def _scale_color(self) -> bq.ColorScale:
+        return self._scatter.scales["color"]
+
+    @property
+    def colors(self) -> List[str]:
+        return self._scale_color.colors
+
+    @colors.setter
+    def colors(self, colors: List[str]) -> None:
+        self._scale_color.colors = colors
+
+    @property
     def labels_named(self) -> Sequence[str]:
         return [self.names[i] for i in self.labels]
-
-    @contextmanager
-    def editing(self) -> Iterable["Labeler"]:
-        yield self
-        self.refresh()
 
     def reset(self, *_) -> None:
         self._reset_plot()
@@ -195,32 +213,40 @@ class Labeler(wg.GridBox):
 
     def merge_to(self, label_from: int, label_to: int) -> None:
         del self.names[label_from]
-        del self.colors[label_from]
+        colors = [*self.colors]
+        del colors[label_from]
+        self.colors = colors
+
         for i in range(len(self.labels)):
             if self.labels[i] == label_from:
                 self.labels[i] = label_to
+        self.plot.marks[0].color = []
+        self.plot.marks[0].color = self.labels
+
+        self._legend.children = self._items_legend()
+        self._set_options_merge()
+
+    def _set_options_merge(self) -> None:
+        self._dropdown_merge.options = self.names
 
     def _update_name(self, label: int) -> None:
         def _update(change: Dict):
             name_new = change["new"]
-            merge_has_occured = False
-            for label_current, name_current in self.names.items():
+            self.names[label] = name_new
+            for label_current, name_current in enumerate(self.names):
                 if label_current != label and name_current == name_new:
                     self.merge_to(label, label_current)
-                    merge_has_occured = True
                     break
 
-            if label in self.names:
-                self.names[label] = change['new']
-            if merge_has_occured:
-                self.reset()
+            self._set_options_merge()
 
         return _update
 
     def _update_color(self, label: int) -> None:
         def _update(change: Dict):
-            self.colors[label] = change['new']
-            self.plot.marks[i].colors = [change['new']]
+            colors = [*self.plot.marks[0].scales["color"].colors]
+            colors[label] = change["new"]
+            self.plot.marks[0].scales["color"].colors = colors
         return _update
 
 
