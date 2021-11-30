@@ -86,7 +86,7 @@ class Labeler(wg.GridBox):
         )
         self._button_split = wg.Button(
             description="Split",
-            icon="cut",
+            icon="flag",
             disabled=True,
             layout=wg.Layout(width="8em")
         )
