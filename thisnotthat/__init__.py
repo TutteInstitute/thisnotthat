@@ -178,24 +178,27 @@ class Labeler(wg.GridBox):
             "Lasso ": bqi.LassoSelector()
         }
 
+    def merge_to(self, label_from: Hashable, label_to: Hashable) -> None:
+        del self.names[label_from]
+        del self.colors[label_from]
+        for i in range(len(self.labels)):
+            if self.labels[i] == label_from:
+                self.labels[i] = label_to
+
     def _update_name(self, label: Hashable) -> None:
         def _update(change: Dict):
             name_new = change["new"]
-            label_merge = None
+            merge_has_occured = False
             for label_current, name_current in self.names.items():
                 if label_current != label and name_current == name_new:
-                    label_merge = label_current
+                    self.merge_to(label, label_current)
+                    merge_has_occured = True
                     break
 
-            self.names[label] = change['new']
-            if label_merge is not None:
-                del self.names[label_merge]
-                self.colors[label] = self.colors[label_merge]
-                del self.colors[label_merge]
-                for i in range(len(self.labels)):
-                    if self.labels[i] == label_merge:
-                        self.labels[i] = label
-                self.refresh()
+            if label in self.names:
+                self.names[label] = change['new']
+            if merge_has_occured:
+                self.reset()
 
         return _update
 
