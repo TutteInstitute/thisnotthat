@@ -94,12 +94,8 @@ class Labeler(wg.GridBox):
 
         def mark_selection(change: Dict) -> None:
             scatter = change["owner"]
-            points_are_selected = False
-            if change["new"] is not None:
-                points_are_selected = len(change["new"]) > 0
-
-            if points_are_selected:
-                scatter.unselected_style = {"opacity": 0.2}
+            if self.num_selected > 0:
+                scatter.unselected_style = {"opacity": 0.1}
             else:
                 scatter.unselected_style = {}
 
@@ -174,10 +170,7 @@ class Labeler(wg.GridBox):
 
         def set_disabled(widget: wg.Widget) -> Callable[[Dict], None]:
             def _set(change: Dict):
-                if change["new"] is None:
-                    widget.disabled = True
-                else:
-                    widget.disabled = len(change["new"]) == 0
+                widget.disabled = self.num_selected == 0
             return _set
 
         self._button_split = wg.Button(
@@ -231,6 +224,12 @@ class Labeler(wg.GridBox):
     @selected.setter
     def selected(self, selected: Optional[np.ndarray]) -> None:
         self._scatter.selected = selected
+
+    @property
+    def num_selected(self) -> int:
+        if self.selected is None:
+            return 0
+        return len(self.selected)
 
     @property
     def labels_named(self) -> Sequence[str]:
