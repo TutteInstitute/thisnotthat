@@ -87,11 +87,13 @@ class Labeler(wg.GridBox):
         self._button_split = wg.Button(
             description="Split",
             icon="cut",
+            disabled=True,
             layout=wg.Layout(width="8em")
         )
         self._dropdown_merge = wg.Dropdown(
             description="Merge to",
             options=[],
+            disabled=True,
             layout=wg.Layout(width="auto"),
             style={"description_width": "5em"}
         )
