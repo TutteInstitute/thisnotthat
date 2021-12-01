@@ -72,6 +72,7 @@ class Labeler(wg.GridBox):
             for ll in labels
         ]
         labels_unique = uniques_sorted(labels_fixed)
+        self.num_labels = len(labels_unique)
         label_to_int = {ll: i for i, ll in enumerate(labels_unique)}
         self.labels = np.array([label_to_int[ll] for ll in labels_fixed])
         self.names = [str(ll) for ll in labels_unique]
@@ -94,6 +95,7 @@ class Labeler(wg.GridBox):
     ) -> Tuple[bq.Figure, bqi.Interaction, bqi.Interaction]:
         scale_x, scale_y = bq.LinearScale(), bq.LinearScale()
         scale_colors = bq.ColorScale(
+            max=len(colors) - 1,
             colors=colors
         )
         axis_x = bq.Axis(scale=scale_x)
@@ -142,12 +144,16 @@ class Labeler(wg.GridBox):
             bqi.LassoSelector(marks=[scatter])
         )
 
+    @property
+    def _labels_unique(self) -> Iterator[int]:
+        return uniques_sorted(self.labels)
+
     def _items_legend(self) -> List[wg.DOMWidget]:
         items_legend = []
-        for label, color in enumerate(self.colors):
+        for label in self._labels_unique:
             picker = wg.ColorPicker(
                 concise=True,
-                value=color,
+                value=self.colors[label],
                 layout=wg.Layout(width="2em")
             )
             picker.observe(self._update_color(label), "value")
@@ -188,7 +194,7 @@ class Labeler(wg.GridBox):
         )
         self._button_reset.on_click(self.reset)
         self._toggle_tools = wg.ToggleButtons(
-            options={"Pick ": None, "Pan/Zoom ": pan_zoom, "Lasso ": lasso},
+            options=[("Pick ", None), ("Pan/Zoom ", pan_zoom), ("Lasso ", lasso)],
             icons=["hand-point-up", "arrows", "circle-notch"],
             index=0,
             style=wg.ToggleButtonsStyle(button_width="6em")
@@ -214,6 +220,7 @@ class Labeler(wg.GridBox):
             style={"description_width": "5em"}
         )
         self._set_options_merge()
+        self._dropdown_merge.observe(self._merge_to, names="value")
         self._scatter.observe(set_disabled(self._dropdown_merge), names="selected")
 
         tr.link((self._toggle_tools, "value"), (self.plot, "interaction"))
@@ -274,39 +281,14 @@ class Labeler(wg.GridBox):
                 self._scatter.scales[dim].min = None
                 self._scatter.scales[dim].max = None
 
-    def merge_to(self, label_from: int, label_to: int) -> None:
-        del self.names[label_from]
-        colors = [*self.colors]
-        del colors[label_from]
-        self.colors = colors
-
-        for i in range(len(self.labels)):
-            if self.labels[i] == label_from:
-                self.labels[i] = label_to
-        assert list(set(range(len(self.names) + 1)) - set(self.labels))[0] == label_from
-        for i in range(len(self.labels)):
-            if self.labels[i] > label_from:
-                self.labels[i] -= 1
-
-        self.plot.marks[0].color = []
-        self.plot.marks[0].color = self.labels
-
-        self._legend.children = self._items_legend()
-        self._set_options_merge()
-
     def _set_options_merge(self) -> None:
-        self._dropdown_merge.options = self.names
+        self._dropdown_merge.options = [("(choose...)", -1)] + [
+            (self.names[label], label) for label in self._labels_unique
+        ]
 
     def _update_name(self, label: int) -> Callable[[Dict], None]:
         def _update(change: Dict):
-            name_new = change["new"]
-            self.names[label] = name_new
-            for label_current, name_current in enumerate(self.names):
-                if label_current != label and name_current == name_new:
-                    self.merge_to(label, label_current)
-                    break
-
-            self._set_options_merge()
+            self.names[label] = change["new"]
 
         return _update
 
@@ -327,6 +309,21 @@ class Labeler(wg.GridBox):
             else:
                 self.selected = np.union1d(self.selected, indexes_cluster)
         return _click
+
+    def _merge_to(self, change: Dict) -> None:
+        label_target = change["new"]
+        if label_target >= 0:
+            num_labels = len(uniques_sorted(self.labels))
+            assert label_target < len(self.names)
+            for i in self.selected.astype(int):
+                self.labels[i] = label_target
+
+            self._scatter.color = None
+            self._scatter.color = self.labels
+            self._scale_color.max = self.num_labels - 1
+            self._legend.children = self._items_legend()
+            self._set_options_merge()
+            self._dropdown_merge.value = -1
 
 
 COLORS = """\
