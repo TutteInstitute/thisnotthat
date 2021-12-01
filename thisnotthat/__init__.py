@@ -81,7 +81,7 @@ class Labeler(wg.GridBox):
             if label in colors:
                 colors_[i] = colors[label]
 
-        self.plot, pan_zoom, lasso = self._make_elements_plot(colors_)
+        self.plot, pan_zoom, lasso = self._make_elements_plot(colors_, hover)
         self._pz = bqi.PanZoom()
         self._legend = self._make_legend()
         self._toolbar = self._make_toolbar(pan_zoom, lasso)
@@ -89,7 +89,8 @@ class Labeler(wg.GridBox):
 
     def _make_elements_plot(
         self,
-        colors: List[str]
+        colors: List[str],
+        hover: Sequence
     ) -> Tuple[bq.Figure, bqi.Interaction, bqi.Interaction]:
         scale_x, scale_y = bq.LinearScale(), bq.LinearScale()
         scale_colors = bq.ColorScale(
@@ -122,6 +123,11 @@ class Labeler(wg.GridBox):
                 self.select([index])
 
         scatter.on_element_click(on_click)
+
+        if len(hover) > 0:
+            assert len(hover) == len(self._x)
+            scatter.names = [str(h) for h in hover]
+            scatter.tooltip = bq.Tooltip(fields=["name"], show_labels=False)
 
         return (
             bq.Figure(
@@ -177,7 +183,7 @@ class Labeler(wg.GridBox):
         )
         self._button_reset.on_click(self.reset)
         self._toggle_tools = wg.ToggleButtons(
-            options={"Pan/Zoom ": pan_zoom, "Pick ": None, "Lasso ": lasso},
+            options={"Pick ": None, "Pan/Zoom ": pan_zoom, "Lasso ": lasso},
             icons=["arrows", "crosshairs", "circle-notch"],
             index=0,
             style=wg.ToggleButtonsStyle(button_width="6em")
