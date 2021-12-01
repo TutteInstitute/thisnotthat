@@ -8,11 +8,16 @@ import numpy as np
 import traitlets as tr
 
 
-T = TypeVar("T")
+__all__ = ["Labeler"]
 
 
-def uniques_sorted(sortables: Iterable[T]) -> List[T]:
-    return sorted(list(set(sortables)))
+Table = Mapping[Hashable, Sequence[float]]
+Label = Hashable
+Labels = Sequence[Hashable]
+
+
+def uniques_sorted(sortables: Iterable[Hashable]) -> List[str]:
+    return sorted(list(set(sortables)), key=str)
 
 
 class Counter:
@@ -35,17 +40,18 @@ class Labeler(wg.GridBox):
 
     def __init__(
         self,
-        data: np.ndarray,
-        labels: Sequence[int],
-        notes: Sequence[str] = [],
-        names: Mapping[Hashable, Any] = {},
-        colors: Mapping[Hashable, str] = {}
+        data: Table,
+        labels: Labels,
+        hover: Sequence = [],
+        colors: Mapping[Label, str] = {},
+        width: str = "800px",
+        height: str = "600px"
     ) -> None:
         super().__init__(
             children=[],
             layout=wg.Layout(
-                width="800px",
-                height="600px",
+                width=width,
+                height=height,
                 grid_template_rows="90% 10%",
                 grid_template_columns="75% 25%",
                 grid_template_areas="""
@@ -56,22 +62,22 @@ class Labeler(wg.GridBox):
                 justify_content="space-between"
             )
         )
-        assert data.shape[0] == len(labels)
-        assert data.shape[1] == 2
-        self.data = data
-        label_to_int: Mapping[Hashable, int] = {
-            ll: i
-            for i, ll in enumerate(uniques_sorted(labels))
-        }
-        self.labels = np.array([label_to_int[ll] for ll in labels])
-        self._label_next: int = max(list(label_to_int.values())) + 1
-        self.notes = [*notes]
 
-        self.names: List[str] = []
-        index_unknown = Counter()
-        colors_: List[str] = [c for _, c in zip(range(self._label_next), COLORS)]
-        for label, i in label_to_int.items():
-            self.names.append(names.get(label, "") or f"Cluster {index_unknown}")
+        data_ = np.array(data)
+        self._x, self._y = data[:, 0], data[:, 1]
+
+        assert len(self._x) == len(labels)
+        labels_fixed = [
+            "Unknown" if ll is np.nan or ll is None else ll
+            for ll in labels
+        ]
+        labels_unique = uniques_sorted(labels_fixed)
+        label_to_int = {ll: i for i, ll in enumerate(labels_unique)}
+        self.labels = np.array([label_to_int[ll] for ll in labels_fixed])
+        self.names = [str(ll) for ll in labels_unique]
+
+        colors_: List[str] = [c for _, c in zip(range(len(self.names)), COLORS)]
+        for i, label in enumerate(labels_unique):
             if label in colors:
                 colors_[i] = colors[label]
 
@@ -100,8 +106,8 @@ class Labeler(wg.GridBox):
                 scatter.unselected_style = {}
 
         scatter = bq.Scatter(
-            x=self.data[:, 0],
-            y=self.data[:, 1],
+            x=self._x,
+            y=self._y,
             color=self.labels,
             scales={"x": scale_x, "y": scale_y, "color": scale_colors},
             display_names=False
@@ -266,9 +272,9 @@ class Labeler(wg.GridBox):
         for i in range(len(self.labels)):
             if self.labels[i] == label_from:
                 self.labels[i] = label_to
-        pivot = list(set(range(self._label_next)) - set(self.labels))[0]
+        assert list(set(range(len(self.names) + 1)) - set(self.labels))[0] == label_from
         for i in range(len(self.labels)):
-            if self.labels[i] > pivot:
+            if self.labels[i] > label_from:
                 self.labels[i] -= 1
 
         self.plot.marks[0].color = []
