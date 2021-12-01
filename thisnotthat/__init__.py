@@ -211,6 +211,7 @@ class Labeler(wg.GridBox):
             disabled=True,
             layout=wg.Layout(width="8em")
         )
+        self._button_split.on_click(self._split)
         self._scatter.observe(set_disabled(self._button_split), names="selected")
         self._dropdown_merge = wg.Dropdown(
             description="Merge to",
@@ -324,6 +325,21 @@ class Labeler(wg.GridBox):
             self._legend.children = self._items_legend()
             self._set_options_merge()
             self._dropdown_merge.value = -1
+
+    def _split(self, *_) -> None:
+        label_new = self.num_labels
+        self.num_labels += 1
+        for i in self.selected.astype(int):
+            self.labels[i] = label_new
+
+        self.names.append(f"Cluster {label_new}")
+        self.colors = [*self.colors, COLORS[label_new % len(COLORS)]]
+        self._scatter.color = None
+        self._scatter.color = self.labels
+        self._scale_color.max = self.num_labels - 1
+        self._legend.children = self._items_legend()
+        self._set_options_merge()
+
 
 
 COLORS = """\
