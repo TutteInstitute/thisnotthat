@@ -290,6 +290,7 @@ class Labeler(wg.GridBox):
     def _update_name(self, label: int) -> Callable[[Dict], None]:
         def _update(change: Dict):
             self.names[label] = change["new"]
+            self._set_options_merge()
 
         return _update
 
