@@ -53,7 +53,7 @@ class Labeler(wg.GridBox):
                 width=width,
                 height=height,
                 grid_template_rows="90% 10%",
-                grid_template_columns="75% 25%",
+                grid_template_columns="73% 27%",
                 grid_template_areas="""
                     "plot legend"
                     "toolbar toolbar"
@@ -151,6 +151,11 @@ class Labeler(wg.GridBox):
                 layout=wg.Layout(width="2em")
             )
             picker.observe(self._update_color(label), "value")
+            selector = wg.Button(
+                icon="check-square",
+                layout=wg.Layout(width="3em")
+            )
+            selector.on_click(self._select_cluster(label))
             textbox = wg.Text(
                 value=self.names[label],
                 continuous_update=False,
@@ -159,7 +164,7 @@ class Labeler(wg.GridBox):
             textbox.observe(self._update_name(label), "value")
             items_legend.append(
                 wg.HBox(
-                    children=[picker, textbox],
+                    children=[picker, selector, textbox],
                     layout=wg.Layout(min_height="2.2em")
                 )
             )
@@ -184,7 +189,7 @@ class Labeler(wg.GridBox):
         self._button_reset.on_click(self.reset)
         self._toggle_tools = wg.ToggleButtons(
             options={"Pick ": None, "Pan/Zoom ": pan_zoom, "Lasso ": lasso},
-            icons=["arrows", "crosshairs", "circle-notch"],
+            icons=["hand-point-up", "arrows", "circle-notch"],
             index=0,
             style=wg.ToggleButtonsStyle(button_width="6em")
         )
@@ -292,7 +297,7 @@ class Labeler(wg.GridBox):
     def _set_options_merge(self) -> None:
         self._dropdown_merge.options = self.names
 
-    def _update_name(self, label: int) -> None:
+    def _update_name(self, label: int) -> Callable[[Dict], None]:
         def _update(change: Dict):
             name_new = change["new"]
             self.names[label] = name_new
@@ -305,12 +310,23 @@ class Labeler(wg.GridBox):
 
         return _update
 
-    def _update_color(self, label: int) -> None:
+    def _update_color(self, label: int) -> Callable[[Dict], None]:
         def _update(change: Dict):
             colors = [*self.plot.marks[0].scales["color"].colors]
             colors[label] = change["new"]
             self.plot.marks[0].scales["color"].colors = colors
         return _update
+
+    def _select_cluster(self, label: int) -> Callable[[Dict], None]:
+        def _click(*_) -> None:
+            indexes_cluster = np.array(
+                [i for i, ll in enumerate(self.labels) if ll == label]
+            )
+            if np.all(np.isin(indexes_cluster, self.selected)):
+                self.selected = np.setdiff1d(self.selected, indexes_cluster)
+            else:
+                self.selected = np.union1d(self.selected, indexes_cluster)
+        return _click
 
 
 COLORS = """\
