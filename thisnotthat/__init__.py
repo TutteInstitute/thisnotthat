@@ -333,7 +333,7 @@ class Labeler(wg.GridBox):
         for i in self.selected.astype(int):
             self.labels[i] = label_new
 
-        self.names.append(f"Cluster {label_new}")
+        self.names.append(f"Cluster {label_new + 1}")
         self.colors = [*self.colors, COLORS[label_new % len(COLORS)]]
         self._scatter.color = None
         self._scatter.color = self.labels
