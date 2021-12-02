@@ -347,7 +347,6 @@ COLORS = """\
 steelblue
 chartreuse
 darkgreen
-slategray
 magenta
 midnightblue
 salmon
@@ -375,6 +374,7 @@ darkred
 maroon
 floralwhite
 deeppink
+slategray
 mediumvioletred
 darkorchid
 darkslateblue
