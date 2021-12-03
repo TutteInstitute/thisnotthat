@@ -236,10 +236,12 @@ class Labeler(wg.GridBox):
         )
 
     def select(self, indexes: Sequence[int]) -> None:
-        self.selected = np.hstack([self.selected, np.array(indexes)])
+        with self._scatter.hold_sync():
+            self.selected = np.hstack([self.selected, np.array(indexes)])
 
     def deselect(self, indexes: Sequence[int]) -> None:
-        self.selected = np.array([i for i in self.selected if i not in indexes])
+        with self._scatter.hold_sync():
+            self.selected = np.array([i for i in self.selected if i not in indexes])
 
     @property
     def _scatter(self) -> bq.Scatter:
@@ -272,15 +274,16 @@ class Labeler(wg.GridBox):
         return [self.names[i] for i in self.labels]
 
     def reset(self, *_) -> None:
-        if len(self.selected) > 0:
-            self.selected = None
-            interaction = self.plot.interaction
-            self.plot.interaction = None
-            self.plot.interaction = interaction
-        else:
-            for dim in ["x", "y"]:
-                self._scatter.scales[dim].min = None
-                self._scatter.scales[dim].max = None
+        with self._scatter.hold_sync():
+            if len(self.selected) > 0:
+                self.selected = None
+                interaction = self.plot.interaction
+                self.plot.interaction = None
+                self.plot.interaction = interaction
+            else:
+                for dim in ["x", "y"]:
+                    self._scatter.scales[dim].min = None
+                    self._scatter.scales[dim].max = None
 
     def _set_options_merge(self) -> None:
         self._dropdown_merge.options = [("(choose...)", -1)] + [
@@ -306,10 +309,11 @@ class Labeler(wg.GridBox):
             indexes_cluster = np.array(
                 [i for i, ll in enumerate(self.labels) if ll == label]
             )
-            if np.all(np.isin(indexes_cluster, self.selected)):
-                self.selected = np.setdiff1d(self.selected, indexes_cluster)
-            else:
-                self.selected = np.union1d(self.selected, indexes_cluster)
+            with self._scatter.hold_sync():
+                if np.all(np.isin(indexes_cluster, self.selected)):
+                    self.selected = np.setdiff1d(self.selected, indexes_cluster)
+                else:
+                    self.selected = np.union1d(self.selected, indexes_cluster)
         return _click
 
     def _merge_to(self, change: Dict) -> None:
@@ -320,12 +324,13 @@ class Labeler(wg.GridBox):
             for i in self.selected.astype(int):
                 self.labels[i] = label_target
 
-            self._scatter.color = None
-            self._scatter.color = self.labels
-            self._scale_color.max = self.num_labels - 1
-            self._legend.children = self._items_legend()
-            self._set_options_merge()
-            self._dropdown_merge.value = -1
+            with self._scatter.hold_sync():
+                self._scatter.color = None
+                self._scatter.color = self.labels
+                self._scale_color.max = self.num_labels - 1
+                self._legend.children = self._items_legend()
+                self._set_options_merge()
+                self._dropdown_merge.value = -1
 
     def _split(self, *_) -> None:
         label_new = self.num_labels
@@ -334,12 +339,13 @@ class Labeler(wg.GridBox):
             self.labels[i] = label_new
 
         self.names.append(f"Cluster {label_new + 1}")
-        self.colors = [*self.colors, COLORS[label_new % len(COLORS)]]
-        self._scatter.color = None
-        self._scatter.color = self.labels
-        self._scale_color.max = self.num_labels - 1
-        self._legend.children = self._items_legend()
-        self._set_options_merge()
+        with self._scatter.hold_sync():
+            self.colors = [*self.colors, COLORS[label_new % len(COLORS)]]
+            self._scatter.color = None
+            self._scatter.color = self.labels
+            self._scale_color.max = self.num_labels - 1
+            self._legend.children = self._items_legend()
+            self._set_options_merge()
 
 
 
