@@ -4,10 +4,15 @@ import bokeh.plotting
 import bokeh.models
 import bokeh.transform
 import bokeh.palettes
+import numpy as np
+import numpy.typing as npt
+import pandas as pd
+
+from typing import *
 
 # Provide indexing into a list that jumps around a lot
 # ideal for selecting varied colors from a large linear color palette
-def _palette_index(size):
+def _palette_index(size: int) -> Iterator[int]:
     step = size
     current = size - 1
     used = set([])
@@ -26,19 +31,19 @@ def _palette_index(size):
     return
 
 
-class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
+class BokehPlotPane(pn.reactive.Reactive):
     labels = param.Series(doc="Labels")
     color_palette = param.List([], item_type=str, doc="Color palette")
     color_factors = param.List([], item_type=str, doc="Color palette")
     selected = param.List([], doc="Indices of selected samples")
 
-    def _update_selected(self, attr, old, new):
+    def _update_selected(self, attr, old, new) -> None:
         self.selected = self.data_source.selected.indices
 
-    def __init__(self, data, labels, annotation):
+    def __init__(self, data: npt.ArrayLike, labels: Iterable[str], annotation: Iterable[str]):
         super().__init__()
         self.data_source = bokeh.models.ColumnDataSource(
-            {"x": data.T[0], "y": data.T[1], "label": labels, "annotation": annotation}
+            {"x": np.asarray(data).T[0], "y": np.asarray(data).T[1], "label": labels, "annotation": annotation}
         )
         self.data_source.selected.on_change("indices", self._update_selected)
         self._factor_cmap = bokeh.transform.factor_cmap(
@@ -83,7 +88,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         #         self.plot.legend.click_policy="mute"
         self.pane = pn.pane.Bokeh(self.plot)
 
-        self.labels = self.dataframe.label
+        self.labels = pd.Series(labels)
         self.color_palette = list(self.color_mapping.palette)
         self.color_factors = list(self.color_mapping.factors)
 
@@ -92,17 +97,17 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwds)
 
     @param.depends("color_palette", watch=True)
-    def _update_palette(self):
+    def _update_palette(self) -> None:
         self.color_mapping.palette = self.color_palette
         pn.io.push_notebook(self.pane)
 
     @param.depends("color_factors", watch=True)
-    def _update_factors(self):
+    def _update_factors(self) -> None:
         self.color_mapping.factors = self.color_factors
         pn.io.push_notebook(self.pane)
 
     @param.depends("labels", watch=True)
-    def _update_labels(self):
+    def _update_labels(self) -> None:
         self.data_source.data["label"] = self.labels  # self.dataframe["label"]
         # We auto-update the factors from elsewhere (? from legend yes, but not from table edits)
         #         self.factors = list(self.color_mapping.factors) + [
@@ -111,6 +116,6 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         pn.io.push_notebook(self.pane)
 
     @param.depends("selected", watch=True)
-    def _update_selection(self):
+    def _update_selection(self) -> None:
         self.data_source.selected.indices = self.selected
         pn.io.push_notebook(self.pane)

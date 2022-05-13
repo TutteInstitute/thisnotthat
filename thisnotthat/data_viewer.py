@@ -2,17 +2,19 @@ import panel as pn
 import param
 import pandas as pd
 from io import BytesIO
+import numpy.typing as npt
 
+from typing import *
 
 class DataPane(pn.reactive.Reactive):
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     selected = param.List(default=[], doc="Indices of selected samples")
     data = param.DataFrame(doc="Source data")
 
-    def _get_csv(self):
+    def _get_csv(self) -> BytesIO:
         return BytesIO(self.table.value.to_csv().encode())
 
-    def _data_pane_update_selected(self, event):
+    def _data_pane_update_selected(self, event: param.parameterized.Event) -> None:
         if len(event.old) == 0:
             self._base_selection = self.selected
         if len(event.new) > 0:
@@ -20,7 +22,7 @@ class DataPane(pn.reactive.Reactive):
         elif len(event.new) == 0 and len(event.old) > 0:
             self.selected = self._base_selection
 
-    def __init__(self, labels, raw_dataframe):
+    def __init__(self, labels: npt.ArrayLike, raw_dataframe: pd.DataFrame) -> None:
         super().__init__()
         self.data = raw_dataframe.copy()
         self.data["label"] = labels
@@ -46,13 +48,15 @@ class DataPane(pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwds)
 
     @param.depends("selected", watch=True)
-    def _data_pane_update_selection(self):
+    def _data_pane_update_selection(self) -> None:
         if len(self.table.selection) != len(self.selected):
             self.table.selection = []
             self.table.value = self.data.iloc[self.selected]
 
     @param.depends("labels", watch=True)
-    def _update_labels(self):
+    def _update_labels(self) -> None:
         self.data["label"] = self.labels
         if len(self.selected) > 0:
             self.table.value = self.data.iloc[self.selected]
+        else:
+            self.table.value = self.data
