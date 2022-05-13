@@ -5,5 +5,5 @@ setup(
     name="thisnotthat",
     packages=find_packages(),
     version="0.1",
-    install_requires=["bqplot"]
+    install_requires=["bokeh", "panel", "param", "pandas"]
 )
