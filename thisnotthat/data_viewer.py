@@ -7,31 +7,52 @@ import numpy.typing as npt
 from typing import *
 
 class DataPane(pn.reactive.Reactive):
+
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     selected = param.List(default=[], doc="Indices of selected samples")
     data = param.DataFrame(doc="Source data")
 
-    def _get_csv(self) -> BytesIO:
-        return BytesIO(self.table.value.to_csv().encode())
-
-    def _data_pane_update_selected(self, event: param.parameterized.Event) -> None:
-        if len(event.old) == 0:
-            self._base_selection = self.selected
-        if len(event.new) > 0:
-            self.selected = self.table.value.index[event.new].to_list()
-        elif len(event.new) == 0 and len(event.old) > 0:
-            self.selected = self._base_selection
-
-    def __init__(self, labels: npt.ArrayLike, raw_dataframe: pd.DataFrame) -> None:
+    def __init__(
+            self,
+            labels: npt.ArrayLike,
+            raw_dataframe: pd.DataFrame,
+            *,
+            width: int = 600,
+            height: int = 600,
+            tabulator_configuration: dict = {},
+            formatters: dict = {},
+            header_align: Union[dict, str] = "center",
+            hidden_columns: List[str] = [],
+            layout: str = "fit_table_data",
+            frozen_columns: List[str] = [],
+            page_size: int = 20,
+            row_height: int = 30,
+            show_index: bool = True,
+            sorters: List[Dict[str, str]] = [],
+            theme: str = "materialize",
+            widths: Dict[str, int] = {},
+    ) -> None:
         super().__init__()
-        self.data = raw_dataframe.copy()
+        self.data = raw_dataframe.reset_index()
         self.data["label"] = labels
         self._base_selection = []
         self.table = pn.widgets.Tabulator(
             self.data,
             pagination="remote",
-            page_size=20,
-            width=600,
+            page_size=page_size,
+            width=width,
+            height=height,
+            configuration=tabulator_configuration,
+            formatters=formatters,
+            header_align=header_align,
+            hidden_columns=hidden_columns,
+            layout=layout,
+            frozen_columns=frozen_columns,
+            row_height=row_height,
+            show_index=show_index,
+            sorters=sorters,
+            theme=theme,
+            widths=widths,
             selectable="checkbox",
             disabled=True,
         )
@@ -43,6 +64,17 @@ class DataPane(pn.reactive.Reactive):
         )
         self.pane = pn.Column(self.table, self.file_download)
         self.labels = labels
+
+    def _get_csv(self) -> BytesIO:
+        return BytesIO(self.table.value.to_csv().encode())
+
+    def _data_pane_update_selected(self, event: param.parameterized.Event) -> None:
+        if len(event.old) == 0:
+            self._base_selection = self.selected
+        if len(event.new) > 0:
+            self.selected = self.table.value.index[event.new].to_list()
+        elif len(event.new) == 0 and len(event.old) > 0:
+            self.selected = self._base_selection
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)

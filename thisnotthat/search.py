@@ -12,6 +12,35 @@ class SearchPane(pn.reactive.Reactive):
     selected = param.List(default=[], doc="Indices of selected samples")
     data = param.DataFrame(doc="Source data")
 
+    def __init__(self, raw_dataframe: pd.DataFrame) -> None:
+        super().__init__()
+        self.data = raw_dataframe
+        self.query_box = pn.widgets.TextAreaInput(
+            name="Search query",
+            placeholder="Enter search here ...",
+            min_height=64,
+            height=128,
+        )
+        self.query_style_selector = pn.widgets.RadioButtonGroup(
+            name="Query type",
+            options=["String search", "Regex", "Pandas query"],
+            button_type="primary",
+        )
+        self.query_button = pn.widgets.Button(name="Search", button_type="success")
+        self.query_button.on_click(self._run_query)
+        self.columns_to_search = pn.widgets.MultiChoice(
+            name="Columns to search (all if empty)", options=self.data.columns.tolist(),
+        )
+        self.query_style_selector.param.watch(self._query_style_change, "value")
+        self.warning_area = pn.pane.Alert("", alert_type="light")
+        self.pane = pn.WidgetBox(
+            self.query_style_selector,
+            self.query_box,
+            self.query_button,
+            self.columns_to_search,
+            self.warning_area,
+        )
+
     def _query_style_change(self, event: param.parameterized.Event) -> None:
         if event.new == "Pandas query":
             self._saved_col_to_search = self.columns_to_search.value
@@ -76,35 +105,6 @@ class SearchPane(pn.reactive.Reactive):
             except Exception as err:
                 self.warning_area.alert_type = "danger"
                 self.warning_area.object = str(err)
-
-    def __init__(self, raw_dataframe: pd.DataFrame) -> None:
-        super().__init__()
-        self.data = raw_dataframe
-        self.query_box = pn.widgets.TextAreaInput(
-            name="Search query",
-            placeholder="Enter search here ...",
-            min_height=64,
-            height=128,
-        )
-        self.query_style_selector = pn.widgets.RadioButtonGroup(
-            name="Query type",
-            options=["String search", "Regex", "Pandas query"],
-            button_type="primary",
-        )
-        self.query_button = pn.widgets.Button(name="Search", button_type="success")
-        self.query_button.on_click(self._run_query)
-        self.columns_to_search = pn.widgets.MultiChoice(
-            name="Columns to search (all if empty)", options=self.data.columns.tolist(),
-        )
-        self.query_style_selector.param.watch(self._query_style_change, "value")
-        self.warning_area = pn.pane.Alert("", alert_type="light")
-        self.pane = pn.WidgetBox(
-            self.query_style_selector,
-            self.query_box,
-            self.query_button,
-            self.columns_to_search,
-            self.warning_area,
-        )
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)

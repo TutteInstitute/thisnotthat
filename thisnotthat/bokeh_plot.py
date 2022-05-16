@@ -8,27 +8,9 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
+from .utils import _palette_index
+
 from typing import *
-
-# Provide indexing into a list that jumps around a lot
-# ideal for selecting varied colors from a large linear color palette
-def _palette_index(size: int) -> Iterator[int]:
-    step = size
-    current = size - 1
-    used = set([])
-    for i in range(size):
-        used.add(current)
-        yield current
-
-        while current in used:
-            current += step
-            if current >= size:
-                step //= 2
-                current = 0
-            if step == 0:
-                break
-
-    return
 
 
 class BokehPlotPane(pn.reactive.Reactive):
@@ -40,39 +22,79 @@ class BokehPlotPane(pn.reactive.Reactive):
     def _update_selected(self, attr, old, new) -> None:
         self.selected = self.data_source.selected.indices
 
-    def __init__(self, data: npt.ArrayLike, labels: Iterable[str], annotation: Iterable[str]):
+    def __init__(
+        self,
+        data: npt.ArrayLike,
+        labels: Iterable[str],
+        annotation: Optional[Iterable[str]] = None,
+        size: Optional[Iterable[float]] = None,
+        *,
+        label_color_mapping: Optional[Dict[str, str]] = None,
+        palette: Sequence[str] = bokeh.palettes.Turbo256,
+        width: int = 600,
+        height: int = 600,
+        fill_alpha=0.75,
+        line_color="white",
+        line_width=0.25,
+        hover_fill_color="red",
+        hover_line_color="black",
+        hover_line_width=2,
+        selection_fill_alpha=1.0,
+        nonselection_fill_alpha=0.1,
+        nonselection_fill_color="gray",
+    ):
         super().__init__()
         self.data_source = bokeh.models.ColumnDataSource(
-            {"x": np.asarray(data).T[0], "y": np.asarray(data).T[1], "label": labels, "annotation": annotation}
+            {
+                "x": np.asarray(data).T[0],
+                "y": np.asarray(data).T[1],
+                "label": labels,
+                "annotation": annotation if annotation is not None else labels,
+                "size": size if size is not None else np.full(data.shape[0], 0.1)
+            }
         )
         self.data_source.selected.on_change("indices", self._update_selected)
-        self._factor_cmap = bokeh.transform.factor_cmap(
-            "label", palette=bokeh.palettes.Turbo256, factors=list(set(labels))
-        )
-        self.color_mapping = self._factor_cmap["transform"]
-        self.color_mapping.palette = [
-            self.color_mapping.palette[x] for x in _palette_index(256)
-        ]
+        if label_color_mapping is not None:
+            factors = []
+            colors = []
+            for label, color in label_color_mapping:
+                factors.append(label)
+                colors.append(color)
+            self._factor_cmap = bokeh.transform.factor_cmap(
+                "label", palette=colors, factors=factors
+            )
+            self.color_mapping = self._factor_cmap["transform"]
+            self.color_mapping.palette = self.color_mapping.palette + [
+                palette[x] for x in _palette_index(len(palette))
+            ]
+        else:
+            self._factor_cmap = bokeh.transform.factor_cmap(
+                "label", palette=palette, factors=list(set(labels))
+            )
+            self.color_mapping = self._factor_cmap["transform"]
+            self.color_mapping.palette = [
+                self.color_mapping.palette[x] for x in _palette_index(256)
+            ]
 
         self.plot = bokeh.plotting.figure(
-            width=600,
-            height=600,
+            width=width,
+            height=height,
             output_backend="webgl",
             border_fill_color="whitesmoke",
         )
         points = self.plot.circle(
             source=self.data_source,
-            radius=0.1,
-            color=self._factor_cmap,
-            alpha=0.75,
-            line_color="white",
-            line_width=0.25,
-            hover_fill_color="red",
-            hover_line_color="black",
-            hover_line_width=2,
-            selection_fill_alpha=1.0,
-            nonselection_fill_alpha=0.1,
-            nonselection_fill_color="gray",
+            radius="size",
+            fill_color=self._factor_cmap,
+            fill_alpha=fill_alpha,
+            line_color=line_color,
+            line_width=line_width,
+            hover_fill_color=hover_fill_color,
+            hover_line_color=hover_line_color,
+            hover_line_width=hover_line_width,
+            selection_fill_alpha=selection_fill_alpha,
+            nonselection_fill_alpha=nonselection_fill_alpha,
+            nonselection_fill_color=nonselection_fill_color,
             legend_field="label",
         )
         self.plot.add_tools(
@@ -85,7 +107,6 @@ class BokehPlotPane(pn.reactive.Reactive):
         self.plot.ygrid.grid_line_color = None
         self.plot.xaxis.bounds = (0, 0)
         self.plot.yaxis.bounds = (0, 0)
-        #         self.plot.legend.click_policy="mute"
         self.pane = pn.pane.Bokeh(self.plot)
 
         self.labels = pd.Series(labels)
