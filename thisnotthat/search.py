@@ -12,8 +12,8 @@ class SearchPane(pn.reactive.Reactive):
     selected = param.List(default=[], doc="Indices of selected samples")
     data = param.DataFrame(doc="Source data")
 
-    def __init__(self, raw_dataframe: pd.DataFrame) -> None:
-        super().__init__()
+    def __init__(self, raw_dataframe: pd.DataFrame, *, name: str = "Search") -> None:
+        super().__init__(name=name)
         if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
             self.data = raw_dataframe
         else:

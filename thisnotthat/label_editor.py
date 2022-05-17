@@ -30,8 +30,9 @@ class LegendPane(pn.reactive.Reactive):
         label_max_width: int = 225,
         label_min_width: int = 125,
         label_margin: Sequence[int] = [0, 0],
+        name: str = "Editable Legend",
     ) -> None:
-        super().__init__()
+        super().__init__(name=name)
         self.label_set = set(np.unique(labels))
         self.color_factors = factors
         self.color_palette = (
@@ -130,8 +131,9 @@ class NewLabelButton(pn.reactive.Reactive):
         *,
         button_type: str = "success",
         button_text: str = "New Label",
+        name: str = "New Label",
     ) -> None:
-        super().__init__()
+        super().__init__(name=name)
         self.label_count = 1
         self.pane = pn.Column(
             pn.widgets.Button(name=button_text, button_type=button_type)
@@ -189,8 +191,9 @@ class LabelEditorPane(pn.reactive.Reactive):
         label_margin: Sequence[int] = [0, 0],
         newlabel_button_type: str = "success",
         newlabel_button_text: str = "New Label",
+        name: str = "Label Editor",
     ) -> None:
-        super().__init__()
+        super().__init__(name=name)
         self.legend = LegendPane(
             labels,
             color_factors,
