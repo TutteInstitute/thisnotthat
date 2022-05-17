@@ -2,6 +2,8 @@ import panel as pn
 import param
 import pandas as pd
 
+from typing import *
+
 class InformationPane(pn.reactive.Reactive):
 
     selected = param.List(default=[], doc="Indices of selected samples")
@@ -15,13 +17,27 @@ class InformationPane(pn.reactive.Reactive):
             width: int = 200,
             height: int = 600,
             placeholder_text: str = "<center> ... nothing selected ...",
+            dedent: bool = False,
+            disable_math: bool = False,
+            extensions: List[str] = ["extra", "smarty", "codehilite"],
+            style: dict = {},
+            margin: List[int] = [5, 5],
             name: str = "Information",
     ):
         super().__init__(name=name)
         self.data = raw_dataframe
         self.markdown_template = markdown_template
         self.placeholder_text = placeholder_text
-        self.pane = pn.pane.Markdown(self.placeholder_text, width=width, height=height)
+        self.pane = pn.pane.Markdown(
+            self.placeholder_text,
+            width=width,
+            height=height,
+            margin=margin,
+            dedent=dedent,
+            diable_math=disable_math,
+            extensions=extensions,
+            style=style,
+        )
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
@@ -31,13 +47,10 @@ class InformationPane(pn.reactive.Reactive):
         if len(self.selected) == 0:
             self.pane.object = self.placeholder_text
         else:
-            try:
-                substitution_dict = {
-                    col: self.data[col].iloc[self.selected[-1]]
-                    for col in self.data.columns
-                }
-                self.pane.object = self.markdown_template.format(
-                    **substitution_dict
-                )
-            except Exception as err:
-                self.pane.object = err
+            substitution_dict = {
+                col: self.data[col].iloc[self.selected[-1]]
+                for col in self.data.columns
+            }
+            self.pane.object = self.markdown_template.format(
+                **substitution_dict
+            )
