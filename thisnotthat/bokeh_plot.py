@@ -84,7 +84,11 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             output_backend="webgl",
             border_fill_color="whitesmoke",
         )
-        if show_legend and legend_location != "outside":
+        if show_legend:
+            if legend_location == "outside":
+                self._legend = bokeh.models.Legend()
+                self.plot.add_layout(self._legend, "right")
+
             self.points = self.plot.circle(
                 source=self.data_source,
                 radius="size",
@@ -100,38 +104,21 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 nonselection_fill_color=nonselection_fill_color,
                 legend_field="label",
             )
-        elif show_legend and legend_location == "outside":
-            self.points = self.plot.circle(
-                source=self.data_source,
-                radius="size",
-                fill_color=self._factor_cmap,
-                fill_alpha=fill_alpha,
-                line_color=line_color,
-                line_width=line_width,
-                hover_fill_color=hover_fill_color,
-                hover_line_color=hover_line_color,
-                hover_line_width=hover_line_width,
-                selection_fill_alpha=selection_fill_alpha,
-                nonselection_fill_alpha=nonselection_fill_alpha,
-                nonselection_fill_color=nonselection_fill_color,
-            )
-        elif not show_legend:
-            self.points = self.plot.circle(
-                source=self.data_source,
-                radius="size",
-                fill_color=self._factor_cmap,
-                fill_alpha=fill_alpha,
-                line_color=line_color,
-                line_width=line_width,
-                hover_fill_color=hover_fill_color,
-                hover_line_color=hover_line_color,
-                hover_line_width=hover_line_width,
-                selection_fill_alpha=selection_fill_alpha,
-                nonselection_fill_alpha=nonselection_fill_alpha,
-                nonselection_fill_color=nonselection_fill_color,
-            )
         else:
-            raise ValueError("Something has gone very wrong with legend settings ...")
+            self.points = self.plot.circle(
+                source=self.data_source,
+                radius="size",
+                fill_color=self._factor_cmap,
+                fill_alpha=fill_alpha,
+                line_color=line_color,
+                line_width=line_width,
+                hover_fill_color=hover_fill_color,
+                hover_line_color=hover_line_color,
+                hover_line_width=hover_line_width,
+                selection_fill_alpha=selection_fill_alpha,
+                nonselection_fill_alpha=nonselection_fill_alpha,
+                nonselection_fill_color=nonselection_fill_color,
+            )
 
         self.plot.add_tools(
             bokeh.models.HoverTool(
