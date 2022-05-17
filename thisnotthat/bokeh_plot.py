@@ -135,7 +135,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self.plot.add_tools(
             bokeh.models.HoverTool(
-                tooltips=[("text", "@annotation")], renderers=[points]
+                tooltips=[("text", "@annotation")], renderers=[self.points]
             )
         )
         self.plot.add_tools(bokeh.models.LassoSelectTool())
