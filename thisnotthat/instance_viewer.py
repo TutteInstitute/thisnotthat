@@ -15,7 +15,8 @@ class InformationPane(pn.reactive.Reactive):
             width: int = 200,
             height: int = 600,
             placeholder_text: str = "<center> ... nothing selected ..."
-    )
+    ):
+        super().__init__()
         self.data = raw_dataframe
         self.markdown_template = markdown_template
         self.placeholder_text = placeholder_text
