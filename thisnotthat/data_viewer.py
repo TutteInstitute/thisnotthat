@@ -63,7 +63,7 @@ class DataPane(pn.reactive.Reactive):
             filename="data.csv", callback=self._get_csv, button_type="primary"
         )
         self.pane = pn.Column(self.table, self.file_download)
-        self.labels = labels
+        self.labels = pd.Series(labels)
 
     def _get_csv(self) -> BytesIO:
         return BytesIO(self.table.value.to_csv().encode())
