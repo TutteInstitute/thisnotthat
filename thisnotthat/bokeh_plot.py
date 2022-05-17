@@ -33,17 +33,24 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         palette: Sequence[str] = bokeh.palettes.Turbo256,
         width: int = 600,
         height: int = 600,
-        fill_alpha=0.75,
-        line_color="white",
-        line_width=0.25,
-        hover_fill_color="red",
-        hover_line_color="black",
-        hover_line_width=2,
-        selection_fill_alpha=1.0,
-        nonselection_fill_alpha=0.1,
-        nonselection_fill_color="gray",
-        show_legend=True,
-        legend_location="outside",
+        max_point_size: Optional[float] = None,
+        min_point_size: Optional[float] = None,
+        fill_alpha: float = 0.75,
+        line_color: str = "white",
+        line_width: float = 0.25,
+        hover_fill_color: str = "red",
+        hover_line_color: str = "black",
+        hover_line_width: float = 2,
+        selection_fill_alpha: float = 1.0,
+        nonselection_fill_alpha: float = 0.1,
+        nonselection_fill_color: str = "gray",
+        background_fill_color: str = "#ffffff",
+        border_fill_color: str = "whitesmoke",
+        toolbar_location: str = "above",
+        title: Optional[str] = None,
+        title_location: str = "above",
+        show_legend: bool = True,
+        legend_location: str = "outside",
     ):
         super().__init__()
         self.data_source = bokeh.models.ColumnDataSource(
@@ -52,7 +59,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "y": np.asarray(data).T[1],
                 "label": labels,
                 "annotation": annotation if annotation is not None else labels,
-                "size": size if size is not None else np.full(data.shape[0], 0.1)
+                "size": size if size is not None else np.full(data.shape[0], 0.1),
+                "apparent_size": size
+                if size is not None
+                else np.full(data.shape[0], 0.1),
             }
         )
         self.data_source.selected.on_change("indices", self._update_selected)
@@ -82,11 +92,16 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             width=width,
             height=height,
             output_backend="webgl",
-            border_fill_color="whitesmoke",
+            background_fill_color=background_fill_color,
+            border_fill_color=border_fill_color,
+            toolbar_location=toolbar_location,
+            tools="pan,wheel_zoom,lasso_select,save,reset,help",
+            title=title,
+            title_location=title_location,
         )
         if show_legend:
             if legend_location == "outside":
-                self._legend = bokeh.models.Legend()
+                self._legend = bokeh.models.Legend(location="center")
                 self.plot.add_layout(self._legend, "right")
 
             self.points = self.plot.circle(
@@ -120,12 +135,37 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 nonselection_fill_color=nonselection_fill_color,
             )
 
+        if max_point_size is not None or min_point_size is not None:
+            if max_point_size is None:
+                max_point_size = 1.0e6
+            elif min_point_size is None:
+                min_point_size = 0.0
+            circle_resize_callback = bokeh.models.callbacks.CustomJS(
+                args=dict(source=self.data_source),
+                code="""
+            const scale = cb_obj.end - cb_obj.start;
+            const size = source.data["size"];
+            const apparent_size = source.data["apparent_size"];
+            for (var i = 0; i < size.length; i++) {
+                if ((size[i] / scale) > %f) {
+                    apparent_size[i] = %f * scale;
+                } else if ((size[i] / scale) < %f) {
+                    apparent_size[i] = %f * scale;
+                } else {
+                    apparent_size[i] = size[i];
+                }
+            }
+            source.change.emit();
+            """
+                % (max_point_size, max_point_size, min_point_size, min_point_size),
+            )
+            self.plot.x_range.js_on_change("start", circle_resize_callback)
+
         self.plot.add_tools(
             bokeh.models.HoverTool(
                 tooltips=[("text", "@annotation")], renderers=[self.points]
             )
         )
-        self.plot.add_tools(bokeh.models.LassoSelectTool())
         self.plot.xgrid.grid_line_color = None
         self.plot.ygrid.grid_line_color = None
         self.plot.xaxis.bounds = (0, 0)
