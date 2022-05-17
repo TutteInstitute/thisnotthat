@@ -34,7 +34,7 @@ class DataPane(pn.reactive.Reactive):
             widths: Dict[str, int] = {},
             name: str = "Data Table",
     ) -> None:
-        super().__init__()
+        super().__init__(name=name)
         if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
             self.data = raw_dataframe.copy()
         else:
@@ -69,7 +69,6 @@ class DataPane(pn.reactive.Reactive):
         )
         self.pane = pn.Column(self.table, self.file_download)
         self.labels = pd.Series(labels)
-        self.name = name
 
     def _get_csv(self) -> BytesIO:
         return BytesIO(self.table.value.to_csv().encode())
