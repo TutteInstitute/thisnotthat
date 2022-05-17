@@ -33,8 +33,8 @@ class InformationPane(pn.reactive.Reactive):
         else:
             try:
                 substitution_dict = {
-                    col: self.dataframe[col].iloc[self.selected[-1]]
-                    for col in self.dataframe.columns
+                    col: self.data[col].iloc[self.selected[-1]]
+                    for col in self.data.columns
                 }
                 self.pane.object = self.markdown_template.format(
                     **substitution_dict
