@@ -23,7 +23,7 @@ class DataPane(pn.reactive.Reactive):
             formatters: dict = {},
             header_align: Union[dict, str] = "center",
             hidden_columns: List[str] = [],
-            layout: str = "fit_table_data",
+            layout: str = "fit_data_table",
             frozen_columns: List[str] = [],
             page_size: int = 20,
             row_height: int = 30,
