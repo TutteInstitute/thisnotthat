@@ -106,7 +106,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
             self.points = self.plot.circle(
                 source=self.data_source,
-                radius="size",
+                radius="apparent_size",
                 fill_color=self._factor_cmap,
                 fill_alpha=fill_alpha,
                 line_color=line_color,
@@ -125,7 +125,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         else:
             self.points = self.plot.circle(
                 source=self.data_source,
-                radius="size",
+                radius="apparent_size",
                 fill_color=self._factor_cmap,
                 fill_alpha=fill_alpha,
                 line_color=line_color,
