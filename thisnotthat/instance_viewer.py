@@ -31,10 +31,13 @@ class InformationPane(pn.reactive.Reactive):
         if len(self.selected) == 0:
             self.pane.object = self.placeholder_text
         else:
-            substitution_dict = {
-                col: self.dataframe[col].iloc[self.selected[-1]]
-                for col in self.dataframe.columns
-            }
-            self.pane.object = self.markdown_template.format(
-                **substitution_dict
-            )
+            try:
+                substitution_dict = {
+                    col: self.dataframe[col].iloc[self.selected[-1]]
+                    for col in self.dataframe.columns
+                }
+                self.pane.object = self.markdown_template.format(
+                    **substitution_dict
+                )
+            except Exception as err:
+                self.pane.object = err
