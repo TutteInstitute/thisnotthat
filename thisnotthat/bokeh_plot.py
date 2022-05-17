@@ -51,8 +51,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         title_location: str = "above",
         show_legend: bool = True,
         legend_location: str = "outside",
+        name: str = "Plot",
     ):
         super().__init__()
+        self.name = name
         self.data_source = bokeh.models.ColumnDataSource(
             {
                 "x": np.asarray(data).T[0],

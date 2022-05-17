@@ -14,7 +14,11 @@ class SearchPane(pn.reactive.Reactive):
 
     def __init__(self, raw_dataframe: pd.DataFrame) -> None:
         super().__init__()
-        self.data = raw_dataframe
+        if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
+            self.data = raw_dataframe
+        else:
+            self.data = raw_dataframe.reset_index()
+
         self.query_box = pn.widgets.TextAreaInput(
             name="Search query",
             placeholder="Enter search here ...",

@@ -2,6 +2,7 @@ import panel as pn
 import param
 import pandas as pd
 from io import BytesIO
+import numpy as np
 import numpy.typing as npt
 
 from typing import *
@@ -31,9 +32,13 @@ class DataPane(pn.reactive.Reactive):
             sorters: List[Dict[str, str]] = [],
             theme: str = "materialize",
             widths: Dict[str, int] = {},
+            name: str = "Data Table",
     ) -> None:
         super().__init__()
-        self.data = raw_dataframe.reset_index()
+        if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
+            self.data = raw_dataframe.copy()
+        else:
+            self.data = raw_dataframe.reset_index()
         self.data["label"] = labels
         self._base_selection = []
         self.table = pn.widgets.Tabulator(
@@ -64,6 +69,7 @@ class DataPane(pn.reactive.Reactive):
         )
         self.pane = pn.Column(self.table, self.file_download)
         self.labels = pd.Series(labels)
+        self.name = name
 
     def _get_csv(self) -> BytesIO:
         return BytesIO(self.table.value.to_csv().encode())
