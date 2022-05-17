@@ -119,6 +119,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 nonselection_fill_color=nonselection_fill_color,
                 legend_field="label",
             )
+
+            if legend_location != "outside":
+                self.plot.legend.location = legend_location
         else:
             self.points = self.plot.circle(
                 source=self.data_source,
