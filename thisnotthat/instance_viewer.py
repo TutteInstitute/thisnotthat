@@ -14,9 +14,10 @@ class InformationPane(pn.reactive.Reactive):
             *,
             width: int = 200,
             height: int = 600,
-            placeholder_text: str = "<center> ... nothing selected ..."
+            placeholder_text: str = "<center> ... nothing selected ...",
+            name: str = "Information",
     ):
-        super().__init__()
+        super().__init__(name=name)
         self.data = raw_dataframe
         self.markdown_template = markdown_template
         self.placeholder_text = placeholder_text
@@ -35,5 +36,5 @@ class InformationPane(pn.reactive.Reactive):
                 for col in self.dataframe.columns
             }
             self.pane.object = self.markdown_template.format(
-                substitution_dict
+                **substitution_dict
             )
