@@ -13,7 +13,7 @@ from .utils import _palette_index
 from typing import *
 
 
-class PyDeckPane(pn.viewable.Viewer, pn.reactive.Reactive):
+class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     labels = param.Series(doc="Labels")
     color_palette = param.List([], item_type=str, doc="Color palette")
     color_factors = param.List([], item_type=str, doc="Color palette")
