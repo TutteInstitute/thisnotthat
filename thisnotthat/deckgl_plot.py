@@ -12,6 +12,10 @@ from .utils import _palette_index
 
 from typing import *
 
+BRUSH_ON_MESSAGE = "Brush is **on**. Left-click to stop brushing."
+BRUSH_OFF_MESSAGE = "Brush currently **off**. Left-click to enable the brush and start brushing"
+ERASER_ON_MESSAGE = "Eraser is **on**. Left-click to stop erasing."
+ERASER_OFF_MESSAGE = "Eraser currently **off**. Left-click to enable the eraser and start erasing"
 
 class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     labels = param.Series(doc="Labels")
@@ -216,24 +220,24 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             if self._brushing_on:
                 self._brushing_on = False
                 self.select_message.visible = True
-                self.select_message.alert_type = "default"
-                self.select_message.object = "Brush currently off. Left-click to enable the brush and start brushing"
+                self.select_message.alert_type = "primary"
+                self.select_message.object = BRUSH_OFF_MESSAGE
             else:
                 self._brushing_on = True
                 self.select_message.visible = True
                 self.select_message.alert_type = "success"
-                self.select_message.object = "Brush is *on*. Left-click to stop brushing."
+                self.select_message.object = BRUSH_ON_MESSAGE
         elif self.select_method.value == "Brush-Erase":
             if self._brushing_on:
                 self._brushing_on = False
                 self.select_message.visible = True
-                self.select_message.alert_type = "default"
-                self.select_message.object = "Eraser currently off. Left-click to enable the eraser and start erasing"
+                self.select_message.alert_type = "primary"
+                self.select_message.object = ERASER_OFF_MESSAGE
             else:
                 self._brushing_on = True
                 self.select_message.visible = True
                 self.select_message.alert_type = "success"
-                self.select_message.object = "Eraser is *on*. Left-click to stop erasing."
+                self.select_message.object = ERASER_ON_MESSAGE
 
     def _change_selection_type(self, event):
         if event.new == "Reset":
@@ -242,13 +246,13 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         elif event.new == "Brush":
             self._brushing_on = False
             self.select_message.visible = True
-            self.select_message.alert_type = "default"
-            self.select_message.object = "Brush currently off. Left-click to enable the brush and start brushing"
+            self.select_message.alert_type = "primary"
+            self.select_message.object = BRUSH_OFF_MESSAGE
         elif event.new == "Brush-Erase":
             self._brushing_on = False
             self.select_message.visible = True
-            self.select_message.alert_type = "default"
-            self.select_message.object = "Eraser currently off. Left-click to enable the eraser and start erasing"
+            self.select_message.alert_type = "primary"
+            self.select_message.object = ERASER_OFF_MESSAGE
         else:
             self.select_message.visible = False
 
