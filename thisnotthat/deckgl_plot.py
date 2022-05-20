@@ -75,7 +75,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.color_mapping = {
             label: (
                 [int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int]
-            )  # TODO: optional opacity
+            )
             for label, color in zip(base_color_factors, base_color_palette)
         }
 
@@ -159,7 +159,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.points["data"] = self.dataframe
         self.pane_deck.param.trigger("object")
         self.pane_deck.param.watch(
-            self._update_selected, "click_state", only_changed=True
+            self._update_selected, "click_state", onlychanged=True
         )
         self.pane_deck.param.watch(self._hover_select, "hover_state")
 
@@ -237,8 +237,8 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _update_palette(self):
         self.color_mapping = {
             label: (
-                [int(c * 255) for c in to_rgb(color)] + []
-            )  # TODO: optional opacity
+                [int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int]
+            )
             for label, color in zip(self.color_factors, self.color_palette)
         }
         self._remap_colors()
@@ -247,7 +247,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _update_factors(self):
         self.color_mapping = {
             label: (
-                [int(c * 255) for c in to_rgb(color)] + [190]
+                [int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int]
             )  # TODO: optional opacity
             for label, color in zip(self.color_factors, self.color_palette)
         }
