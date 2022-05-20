@@ -40,6 +40,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         fill_alpha: float = 0.75,
         line_color: str = "white",
         hover_fill_color: str = "red",
+        background_fill_color: str = "#ffffff",
         selection_fill_alpha: float = 1.0,
         nonselection_fill_alpha: float = 0.1,
         nonselection_fill_color: str = "gray",
@@ -117,7 +118,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             "layers": [self.points],
             "mapStyle": "",
             "views": [{"@@type": "OrthographicView", "controller": True}],
-            "getTooltip": "@@=annotation",
+            "parameters": {"clearColor": [x for x in to_rgb(background_fill_color)] + [1.0]}
         }
         self.select_method = pn.widgets.RadioButtonGroup(
             name="Selection Method",
