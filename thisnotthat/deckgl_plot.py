@@ -91,6 +91,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self._update_selected_set_flag = True
         self._nn_index = NearestNeighbors().fit(data)
         self._brushing_on = False
+        self._color_map_in_selection_mode = False
 
         self.points = {
             "@@type": "ScatterplotLayer",
@@ -261,21 +262,25 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.dataframe["color"] = [self._nonselection_fill_color] * len(
                 self.dataframe
             )
-            if self.color_mapping.values()[0][3] != self._selection_fill_alpha_int:
+            if not self._color_map_in_selection_mode:
                 self.color_mapping = {
                     key: color[:3] + [self._selection_fill_alpha_int]
                     for key, color in self.color_mapping.items()
                 }
+                self._color_map_in_selection_mode = True
+
             self.dataframe.iloc[
                 self.selected, self._color_loc
             ] = self.dataframe.label.iloc[self.selected].map(self.color_mapping)
             self.points["data"] = self.dataframe
         else:
-            if self.color_mapping.values()[0][3] != self._fill_alpha_int:
+            if self._color_map_in_selection_mode:
                 self.color_mapping = {
                     key: color[:3] + [self._fill_alpha_int]
                     for key, color in self.color_mapping.items()
                 }
+                self._color_map_in_selection_mode = False
+
             self.dataframe["color"] = self.dataframe.label.map(self.color_mapping)
             self.points["data"] = self.dataframe
 
