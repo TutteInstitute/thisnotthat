@@ -34,7 +34,7 @@ class InformationPane(pn.reactive.Reactive):
             height=height,
             margin=margin,
             dedent=dedent,
-            diable_math=disable_math,
+            disable_math=disable_math,
             extensions=extensions,
             style=style,
         )

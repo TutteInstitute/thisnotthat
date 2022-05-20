@@ -30,7 +30,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         palette: Sequence[str] = bokeh.palettes.Turbo256,
         width: int = 600,
         height: int = 600,
-        selection_paint_radius=0.5,
+        selection_brush_radius=0.5,
         max_point_size: Optional[float] = None,
         min_point_size: Optional[float] = None,
         fill_alpha: float = 0.75,
@@ -80,12 +80,13 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         }
 
         self.dataframe["color"] = self.dataframe.label.map(self.color_mapping)
-        self.paint_radius = selection_paint_radius
+        self.brush_radius = selection_brush_radius
 
         self._color_loc = self.dataframe.columns.get_loc("color")
         self._selected_set = set([])
         self._update_selected_set_flag = True
         self._nn_index = NearestNeighbors().fit(data)
+        self._brushing_on = False
 
         self.points = {
             "@@type": "ScatterplotLayer",
@@ -136,6 +137,12 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.select_method.param.watch(
             self._change_selection_type, "value", onlychanged=True
         )
+        self.select_message = pn.pane.Alert(
+            "",
+            alert_type="default",
+            sizing_mode="stretch_width",
+            visible=False,
+        )
         self.pane_deck = pn.pane.DeckGL(
             self.deck,
             sizing_mode="stretch_width",
@@ -163,7 +170,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         )
         self.pane_deck.param.watch(self._hover_select, "hover_state")
 
-        self.pane = pn.Column(self.select_controls, self.title, self.pane_deck)
+        self.pane = pn.Column(self.select_controls, self.select_message, self.title, self.pane_deck)
         self.select_controls.visible = show_selection_controls
         self.title.visible = title is not None
         self.labels = pd.Series(labels)
@@ -178,7 +185,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if self.select_method.value == "Brush":
             neighbors = self._nn_index.radius_neighbors(
                 [event.new["coordinate"]],
-                radius=self.paint_radius,
+                radius=self.brush_radius,
                 return_distance=False,
             )
             self._selected_set.update(neighbors[0])
@@ -186,7 +193,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         elif self.select_method.value == "Brush-Erase":
             neighbors = self._nn_index.radius_neighbors(
                 [event.new["coordinate"]],
-                radius=self.paint_radius,
+                radius=self.brush_radius,
                 return_distance=False,
             )
             self._selected_set.difference_update(neighbors[0])
@@ -205,29 +212,66 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._update_selected_set_flag = False
                 self.selected = list(self._selected_set)
                 self._update_selected_set_flag = True
+        elif self.select_method.value == "Brush":
+            if self._brushing_on:
+                self._brushing_on = False
+                self.select_message.visible = True
+                self.select_message.alert_type = "default"
+                self.select_message.object = "Brush currently off. Left-click to enable the brush and start brushing"
+            else:
+                self._brushing_on = True
+                self.select_message.visible = True
+                self.select_message.alert_type = "success"
+                self.select_message.object = "Brush is *on*. Left-click to stop brushing."
+        elif self.select_method.value == "Brush-Erase":
+            if self._brushing_on:
+                self._brushing_on = False
+                self.select_message.visible = True
+                self.select_message.alert_type = "default"
+                self.select_message.object = "Eraser currently off. Left-click to enable the eraser and start erasing"
+            else:
+                self._brushing_on = True
+                self.select_message.visible = True
+                self.select_message.alert_type = "success"
+                self.select_message.object = "Eraser is *on*. Left-click to stop erasing."
 
     def _change_selection_type(self, event):
         if event.new == "Reset":
+            self.select_message.visible = False
             self.selected = []
+        elif event.new == "Brush":
+            self._brushing_on = False
+            self.select_message.visible = True
+            self.select_message.alert_type = "default"
+            self.select_message.object = "Brush currently off. Left-click to enable the brush and start brushing"
+        elif event.new == "Brush-Erase":
+            self._brushing_on = False
+            self.select_message.visible = True
+            self.select_message.alert_type = "default"
+            self.select_message.object = "Eraser currently off. Left-click to enable the eraser and start erasing"
+        else:
+            self.select_message.visible = False
 
     def _remap_colors(self):
         if len(self.selected) > 0:
             self.dataframe["color"] = [self._nonselection_fill_color] * len(
                 self.dataframe
             )
-            self.color_mapping = {
-                key: color[:3] + [self._selection_fill_alpha_int]
-                for key, color in self.color_mapping
-            }
+            if self.color_mappingvalues()[0][3] != self._selection_fill_alpha_int:
+                self.color_mapping = {
+                    key: color[:3] + [self._selection_fill_alpha_int]
+                    for key, color in self.color_mapping.items()
+                }
             self.dataframe.iloc[
                 self.selected, self._color_loc
             ] = self.dataframe.label.iloc[self.selected].map(self.color_mapping)
-            self.color_mapping = {
-                key: color[:3] + [self._fill_alpha_int]
-                for key, color in self.color_mapping
-            }
             self.points["data"] = self.dataframe
         else:
+            if self.color_mappingvalues()[0][3] != self._fill_alpha_int:
+                self.color_mapping = {
+                    key: color[:3] + [self._fill_alpha_int]
+                    for key, color in self.color_mapping.items()
+                }
             self.dataframe["color"] = self.dataframe.label.map(self.color_mapping)
             self.points["data"] = self.dataframe
 
