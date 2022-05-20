@@ -143,7 +143,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         )
         self.select_message = pn.pane.Alert(
             "",
-            alert_type="default",
+            alert_type="primary",
             sizing_mode="stretch_width",
             visible=False,
         )
