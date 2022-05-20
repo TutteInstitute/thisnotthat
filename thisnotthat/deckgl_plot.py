@@ -261,7 +261,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.dataframe["color"] = [self._nonselection_fill_color] * len(
                 self.dataframe
             )
-            if self.color_mappingvalues()[0][3] != self._selection_fill_alpha_int:
+            if self.color_mapping.values()[0][3] != self._selection_fill_alpha_int:
                 self.color_mapping = {
                     key: color[:3] + [self._selection_fill_alpha_int]
                     for key, color in self.color_mapping.items()
@@ -271,7 +271,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             ] = self.dataframe.label.iloc[self.selected].map(self.color_mapping)
             self.points["data"] = self.dataframe
         else:
-            if self.color_mappingvalues()[0][3] != self._fill_alpha_int:
+            if self.color_mapping.values()[0][3] != self._fill_alpha_int:
                 self.color_mapping = {
                     key: color[:3] + [self._fill_alpha_int]
                     for key, color in self.color_mapping.items()
