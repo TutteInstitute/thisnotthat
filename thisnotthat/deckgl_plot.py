@@ -13,9 +13,16 @@ from .utils import _palette_index
 from typing import *
 
 BRUSH_ON_MESSAGE = "Brush is **on**. Left-click to stop brushing."
-BRUSH_OFF_MESSAGE = "Brush currently **off**. Left-click to enable the brush and start brushing"
+BRUSH_OFF_MESSAGE = (
+    "Brush currently **off**. Left-click to enable the brush and start brushing"
+)
 ERASER_ON_MESSAGE = "Eraser is **on**. Left-click to stop erasing."
-ERASER_OFF_MESSAGE = "Eraser currently **off**. Left-click to enable the eraser and start erasing"
+ERASER_OFF_MESSAGE = (
+    "Eraser currently **off**. Left-click to enable the eraser and start erasing"
+)
+
+MAGIC_ZOOM_CONSTANT = 8.720671786825559
+
 
 class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     labels = param.Series(doc="Labels")
@@ -78,9 +85,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             base_color_factors = list(set(labels))
 
         self.color_mapping = {
-            label: (
-                [int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int]
-            )
+            label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
             for label, color in zip(base_color_factors, base_color_palette)
         }
 
@@ -89,7 +94,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self._color_loc = self.dataframe.columns.get_loc("color")
         self._selected_set = set([])
-        self._update_selected_set_flag = True
+        self._selected_externally_changed = True
         self._nn_index = NearestNeighbors().fit(data)
         self._brushing_on = False
         self._color_map_in_selection_mode = False
@@ -112,13 +117,22 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             "radiusMinPixels": min_point_size if min_point_size is not None else 0.5,
             "radiusMaxPixels": max_point_size if max_point_size is not None else 32,
         }
-        # TODO: calculate a good initial view state
+        view_center = np.mean(data, axis=0)
+        view_size = max(
+            np.max(data.T[0]) - np.min(data.T[0]), np.max(data.T[1]) - np.min(data.T[1])
+        )
+        zoom = MAGIC_ZOOM_CONSTANT - np.log2(view_size)
         self.deck = {
-            "initialViewState": {"zoom": 4},
+            "initialViewState": {
+                "zoom": zoom,
+                "target": [view_center[0], view_center[1]],
+            },
             "layers": [self.points],
             "mapStyle": "",
             "views": [{"@@type": "OrthographicView", "controller": True}],
-            "parameters": {"clearColor": [x for x in to_rgb(background_fill_color)] + [1.0]}
+            "parameters": {
+                "clearColor": [x for x in to_rgb(background_fill_color)] + [1.0]
+            },
         }
         self.select_method = pn.widgets.RadioButtonGroup(
             name="Selection Method",
@@ -144,10 +158,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self._change_selection_type, "value", onlychanged=True
         )
         self.select_message = pn.pane.Alert(
-            "",
-            alert_type="primary",
-            sizing_mode="stretch_width",
-            visible=False,
+            "", alert_type="primary", sizing_mode="stretch_width", visible=False,
         )
         self.pane_deck = pn.pane.DeckGL(
             self.deck,
@@ -172,11 +183,13 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.points["data"] = self.dataframe
         self.pane_deck.param.trigger("object")
         self.pane_deck.param.watch(
-            self._update_selected, "click_state", onlychanged=True
+            self._click_event_handler, "click_state", onlychanged=True
         )
-        self.pane_deck.param.watch(self._hover_select, "hover_state")
+        self.pane_deck.param.watch(self._hover_event_handler, "hover_state")
 
-        self.pane = pn.Column(self.select_controls, self.select_message, self.title, self.pane_deck)
+        self.pane = pn.Column(
+            self.select_controls, self.select_message, self.title, self.pane_deck
+        )
         self.select_controls.visible = show_selection_controls
         self.title.visible = title is not None
         self.labels = pd.Series(labels)
@@ -187,27 +200,33 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
 
-    def _hover_select(self, event):
+    def _hover_event_handler(self, event):
         if self.select_method.value == "Brush":
-            neighbors = self._nn_index.radius_neighbors(
-                [event.new["coordinate"]],
-                radius=self.brush_radius,
-                return_distance=False,
-            )
-            self._selected_set.update(neighbors[0])
-            self.selected = list(self._selected_set)
+            if self._brushing_on:
+                neighbors = self._nn_index.radius_neighbors(
+                    [event.new["coordinate"]],
+                    radius=self.brush_radius,
+                    return_distance=False,
+                )
+                self._selected_set.update(neighbors[0])
+                self._remap_colors(list(self._selected_set))
+                self._selected_externally_changed = False
+                self.selected = list(self._selected_set)
+                self._selected_externally_changed = True
         elif self.select_method.value == "Brush-Erase":
-            neighbors = self._nn_index.radius_neighbors(
-                [event.new["coordinate"]],
-                radius=self.brush_radius,
-                return_distance=False,
-            )
-            self._selected_set.difference_update(neighbors[0])
-            self._update_selected_set_flag = False
-            self.selected = list(self._selected_set)
-            self._update_selected_set_flag = True
+            if self._brushing_on:
+                neighbors = self._nn_index.radius_neighbors(
+                    [event.new["coordinate"]],
+                    radius=self.brush_radius,
+                    return_distance=False,
+                )
+                self._selected_set.difference_update(neighbors[0])
+                self._remap_colors(list(self._selected_set))
+                self._selected_externally_changed = False
+                self.selected = list(self._selected_set)
+                self._selected_externally_changed = True
 
-    def _update_selected(self, event):
+    def _click_event_handler(self, event):
         if self.select_method.value == "Click":
             if event.new["layer"] == "ScatterplotLayer":
                 if event.new["index"] not in self._selected_set:
@@ -215,9 +234,9 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 else:
                     self._selected_set.discard(event.new["index"])
 
-                self._update_selected_set_flag = False
+                self._selected_externally_changed = False
                 self.selected = list(self._selected_set)
-                self._update_selected_set_flag = True
+                self._selected_externally_changed = True
         elif self.select_method.value == "Brush":
             if self._brushing_on:
                 self._brushing_on = False
@@ -245,21 +264,27 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if event.new == "Reset":
             self.select_message.visible = False
             self.selected = []
+            self.pane_deck.throttle = {"view": 200, "hover": 200}
         elif event.new == "Brush":
             self._brushing_on = False
             self.select_message.visible = True
             self.select_message.alert_type = "primary"
             self.select_message.object = BRUSH_OFF_MESSAGE
+            self.pane_deck.throttle = {"view": 200, "hover": 5}
         elif event.new == "Brush-Erase":
             self._brushing_on = False
             self.select_message.visible = True
             self.select_message.alert_type = "primary"
             self.select_message.object = ERASER_OFF_MESSAGE
+            self.pane_deck.throttle = {"view": 200, "hover": 5}
         else:
             self.select_message.visible = False
+            self.pane_deck.throttle = {"view": 200, "hover": 200}
 
-    def _remap_colors(self):
-        if len(self.selected) > 0:
+    def _remap_colors(self, selected=None):
+        if selected is None:
+            return
+        elif len(selected) > 0:
             self.dataframe["color"] = [self._nonselection_fill_color] * len(
                 self.dataframe
             )
@@ -272,7 +297,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
             self.dataframe.iloc[
                 self.selected, self._color_loc
-            ] = self.dataframe.label.iloc[self.selected].map(self.color_mapping)
+            ] = self.dataframe.label.iloc[selected].map(self.color_mapping)
             self.points["data"] = self.dataframe
         else:
             if self._color_map_in_selection_mode:
@@ -290,31 +315,26 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @param.depends("color_palette", watch=True)
     def _update_palette(self):
         self.color_mapping = {
-            label: (
-                [int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int]
-            )
+            label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
             for label, color in zip(self.color_factors, self.color_palette)
         }
-        self._remap_colors()
+        self._remap_colors(self.selected)
 
     @param.depends("color_factors", watch=True)
     def _update_factors(self):
         self.color_mapping = {
-            label: (
-                [int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int]
-            )  # TODO: optional opacity
+            label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
             for label, color in zip(self.color_factors, self.color_palette)
         }
-        self._remap_colors()
+        self._remap_colors(self.selected)
 
     @param.depends("labels", watch=True)
     def _update_labels(self):
         self.dataframe["label"] = self.labels
-        self._remap_colors()
+        self._remap_colors(self.selected)
 
     @param.depends("selected", watch=True)
     def _update_selection(self):
-        if self._update_selected_set_flag:
+        if self._selected_externally_changed:
             self._selected_set = set(self.selected)
-
-        self._remap_colors()
+            self._remap_colors(self.selected)
