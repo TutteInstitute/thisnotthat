@@ -162,7 +162,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.select_message = pn.pane.Alert(
             "", alert_type="primary", sizing_mode="stretch_width", visible=False,
         )
-        self.pane_deck = pn.pane.DeckGL(
+        self.deck_pane = pn.pane.DeckGL(
             self.deck,
             sizing_mode="stretch_width",
             width=width,
@@ -183,14 +183,16 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             margin=[5, 0],
         )
         self.points["data"] = self.dataframe
-        self.pane_deck.param.trigger("object")
-        self.pane_deck.param.watch(
+        self.deck_pane.param.trigger("object")
+        self.deck_pane.param.watch(
             self._click_event_handler, "click_state", onlychanged=True
         )
-        self.pane_deck.param.watch(self._hover_event_handler, "hover_state")
+        self.deck_pane.param.watch(self._hover_event_handler, "hover_state")
 
-        self.pane = pn.Column(
-            self.select_controls, self.select_message, self.title, self.pane_deck
+        self.pane = pn.WidgetBox(
+            pn.Column(
+                self.select_controls, self.select_message, self.title, self.deck_pane
+            )
         )
         self.select_controls.visible = show_selection_controls
         self.title.visible = title is not None
@@ -205,18 +207,16 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _hover_event_handler(self, event):
         if self.select_method.value == "Brush":
             if self._brushing_on:
-                if len(self.pane_deck.view_state) > 0:
+                if len(self.deck_pane.view_state) > 0:
                     radius = (
-                        self.pane_deck.view_state["se"][0]
-                         - self.pane_deck.view_state["nw"][0]
+                        self.deck_pane.view_state["se"][0]
+                        - self.deck_pane.view_state["nw"][0]
                     ) * self.brush_radius
                 else:
                     radius = self._base_radius
 
                 neighbors = self._nn_index.radius_neighbors(
-                    [event.new["coordinate"]],
-                    radius=radius,
-                    return_distance=False,
+                    [event.new["coordinate"]], radius=radius, return_distance=False,
                 )
                 self._selected_set.update(neighbors[0])
                 self._remap_colors(list(self._selected_set))
@@ -225,18 +225,16 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._selected_externally_changed = True
         elif self.select_method.value == "Brush-Erase":
             if self._brushing_on:
-                if len(self.pane_deck.view_state) > 0:
+                if len(self.deck_pane.view_state) > 0:
                     radius = (
-                        self.pane_deck.view_state["se"][0]
-                         - self.pane_deck.view_state["nw"][0]
+                        self.deck_pane.view_state["se"][0]
+                        - self.deck_pane.view_state["nw"][0]
                     ) * self.brush_radius
                 else:
                     radius = self._base_radius
 
                 neighbors = self._nn_index.radius_neighbors(
-                    [event.new["coordinate"]],
-                    radius=radius,
-                    return_distance=False,
+                    [event.new["coordinate"]], radius=radius, return_distance=False,
                 )
                 self._selected_set.difference_update(neighbors[0])
                 self._remap_colors(list(self._selected_set))
@@ -282,22 +280,22 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if event.new == "Reset":
             self.select_message.visible = False
             self.selected = []
-            self.pane_deck.throttle = {"view": 200, "hover": 200}
+            self.deck_pane.throttle = {"view": 200, "hover": 200}
         elif event.new == "Brush":
             self._brushing_on = False
             self.select_message.visible = True
             self.select_message.alert_type = "primary"
             self.select_message.object = BRUSH_OFF_MESSAGE
-            self.pane_deck.throttle = {"view": 200, "hover": 5}
+            self.deck_pane.throttle = {"view": 200, "hover": 5}
         elif event.new == "Brush-Erase":
             self._brushing_on = False
             self.select_message.visible = True
             self.select_message.alert_type = "primary"
             self.select_message.object = ERASER_OFF_MESSAGE
-            self.pane_deck.throttle = {"view": 200, "hover": 5}
+            self.deck_pane.throttle = {"view": 200, "hover": 5}
         else:
             self.select_message.visible = False
-            self.pane_deck.throttle = {"view": 200, "hover": 200}
+            self.deck_pane.throttle = {"view": 200, "hover": 200}
 
     def _remap_colors(self, selected=None):
         if selected is None:
@@ -313,9 +311,9 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 }
                 self._color_map_in_selection_mode = True
 
-            self.dataframe.iloc[
-                selected, self._color_loc
-            ] = self.dataframe.label.iloc[selected].map(self.color_mapping)
+            self.dataframe.iloc[selected, self._color_loc] = self.dataframe.label.iloc[
+                selected
+            ].map(self.color_mapping)
             self.points["data"] = self.dataframe
         else:
             if self._color_map_in_selection_mode:
@@ -328,7 +326,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.dataframe["color"] = self.dataframe.label.map(self.color_mapping)
             self.points["data"] = self.dataframe
 
-        self.pane_deck.param.trigger("object")
+        self.deck_pane.param.trigger("object")
 
     @param.depends("color_palette", watch=True)
     def _update_palette(self):
