@@ -41,7 +41,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         palette: Sequence[str] = bokeh.palettes.Turbo256,
         width: int = 600,
         height: int = 600,
-        selection_brush_radius=0.5,
+        selection_brush_radius=0.1,
         max_point_size: Optional[float] = None,
         min_point_size: Optional[float] = None,
         fill_alpha: float = 0.75,
@@ -108,9 +108,9 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             "lineWidthUnits": "pixels",
             "stroked": True,
             "getLineColor": [int(c * 255) for c in to_rgb(line_color)],
-            "getLineWidth": 0.75,
-            "lineWidthMinPixels": 0.5,
-            "lineWidthMaxPixels": 1.0,
+            "getLineWidth": 0.6,
+            "lineWidthMinPixels": 0.4,
+            "lineWidthMaxPixels": 0.8,
             "pickable": True,
             "autoHighlight": True,
             "highlightColor": [int(c * 255) for c in to_rgb(hover_fill_color)],
@@ -122,6 +122,8 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             np.max(data.T[0]) - np.min(data.T[0]), np.max(data.T[1]) - np.min(data.T[1])
         )
         zoom = MAGIC_ZOOM_CONSTANT - np.log2(view_size)
+        self._base_radius = view_size * self.brush_radius
+
         self.deck = {
             "initialViewState": {
                 "zoom": zoom,
@@ -163,8 +165,8 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.pane_deck = pn.pane.DeckGL(
             self.deck,
             sizing_mode="stretch_width",
-            height=width,
-            width=height,
+            width=width,
+            height=height,
             tooltips={"html": "{annotation}"},
         )
         self.title = pn.widgets.StaticText(
@@ -203,9 +205,17 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _hover_event_handler(self, event):
         if self.select_method.value == "Brush":
             if self._brushing_on:
+                if len(self.pane_deck.view_state) > 0:
+                    radius = (
+                        self.pane_deck.view_state["se"][0]
+                         - self.pane_deck.view_state["nw"][0]
+                    ) * self.brush_radius
+                else:
+                    radius = self._base_radius
+
                 neighbors = self._nn_index.radius_neighbors(
                     [event.new["coordinate"]],
-                    radius=self.brush_radius,
+                    radius=radius,
                     return_distance=False,
                 )
                 self._selected_set.update(neighbors[0])
@@ -215,9 +225,17 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._selected_externally_changed = True
         elif self.select_method.value == "Brush-Erase":
             if self._brushing_on:
+                if len(self.pane_deck.view_state) > 0:
+                    radius = (
+                        self.pane_deck.view_state["se"][0]
+                         - self.pane_deck.view_state["nw"][0]
+                    ) * self.brush_radius
+                else:
+                    radius = self._base_radius
+
                 neighbors = self._nn_index.radius_neighbors(
                     [event.new["coordinate"]],
-                    radius=self.brush_radius,
+                    radius=radius,
                     return_distance=False,
                 )
                 self._selected_set.difference_update(neighbors[0])
