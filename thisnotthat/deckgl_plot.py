@@ -296,7 +296,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._color_map_in_selection_mode = True
 
             self.dataframe.iloc[
-                self.selected, self._color_loc
+                selected, self._color_loc
             ] = self.dataframe.label.iloc[selected].map(self.color_mapping)
             self.points["data"] = self.dataframe
         else:
