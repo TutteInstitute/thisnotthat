@@ -26,15 +26,19 @@ MAGIC_ZOOM_CONSTANT = 8.720671786825559
 
 class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     labels = param.Series(doc="Labels")
-    color_palette = param.List([], item_type=str, doc="Color palette")
-    color_factors = param.List([], item_type=str, doc="Color palette")
+    label_color_palette = param.List([], item_type=str, doc="Color palette")
+    label_color_factors = param.List([], item_type=str, doc="Color palette")
     selected = param.List([], doc="Indices of selected samples")
+    color_by_vector = param.Series(doc="Color by")
+    color_by_palette = param.List([], item_type=str, doc="Color by palette")
+    marker_size = param.List([], item_type=float, doc="Marker size")
+    hover_text = param.List([], item_type=str, doc="Hover text")
 
     def __init__(
         self,
         data: npt.ArrayLike,
         labels: Iterable[str],
-        annotation: Optional[Iterable[str]] = None,
+        hover_text: Optional[Iterable[str]] = None,
         size: Optional[Iterable[float]] = None,
         *,
         label_color_mapping: Optional[Dict[str, str]] = None,
@@ -60,7 +64,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             {
                 "position": data.tolist(),
                 "label": labels,
-                "annotation": annotation,
+                "hover_text": hover_text,
                 "size": size if size is not None else np.full(data.shape[0], 0.1),
             }
         )
@@ -167,7 +171,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             sizing_mode="stretch_width",
             width=width,
             height=height,
-            tooltips={"html": "{annotation}"},
+            tooltips={"html": "{hover_text}"},
         )
         self.title = pn.widgets.StaticText(
             value="Selection Method:",
@@ -197,8 +201,8 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.select_controls.visible = show_selection_controls
         self.title.visible = title is not None
         self.labels = pd.Series(labels)
-        self.color_palette = base_color_palette
-        self.color_factors = base_color_factors
+        self.label_color_palette = base_color_palette
+        self.label_color_factors = base_color_factors
 
     # Reactive requires this to make the model auto-display as requires
     def _get_model(self, *args, **kwds):
@@ -328,19 +332,19 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self.deck_pane.param.trigger("object")
 
-    @param.depends("color_palette", watch=True)
+    @param.depends("label_color_palette", watch=True)
     def _update_palette(self):
         self.color_mapping = {
             label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
-            for label, color in zip(self.color_factors, self.color_palette)
+            for label, color in zip(self.label_color_factors, self.label_color_palette)
         }
         self._remap_colors(self.selected)
 
-    @param.depends("color_factors", watch=True)
+    @param.depends("label_color_factors", watch=True)
     def _update_factors(self):
         self.color_mapping = {
             label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
-            for label, color in zip(self.color_factors, self.color_palette)
+            for label, color in zip(self.label_color_factors, self.label_color_palette)
         }
         self._remap_colors(self.selected)
 

@@ -15,9 +15,13 @@ from typing import *
 
 class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     labels = param.Series(doc="Labels")
-    color_palette = param.List([], item_type=str, doc="Color palette")
-    color_factors = param.List([], item_type=str, doc="Color palette")
+    label_color_palette = param.List([], item_type=str, doc="Color palette")
+    label_color_factors = param.List([], item_type=str, doc="Color palette")
     selected = param.List([], doc="Indices of selected samples")
+    color_by_vector = param.Series(doc="Color by")
+    color_by_palette = param.List([], item_type=str, doc="Color by palette")
+    marker_size = param.List([], item_type=float, doc="Marker size")
+    hover_text = param.List([], item_type=str, doc="Hover text")
 
     def _update_selected(self, attr, old, new) -> None:
         self.selected = self.data_source.selected.indices
@@ -26,7 +30,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self,
         data: npt.ArrayLike,
         labels: Iterable[str],
-        annotation: Optional[Iterable[str]] = None,
+        hover_text: Optional[Iterable[str]] = None,
         size: Optional[Iterable[float]] = None,
         *,
         label_color_mapping: Optional[Dict[str, str]] = None,
@@ -59,7 +63,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "x": np.asarray(data).T[0],
                 "y": np.asarray(data).T[1],
                 "label": labels,
-                "annotation": annotation if annotation is not None else labels,
+                "hover_text": hover_text if hover_text is not None else labels,
                 "size": size if size is not None else np.full(data.shape[0], 0.1),
                 "apparent_size": size
                 if size is not None
@@ -73,18 +77,18 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             for label, color in label_color_mapping.items():
                 factors.append(label)
                 colors.append(color)
-            self._factor_cmap = bokeh.transform.factor_cmap(
+            self._label_colormap = bokeh.transform.factor_cmap(
                 "label", palette=colors, factors=factors
             )
-            self.color_mapping = self._factor_cmap["transform"]
+            self.color_mapping = self._label_colormap["transform"]
             self.color_mapping.palette = self.color_mapping.palette + [
                 palette[x] for x in _palette_index(len(palette))
             ]
         else:
-            self._factor_cmap = bokeh.transform.factor_cmap(
+            self._label_colormap = bokeh.transform.factor_cmap(
                 "label", palette=palette, factors=list(set(labels))
             )
-            self.color_mapping = self._factor_cmap["transform"]
+            self.color_mapping = self._label_colormap["transform"]
             self.color_mapping.palette = [
                 self.color_mapping.palette[x] for x in _palette_index(256)
             ]
@@ -108,7 +112,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.points = self.plot.circle(
                 source=self.data_source,
                 radius="apparent_size",
-                fill_color=self._factor_cmap,
+                fill_color=self._label_colormap,
                 fill_alpha=fill_alpha,
                 line_color=line_color,
                 line_width=line_width,
@@ -127,7 +131,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.points = self.plot.circle(
                 source=self.data_source,
                 radius="apparent_size",
-                fill_color=self._factor_cmap,
+                fill_color=self._label_colormap,
                 fill_alpha=fill_alpha,
                 line_color=line_color,
                 line_width=line_width,
@@ -167,7 +171,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self.plot.add_tools(
             bokeh.models.HoverTool(
-                tooltips=[("text", "@annotation")], renderers=[self.points]
+                tooltips=[("text", "@hover_text")], renderers=[self.points]
             )
         )
         self.plot.xgrid.grid_line_color = None
@@ -177,21 +181,21 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.pane = pn.pane.Bokeh(self.plot)
 
         self.labels = pd.Series(labels)
-        self.color_palette = list(self.color_mapping.palette)
-        self.color_factors = list(self.color_mapping.factors)
+        self.label_color_palette = list(self.color_mapping.palette)
+        self.label_color_factors = list(self.color_mapping.factors)
 
     # Reactive requires this to make the model auto-display as requires
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
 
-    @param.depends("color_palette", watch=True)
+    @param.depends("label_color_palette", watch=True)
     def _update_palette(self) -> None:
-        self.color_mapping.palette = self.color_palette
+        self.color_mapping.palette = self.label_color_palette
         pn.io.push_notebook(self.pane)
 
-    @param.depends("color_factors", watch=True)
+    @param.depends("label_color_factors", watch=True)
     def _update_factors(self) -> None:
-        self.color_mapping.factors = self.color_factors
+        self.color_mapping.factors = self.label_color_factors
         pn.io.push_notebook(self.pane)
 
     @param.depends("labels", watch=True)
@@ -207,3 +211,46 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _update_selection(self) -> None:
         self.data_source.selected.indices = self.selected
         pn.io.push_notebook(self.pane)
+
+    @param.depends("color_by_vector", watch=True)
+    def _update_color_by_vectors(self) -> None:
+        if len(self.color_by_vector) == 0:
+            self.points.glyph.fill_color = self._label_colormap
+        elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+            self.data_source["color_by"] = self.color_by_vector
+            colormap = bokeh.transform.linear_cmap(
+                "color_by",
+                self.color_by_palette,
+                self.color_by_vector.min(),
+                self.color_by_vector.max(),
+            )
+            self.points.glyph.fill_color = colormap
+        else:
+            self.data_source["color_by"] = self.color_by_vector
+            colormap = bokeh.transform.factor_cmap(
+                "color_by", self.color_by_palette, list(self.color_by_vector.unique())
+            )
+            self.points.glyph.fill_color = colormap
+
+        pn.io.push_notebook(self.pane)
+
+    @param.depends("color_by_palette", watch=True)
+    def _update_color_by_palette(self) -> None:
+        if len(self.color_by_palette) == 0:
+            self.points.glyph.fill_color = self._label_colormap
+        elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+            colormap = bokeh.transform.linear_cmap(
+                "color_by",
+                self.color_by_palette,
+                self.color_by_vector.min(),
+                self.color_by_vector.max(),
+            )
+            self.points.glyph.fill_color = colormap
+        else:
+            colormap = bokeh.transform.factor_cmap(
+                "color_by", self.color_by_palette, list(self.color_by_vector.unique())
+            )
+            self.points.glyph.fill_color = colormap
+
+        pn.io.push_notebook(self.pane)
+
