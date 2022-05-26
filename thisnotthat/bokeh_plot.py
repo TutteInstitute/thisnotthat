@@ -218,7 +218,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if len(self.color_by_vector) == 0:
             self.points.glyph.fill_color = self._label_colormap
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
-            self.data_source.data["color_by"] = self.color_by_vector.to
+            self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.linear_cmap(
                 "color_by",
                 self.color_by_palette,
