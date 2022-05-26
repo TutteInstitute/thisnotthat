@@ -228,7 +228,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.max(),
             )
             self.points.glyph.fill_color = colormap
-            self.plot.legend.visible = self.show_legend
+            self.plot.legend.visible = False
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
@@ -253,7 +253,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.max(),
             )
             self.points.glyph.fill_color = colormap
-            self.plot.legend.visible = self.show_legend
+            self.plot.legend.visible = False
         else:
             colormap = bokeh.transform.factor_cmap(
                 "color_by", self.color_by_palette, list(self.color_by_vector.unique())
