@@ -219,6 +219,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if len(self.color_by_vector) == 0:
             self.points.glyph.fill_color = self._label_colormap
             self.plot.legend.visible = self.show_legend
+            if hasattr(self, "_colorbar") and self._colorbar.visible:
+                self._colorbar.visible = False
+
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.linear_cmap(
@@ -230,11 +233,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.points.glyph.fill_color = colormap
             self.plot.legend.visible = False
             if self.show_legend:
-                self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
-                self.plot.add_layout(
-                    self._colorbar,
-                    "right",
-                )
+                if hasattr(self, "_colorbar"):
+                    self._colorbar.color_mapper=colormap["transform"]
+                    self._colorbar.visible = True
+                else:
+                    self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
+                    self.plot.add_layout(
+                        self._colorbar,
+                        "right",
+                    )
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
@@ -242,6 +249,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.points.glyph.fill_color = colormap
             self.plot.legend.visible = self.show_legend
+            if hasattr(self, "_colorbar") and self._colorbar.visible:
+                self._colorbar.visible = False
 
         pn.io.push_notebook(self.pane)
 
