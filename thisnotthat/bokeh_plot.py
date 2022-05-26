@@ -19,7 +19,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     label_color_factors = param.List([], item_type=str, doc="Color palette")
     selected = param.List([], doc="Indices of selected samples")
     color_by_vector = param.Series(doc="Color by")
-    color_by_palette = param.List([], item_type=str, doc="Color by palette")
+    color_by_palette = param.List(bokeh.palettes.Viridis256, item_type=str, doc="Color by palette")
     marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
 
@@ -180,6 +180,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.plot.yaxis.bounds = (0, 0)
         self.pane = pn.pane.Bokeh(self.plot)
 
+        self.color_by_vector = pd.Series([])
         self.labels = pd.Series(labels)
         self.label_color_palette = list(self.color_mapping.palette)
         self.label_color_factors = list(self.color_mapping.factors)
@@ -217,7 +218,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if len(self.color_by_vector) == 0:
             self.points.glyph.fill_color = self._label_colormap
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
-            self.data_source["color_by"] = self.color_by_vector
+            self.data_source.data["color_by"] = self.color_by_vector.to
             colormap = bokeh.transform.linear_cmap(
                 "color_by",
                 self.color_by_palette,
@@ -226,7 +227,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.points.glyph.fill_color = colormap
         else:
-            self.data_source["color_by"] = self.color_by_vector
+            self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
                 "color_by", self.color_by_palette, list(self.color_by_vector.unique())
             )
