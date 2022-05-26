@@ -19,7 +19,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     label_color_factors = param.List([], item_type=str, doc="Color palette")
     selected = param.List([], doc="Indices of selected samples")
     color_by_vector = param.Series(doc="Color by")
-    color_by_palette = param.List(bokeh.palettes.Viridis256, item_type=str, doc="Color by palette")
+    color_by_palette = param.List(list(bokeh.palettes.Viridis256), item_type=str, doc="Color by palette")
     marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
 
