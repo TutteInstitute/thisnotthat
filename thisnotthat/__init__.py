@@ -5,6 +5,7 @@ from .data_viewer import DataPane
 from .search import SearchPane
 from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
+from .plot_controls import PlotControlPane
 
 __all__ = [
     "BokehPlotPane",
@@ -14,4 +15,5 @@ __all__ = [
     "DataPane",
     "SearchPane",
     "InformationPane",
+    "PlotControlPane",
 ]

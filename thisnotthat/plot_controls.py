@@ -25,9 +25,13 @@ class PlotControlPane(pn.reactive.Reactive):
             name="Color by column",
             options=self.dataframe.columns
         )
+        self.apply_button = pn.widgets.Button(
+            name="Apply", button_type="success"
+        )
         self.pane = pn.WidgetBox(
             self.palette_selector,
             self.column_selected,
+            self.apply_button,
         )
 
     def _get_model(self, *args, **kwds):
