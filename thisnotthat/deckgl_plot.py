@@ -301,7 +301,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.select_message.visible = False
             self.deck_pane.throttle = {"view": 200, "hover": 200}
 
-    def _remap_colors(self, selected=None):
+    def _remap_colors(self, selected=None, color_mapping=None):
         if selected is None:
             return
         elif len(selected) > 0:
@@ -317,7 +317,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
             self.dataframe.iloc[selected, self._color_loc] = self.dataframe.label.iloc[
                 selected
-            ].map(self.color_mapping)
+            ].map(color_mapping)
             self.points["data"] = self.dataframe
         else:
             if self._color_map_in_selection_mode:
@@ -327,7 +327,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 }
                 self._color_map_in_selection_mode = False
 
-            self.dataframe["color"] = self.dataframe.label.map(self.color_mapping)
+            self.dataframe["color"] = self.dataframe.label.map(color_mapping)
             self.points["data"] = self.dataframe
 
         self.deck_pane.param.trigger("object")
@@ -338,7 +338,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
             for label, color in zip(self.label_color_factors, self.label_color_palette)
         }
-        self._remap_colors(self.selected)
+        self._remap_colors(self.selected, self.color_mapping)
 
     @param.depends("label_color_factors", watch=True)
     def _update_factors(self):
@@ -346,15 +346,71 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
             for label, color in zip(self.label_color_factors, self.label_color_palette)
         }
-        self._remap_colors(self.selected)
+        self._remap_colors(self.selected, self.color_mapping)
 
     @param.depends("labels", watch=True)
     def _update_labels(self):
         self.dataframe["label"] = self.labels
-        self._remap_colors(self.selected)
+        self._remap_colors(self.selected, self.color_mapping)
 
     @param.depends("selected", watch=True)
     def _update_selection(self):
         if self._selected_externally_changed:
             self._selected_set = set(self.selected)
-            self._remap_colors(self.selected)
+            self._remap_colors(self.selected, self.color_mapping)
+
+    @param.depends("color_by_vector", watch=True)
+    def _update_color_by_vectors(self) -> None:
+        if len(self.color_by_vector) == 0:
+            self._remap_colors(self.selected, self.color_mapping)
+        elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+            palette = self.color_by_palette
+            bin_width = (self.color_by_vector.max() - self.color_by_vector.min()) / len(
+                palette
+            )
+            if len(self.selected) > 0:
+                self.dataframe.iloc[
+                    self.selected, self._color_loc
+                ] = self.color_by_vector.iloc[self.selected].map(
+                    lambda val: palette[np.int(np.round(val / bin_width))]
+                )
+            else:
+                self.dataframe["color"] = self.color_by_vector.map(
+                    lambda val: palette[np.int(np.round(val / bin_width))]
+                )
+            self.points["data"] = self.dataframe
+            self.deck_pane.param.trigger("object")
+        else:
+            unique_items = self.color_by_vector.unique()
+            color_mapping = {
+                item: color for item, color in zip(unique_items, self.color_by_palette)
+            }
+            self._remap_colors(self.selected, color_mapping)
+
+    @param.depends("color_by_palette", watch=True)
+    def _update_color_by_palette(self) -> None:
+        if len(self.color_by_vector) == 0:
+            self._remap_colors(self.selected, self.color_mapping)
+        elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+            palette = self.color_by_palette
+            bin_width = (self.color_by_vector.max() - self.color_by_vector.min()) / len(
+                palette
+            )
+            if len(self.selected) > 0:
+                self.dataframe.iloc[
+                    self.selected, self._color_loc
+                ] = self.color_by_vector.iloc[self.selected].map(
+                    lambda val: palette[np.int(np.round(val / bin_width))]
+                )
+            else:
+                self.dataframe["color"] = self.color_by_vector.map(
+                    lambda val: palette[np.int(np.round(val / bin_width))]
+                )
+            self.points["data"] = self.dataframe
+            self.deck_pane.param.trigger("object")
+        else:
+            unique_items = self.color_by_vector.unique()
+            color_mapping = {
+                item: color for item, color in zip(unique_items, self.color_by_palette)
+            }
+            self._remap_colors(self.selected, color_mapping)
