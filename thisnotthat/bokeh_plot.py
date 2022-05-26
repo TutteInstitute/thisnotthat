@@ -181,7 +181,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.pane = pn.pane.Bokeh(self.plot)
 
         self.show_legend = show_legend
-        self.color_by_vector = pd.Series([])
+        self.color_by_vector = pd.Series([], dtype=object)
         self.labels = pd.Series(labels)
         self.label_color_palette = list(self.color_mapping.palette)
         self.label_color_factors = list(self.color_mapping.factors)
@@ -229,6 +229,12 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.points.glyph.fill_color = colormap
             self.plot.legend.visible = False
+            if self.show_legend:
+                self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
+                self.plot.add_layout(
+                    self._colorbar,
+                    "right",
+                )
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
@@ -258,7 +264,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.points.glyph.fill_color = colormap
             self.plot.legend.visible = False
             if self.show_legend:
-                self._colorbar = bokeh.models.ColorBar(color_mapper=colormap)
+                self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
                 self.plot.add_layout(
                     self._colorbar,
                     "right",
