@@ -108,8 +108,16 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             if legend_location == "outside":
                 self._legend = bokeh.models.Legend(location="center")
                 self.plot.add_layout(self._legend, "right")
-                self._colorbar = bokeh.models.ColorBar()
+                self._colorbar = bokeh.models.ColorBar(
+                    color_mapper=bokeh.transform.linear_cmap(
+                        "color_by",
+                        self.color_by_palette,
+                        0.0,
+                        1.0,
+                    )["transform"]
+                )
                 self.plot.add_layout(self._colorbar, "right")
+
                 self._colorbar.visible = False
 
             self.points = self.plot.circle(
