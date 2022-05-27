@@ -115,8 +115,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                         0.0,
                         1.0,
                     )["transform"],
-                    width=60,
-                    height=height - 20,
+                    height=height - 150,
                 )
                 self.plot.add_layout(self._colorbar, "right")
 
@@ -247,7 +246,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.plot.legend.visible = False
             if self.show_legend:
                 if hasattr(self, "_colorbar"):
-                    self._colorbar.color_mapper = colormap["transform"]
+                    self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
+                    # self._colorbar.color_mapper = colormap["transform"]
                     self._colorbar.visible = True
                 else:
                     self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])

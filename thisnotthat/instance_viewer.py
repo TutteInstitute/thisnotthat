@@ -31,8 +31,8 @@ class InformationPane(pn.reactive.Reactive):
         self.placeholder_text = placeholder_text
         self.markdown = pn.pane.Markdown(
             self.placeholder_text,
-            width=width - 10,
-            height=height - 10,
+            width=width - 20,
+            height=height - 20,
             margin=margin,
             dedent=dedent,
             disable_math=disable_math,
