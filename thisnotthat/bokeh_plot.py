@@ -118,8 +118,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     "color_by": np.linspace(0, 1, 16),
                 }
             )
-            self._color_by_renderer = self.plot.circle(
-                source=self._color_by_legend_source, visible=False,
+            self._color_by_renderer = self.plot.square(
+                source=self._color_by_legend_source, line_width=0, visible=False,
             )
 
             self.points = self.plot.circle(
@@ -245,7 +245,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.max(),
             )
             self.points.glyph.fill_color = colormap
-            self._color_by_renderer.glyph.color = colormap
+            self._color_by_renderer.glyph.fill_color = colormap
             self._color_by_legend_source.data["color_by"] = [
                 np.round(x, decimals=2)
                 for x in np.linspace(
