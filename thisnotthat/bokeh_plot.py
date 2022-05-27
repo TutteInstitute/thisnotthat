@@ -115,7 +115,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 {
                     "x": np.zeros(16),
                     "y": np.zeros(16),
-                    "color_by": np.linspace(0, 1, 16),
+                    "label": np.linspace(0, 1, 16),
                 }
             )
             self._color_by_renderer = self.plot.square(
@@ -231,12 +231,12 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _update_color_by_vectors(self) -> None:
         if len(self.color_by_vector) == 0:
             self.points.glyph.fill_color = self._label_colormap
-            self.plot.legend.items = [
-                bokeh.models.LegendItem(
-                    label={"field": "label"}, renderers=[self.points]
-                )
-            ]
-            self.selected = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+            self.plot.legend.items[0].renderers = [self.points]
+            # self.plot.legend.items = [
+            #     bokeh.models.LegendItem(
+            #         label={"field": "label"}, renderers=[self.points]
+            #     )
+            # ]
             # HACK! Force update; not sure why this is required but ...
             # if self.plot.x_range.start is not None:
             #     self.plot.x_range.start += 1e-12
@@ -254,17 +254,18 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.points.glyph.fill_color = colormap
             self._color_by_renderer.glyph.fill_color = colormap
-            self._color_by_legend_source.data["color_by"] = [
+            self._color_by_legend_source.data["label"] = [
                 np.round(x, decimals=2)
                 for x in np.linspace(
                     self.color_by_vector.min(), self.color_by_vector.max(), 16,
                 )
             ]
-            self.plot.legend.items = [
-                bokeh.models.LegendItem(
-                    label={"field": "color_by"}, renderers=[self._color_by_renderer]
-                )
-            ]
+            self.plot.legend.items[0].renderers = [self._color_by_renderer]
+            # self.plot.legend.items = [
+            #     bokeh.models.LegendItem(
+            #         label={"field": "color_by"}, renderers=[self._color_by_renderer]
+            #     )
+            # ]
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
