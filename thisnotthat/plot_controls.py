@@ -23,7 +23,7 @@ class PlotControlPane(pn.reactive.Reactive):
         )
         self.column_selected = pn.widgets.Select(
             name="Color by column",
-            options=self.dataframe.columns
+            options=list(self.dataframe.columns),
         )
         self.apply_button = pn.widgets.Button(
             name="Apply", button_type="success"
