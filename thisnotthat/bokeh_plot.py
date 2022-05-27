@@ -236,8 +236,12 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     label={"field": "label"}, renderers=[self.points]
                 )
             ]
-            self.plot.legend.visible = True
-            self.plot.renderers = [self.points]
+            # HACK! Force update; not sure why this is required but ...
+            self.plot.x_range.start += 1e-12
+            pn.io.push_notebook(self.pane)
+            self.plot.x_range.start -= 1e-12
+            pn.io.push_notebook(self.pane)
+
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.linear_cmap(
