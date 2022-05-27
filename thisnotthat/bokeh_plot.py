@@ -19,7 +19,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     label_color_factors = param.List([], item_type=str, doc="Color palette")
     selected = param.List([], doc="Indices of selected samples")
     color_by_vector = param.Series(doc="Color by")
-    color_by_palette = param.List(list(bokeh.palettes.Viridis256), item_type=str, doc="Color by palette")
+    color_by_palette = param.List(
+        list(bokeh.palettes.Viridis256), item_type=str, doc="Color by palette"
+    )
     marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
 
@@ -106,15 +108,18 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         )
         if show_legend:
             if legend_location == "outside":
-                self._legend = bokeh.models.Legend(location="center")
+                self._legend = bokeh.models.Legend(location="center", label_width=150)
                 self.plot.add_layout(self._legend, "right")
 
             self._color_by_legend_source = bokeh.models.ColumnDataSource(
-                {"x": np.zeros(16), "y": np.zeros(16), "color_by": np.linspace(0, 1, 16)}
+                {
+                    "x": np.zeros(16),
+                    "y": np.zeros(16),
+                    "color_by": np.linspace(0, 1, 16),
+                }
             )
             self._color_by_renderer = self.plot.circle(
-                source=self._color_by_legend_source,
-                visible=False,
+                source=self._color_by_legend_source, visible=False,
             )
 
             self.points = self.plot.circle(
@@ -239,14 +244,19 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.max(),
             )
             self.points.glyph.fill_color = colormap
+            self._color_by_renderer.glyph.fill_color = colormap
             # self.plot.legend.visible = False
-            self._color_by_legend_source.data["color_by"] = np.linspace(
-                self.color_by_vector.min(),
-                self.color_by_vector.max(),
-                16,
-            )
+            self._color_by_legend_source.data["color_by"] = [
+                np.round(x, decimals=2)
+                for x in np.linspace(
+                    self.color_by_vector.min(), self.color_by_vector.max(), 16,
+                )
+            ]
+
             self.plot.legend.items = [
-                bokeh.models.LegendItem(label={"field": "color_by"}, renderers=[self._color_by_renderer])
+                bokeh.models.LegendItem(
+                    label={"field": "color_by"}, renderers=[self._color_by_renderer]
+                )
             ]
             # if self.show_legend:
             #     if hasattr(self, "_colorbar"):
@@ -275,7 +285,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _update_color_by_palette(self) -> None:
         if len(self.color_by_palette) == 0:
             self.points.glyph.fill_color = self._label_colormap
-            self.plot.legend.items[0].label = {'field': 'label'}
+            self.plot.legend.items[0].label = {"field": "label"}
             self.plot.legend.visible = self.show_legend
             if hasattr(self, "_colorbar") and self._colorbar.visible:
                 self._colorbar.visible = False
@@ -291,22 +301,22 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.plot.legend.visible = False
             if self.show_legend:
                 if hasattr(self, "_colorbar"):
-                    self._colorbar.color_mapper=colormap["transform"]
+                    self._colorbar.color_mapper = colormap["transform"]
                     self._colorbar.visible = True
                 else:
-                    self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
+                    self._colorbar = bokeh.models.ColorBar(
+                        color_mapper=colormap["transform"]
+                    )
                     self.plot.add_layout(
-                        self._colorbar,
-                        "right",
+                        self._colorbar, "right",
                     )
         else:
             colormap = bokeh.transform.factor_cmap(
                 "color_by", self.color_by_palette, list(self.color_by_vector.unique())
             )
             self.points.glyph.fill_color = colormap
-            self.plot.legend.items[0].label = {'field': 'color_by'}
+            self.plot.legend.items[0].label = {"field": "color_by"}
             if hasattr(self, "_colorbar") and self._colorbar.visible:
                 self._colorbar.visible = False
 
         pn.io.push_notebook(self.pane)
-
