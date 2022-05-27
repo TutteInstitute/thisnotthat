@@ -237,6 +237,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 )
             ]
             self.plot.legend.visible = True
+            self.plot.renderers = [self.points]
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.linear_cmap(
