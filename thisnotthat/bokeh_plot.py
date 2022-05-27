@@ -278,12 +278,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @param.depends("color_by_palette", watch=True)
     def _update_color_by_palette(self) -> None:
         if len(self.color_by_palette) == 0:
-            self.plot.legend.items = [
-                bokeh.models.LegendItem(
-                    label={"field": "label"}, renderers=[self.points]
-                )
-            ]
             self.points.glyph.fill_color = self._label_colormap
+            self.plot.legend.items[0].renderers = [self.points]
 
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             colormap = bokeh.transform.linear_cmap(
@@ -293,18 +289,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.max(),
             )
             self.points.glyph.fill_color = colormap
-            self._color_by_renderer.glyph.color = colormap
+            self._color_by_renderer.glyph.fill_color = colormap
             self._color_by_legend_source.data["color_by"] = [
                 np.round(x, decimals=2)
                 for x in np.linspace(
                     self.color_by_vector.min(), self.color_by_vector.max(), 16,
                 )
             ]
-            self.plot.legend.items = [
-                bokeh.models.LegendItem(
-                    label={"field": "color_by"}, renderers=[self._color_by_renderer]
-                )
-            ]
+            self.plot.legend.items[0].renderers = [self._color_by_renderer]
         else:
             colormap = bokeh.transform.factor_cmap(
                 "color_by", self.color_by_palette, list(self.color_by_vector.unique())
