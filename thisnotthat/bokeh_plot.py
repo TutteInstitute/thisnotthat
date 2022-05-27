@@ -114,7 +114,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                         self.color_by_palette,
                         0.0,
                         1.0,
-                    )["transform"]
+                    )["transform"],
+                    width=60,
+                    height=height - 20,
                 )
                 self.plot.add_layout(self._colorbar, "right")
 

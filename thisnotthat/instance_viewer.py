@@ -47,9 +47,9 @@ class InformationPane(pn.reactive.Reactive):
     @param.depends("selected", watch=True)
     def _info_pane_update_selection(self) -> None:
         if len(self.selected) == 0:
-            self.pane.object = self.placeholder_text
+            self.markdown.object = self.placeholder_text
         else:
             substitution_dict = {
                 col: self.data[col].iloc[self.selected[-1]] for col in self.data.columns
             }
-            self.pane.object = self.markdown_template.format(**substitution_dict)
+            self.markdown.object = self.markdown_template.format(**substitution_dict)
