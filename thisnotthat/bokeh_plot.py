@@ -243,12 +243,13 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.max(),
             )
             self.points.glyph.fill_color = colormap
-            self.plot.legend.visible = False
+            # self.plot.legend.visible = False
+            self.plot.legend.items[0].label = {'field': 'color_by'}
             if self.show_legend:
                 if hasattr(self, "_colorbar"):
                     self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
                     # self._colorbar.color_mapper = colormap["transform"]
-                    self._colorbar.visible = True
+                    # self._colorbar.visible = True
                 else:
                     self._colorbar = bokeh.models.ColorBar(color_mapper=colormap["transform"])
                     self.plot.add_layout(
