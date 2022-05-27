@@ -15,6 +15,7 @@ class PlotControlPane(pn.reactive.Reactive):
     hover_text = param.List([], item_type=str, doc="Hover text")
 
     def __init__(self, raw_dataframe: pd.DataFrame, *, name="Plot Controls"):
+        super().__init__()
         self.dataframe = raw_dataframe
 
         self.palette_selector = pn.widgets.Select(
