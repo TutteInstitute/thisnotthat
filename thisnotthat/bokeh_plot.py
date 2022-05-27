@@ -236,6 +236,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     label={"field": "label"}, renderers=[self.points]
                 )
             ]
+            self.selected = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
             # HACK! Force update; not sure why this is required but ...
             self.plot.x_range.start += 1e-12
             pn.io.push_notebook(self.pane)
