@@ -76,6 +76,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self._base_marker_size = pd.Series(
             size if size is not None else np.full(data.shape[0], 0.1)
         )
+        self._base_hover_text = hover_text if hover_text is not None else labels
         if label_color_mapping is not None:
             factors = []
             colors = []
@@ -249,11 +250,32 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.data_source.data["apparent_size"] = self._base_marker_size.map(
                 _map_apparent_size
             )
-        else:
-            self.data_source.data["size"] = self.marker_size
-            self.data_source.data["apparent_size"] = pd.Series(self.marker_size).map(
+        elif len(self.marker_size) == 1:
+            size_vector = pd.Series(
+                np.full(
+                    len(self.data_source.data["size"]), self.marker_size[0]
+                )
+            )
+            self.data_source.data["size"] = size_vector
+            self.data_source.data["apparent_size"] = size_vector.map(
                 _map_apparent_size
             )
+        else:
+            rescaled_size = pd.Series(self.marker_size)
+            rescaled_size = 0.1 * (rescaled_size / rescaled_size.mean())
+            self.data_source.data["size"] = rescaled_size
+            self.data_source.data["apparent_size"] = rescaled_size.map(
+                _map_apparent_size
+            )
+
+        pn.io.push_notebook(self.pane)
+
+    @param.depends("hover_text", watch=True)
+    def _update_hover_text(self):
+        if len(self.hover_text) == 0:
+            self.data_source.data["hover_text"] = self._base_hover_text
+        else:
+            self.data_source.data["hover_text"] = [str(x) for x in self.hover_text]
 
         pn.io.push_notebook(self.pane)
 
