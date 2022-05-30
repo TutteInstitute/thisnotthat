@@ -320,8 +320,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "color_by", self.color_by_palette, list(self.color_by_vector.unique())
             )
             self.points.glyph.fill_color = colormap
-            if self.plot.legend.items[0].label["field"] != "label":
-                self.plot.legend.items[0].label["field"] = "label"
+            self.plot.legend.items[0].label["field"] = "color_by"
             self.plot.legend.items[0].renderers = [self.points]
 
         pn.io.push_notebook(self.pane)
@@ -356,8 +355,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "color_by", self.color_by_palette, list(self.color_by_vector.unique())
             )
             self.points.glyph.fill_color = colormap
-            if self.plot.legend.items[0].label["field"] != "label":
-                self.plot.legend.items[0].label["field"] = "label"
+            self.plot.legend.items[0].label["field"] = "color_by"
             self.plot.legend.items[0].renderers = [self.points]
 
         pn.io.push_notebook(self.pane)
