@@ -128,8 +128,8 @@ class PlotControlPane(pn.reactive.Reactive):
             ):
                 palette_dict = bokeh.palettes.d3[self.palette_selector.value]
                 palette_sizes = sorted(list(palette_dict.keys()))
-                best_size = bisect.bisect_left(palette_sizes, n_colors_required)
-                palette = palette_dict[best_size]
+                best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
+                palette = palette_dict[palette_sizes[best_size_index]]
                 self.color_by_palette = list(palette)
             else:
                 raise ValueError("Palette option not in a valid palette group")
