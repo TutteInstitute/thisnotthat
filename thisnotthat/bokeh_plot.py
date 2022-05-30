@@ -22,7 +22,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     color_by_palette = param.List(
         list(bokeh.palettes.Viridis256), item_type=str, doc="Color by palette"
     )
-    marker_size = param.List([], item_type=float, doc="Marker size")
+    marker_size = param.Series([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
 
     def _update_selected(self, attr, old, new) -> None:
@@ -73,6 +73,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             }
         )
         self.data_source.selected.on_change("indices", self._update_selected)
+        self._base_marker_size = pd.Series(
+            size if size is not None else np.full(data.shape[0], 0.1)
+        )
         if label_color_mapping is not None:
             factors = []
             colors = []
@@ -156,6 +159,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 nonselection_fill_color=nonselection_fill_color,
             )
 
+        self.max_point_size = max_point_size
+        self.min_point_size = min_point_size
         if max_point_size is not None or min_point_size is not None:
             if max_point_size is None:
                 max_point_size = 1.0e6
@@ -227,11 +232,36 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.data_source.selected.indices = self.selected
         pn.io.push_notebook(self.pane)
 
+    @param.depends("marker_size", watch=True)
+    def _update_marker_size(self):
+        scale = self.plot.x_range.end - self.plot.x_range.start
+
+        def _map_apparent_size(x):
+            if (x / scale) > self.max_point_size:
+                return self.max_point_size * scale
+            elif (x / scale) < self.min_point_size:
+                return self.min_point_size * scale
+            else:
+                return x
+
+        if len(self.marker_size) == 0:
+            self.data_source.data["size"] = self._base_marker_size
+            self.data_source.data["apparent_size"] = self._base_marker_size.map(
+                _map_apparent_size
+            )
+        else:
+            self.data_source.data["size"] = self.marker_size
+            self.data_source.data["apparent_size"] = self.marker_size.map(
+                _map_apparent_size
+            )
+
     @param.depends("color_by_vector", watch=True)
     def _update_color_by_vectors(self) -> None:
         if len(self.color_by_vector) == 0:
             # HACK: Not sure why this is needed, but things don't update without it?
-            self.data_source.data["color_by"] = ["nil"] * len(self.data_source.data["label"])
+            self.data_source.data["color_by"] = ["nil"] * len(
+                self.data_source.data["label"]
+            )
             colormap = bokeh.transform.factor_cmap(
                 "color_by", self.color_by_palette, ["nil"],
             )
