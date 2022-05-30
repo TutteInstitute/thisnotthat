@@ -156,4 +156,6 @@ class PlotControlPane(pn.reactive.Reactive):
         if self.marker_size_column.value == "Default":
             self.marker_size = []
         else:
-            self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
+            self.marker_size = (
+                self.dataframe[self.marker_size_column.value].map(str).to_list()
+            )

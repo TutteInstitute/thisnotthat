@@ -262,7 +262,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
         else:
             rescaled_size = pd.Series(self.marker_size)
-            rescaled_size = 0.1 * (rescaled_size / rescaled_size.mean())
+            rescaled_size = 0.05 * (rescaled_size / rescaled_size.mean())
             self.data_source.data["size"] = rescaled_size
             self.data_source.data["apparent_size"] = rescaled_size.map(
                 _map_apparent_size
