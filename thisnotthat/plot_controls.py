@@ -150,12 +150,12 @@ class PlotControlPane(pn.reactive.Reactive):
         if self.hover_text_column.value == "Default":
             self.hover_text = []
         else:
-            self.hover_text = self.dataframe[self.hover_text_column.value].to_list()
+            self.hover_text = self.dataframe[self.hover_text_column.value].map(str).to_list()
 
     def _marker_size_change(self, event) -> None:
         if self.marker_size_column.value == "Default":
             self.marker_size = []
         else:
             self.marker_size = (
-                self.dataframe[self.marker_size_column.value].map(str).to_list()
+                self.dataframe[self.marker_size_column.value].to_list()
             )
