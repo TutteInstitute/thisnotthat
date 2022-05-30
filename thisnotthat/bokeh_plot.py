@@ -22,7 +22,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     color_by_palette = param.List(
         list(bokeh.palettes.Viridis256), item_type=str, doc="Color by palette"
     )
-    marker_size = param.Series([], item_type=float, doc="Marker size")
+    marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
 
     def _update_selected(self, attr, old, new) -> None:
@@ -251,9 +251,11 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
         else:
             self.data_source.data["size"] = self.marker_size
-            self.data_source.data["apparent_size"] = self.marker_size.map(
+            self.data_source.data["apparent_size"] = pd.Series(self.marker_size).map(
                 _map_apparent_size
             )
+
+        pn.io.push_notebook(self.pane)
 
     @param.depends("color_by_vector", watch=True)
     def _update_color_by_vectors(self) -> None:
