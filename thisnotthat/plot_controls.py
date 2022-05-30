@@ -84,11 +84,24 @@ class PlotControlPane(pn.reactive.Reactive):
             ):
                 palette_name = self.palette_selector.value + "256"
                 self.color_by_palette = list(getattr(bokeh.palettes, palette_name))
-            else:
+            elif (
+                self.palette_selector.value
+                in self.palette_selector.groups["ColorBrewer palettes"]
+            ):
                 palette_dict = bokeh.palettes.brewer[self.palette_selector.value]
                 max_palette_size = max(palette_dict.keys())
                 palette = palette_dict[max_palette_size]
                 self.color_by_palette = list(palette)
+            elif (
+                self.palette_selector.value
+                in self.palette_selector.groups["D3 palettes"]
+            ):
+                palette_dict = bokeh.palettes.d3[self.palette_selector.value]
+                max_palette_size = max(palette_dict.keys())
+                palette = palette_dict[max_palette_size]
+                self.color_by_palette = list(palette)
+            else:
+                raise ValueError("Palette option not in a valid palette group")
         else:
             # Discrete scale required
             n_colors_required = self.dataframe[self.color_by_column.value].nunique()
@@ -100,12 +113,26 @@ class PlotControlPane(pn.reactive.Reactive):
                 raw_palette = getattr(bokeh.palettes, palette_name)
                 palette = bokeh.palettes.linear_palette(raw_palette, n_colors_required)
                 self.color_by_palette = list(palette)
-            else:
+            elif (
+                self.palette_selector.value
+                in self.palette_selector.groups["ColorBrewer palettes"]
+            ):
                 palette_dict = bokeh.palettes.brewer[self.palette_selector.value]
+                palette_sizes = sorted(list(palette_dict.keys()))
+                best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
+                palette = palette_dict[palette_sizes[best_size_index]]
+                self.color_by_palette = list(palette)
+            elif (
+                self.palette_selector.value
+                in self.palette_selector.groups["D3 palettes"]
+            ):
+                palette_dict = bokeh.palettes.d3[self.palette_selector.value]
                 palette_sizes = sorted(list(palette_dict.keys()))
                 best_size = bisect.bisect_left(palette_sizes, n_colors_required)
                 palette = palette_dict[best_size]
                 self.color_by_palette = list(palette)
+            else:
+                raise ValueError("Palette option not in a valid palette group")
 
     def _color_by_change(self, event) -> None:
         if (
