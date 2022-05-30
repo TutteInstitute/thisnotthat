@@ -39,7 +39,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         data: npt.ArrayLike,
         labels: Iterable[str],
         hover_text: Optional[Iterable[str]] = None,
-        size: Optional[Iterable[float]] = None,
+        marker_size: Optional[Iterable[float]] = None,
         *,
         label_color_mapping: Optional[Dict[str, str]] = None,
         palette: Sequence[str] = bokeh.palettes.Turbo256,
@@ -65,7 +65,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "position": data.tolist(),
                 "label": labels,
                 "hover_text": hover_text,
-                "size": size if size is not None else np.full(data.shape[0], 0.1),
+                "size": marker_size if marker_size is not None else np.full(data.shape[0], 0.1),
             }
         )
 
