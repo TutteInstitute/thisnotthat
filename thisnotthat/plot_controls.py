@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import numpy.typing as npt
 import bokeh.palettes
+import bisect
 
 from typing import *
 
@@ -28,7 +29,7 @@ class PlotControlPane(pn.reactive.Reactive):
                 "Smooth palettes": [
                     "Viridis",
                     "Cividis",
-                    "Gray",
+                    "Greys",
                     "Inferno",
                     "Magma",
                     "Plasma",
@@ -69,16 +70,41 @@ class PlotControlPane(pn.reactive.Reactive):
     def _palette_change(self, event) -> None:
         if pd.api.types.is_numeric_dtype(self.dataframe[self.color_by_column.value]):
             # Continuous scale required
-            pass
+            if (
+                self.palette_selector.value
+                in self.palette_selector.groups["Smooth palettes"]
+            ):
+                palette_name = self.palette_selector.value + "256"
+                self.color_by_palette = list(getattr(bokeh.palettes, palette_name))
+            else:
+                palette_dict = bokeh.palettes.brewer[self.palette_selector.value]
+                max_palette_size = max(palette_dict.keys())
+                palette = palette_dict[max_palette_size]
+                self.color_by_palette = list(palette)
         else:
             # Discrete scale required
-            pass
+            n_colors_required = self.dataframe[self.color_by_column.value].nunique()
+            if (
+                self.palette_selector.value
+                in self.palette_selector.groups["Smooth palettes"]
+            ):
+                palette_name = self.palette_selector.value + "256"
+                raw_palette = getattr(bokeh.palettes, palette_name)
+                palette = bokeh.palettes.linear_palette(raw_palette, n_colors_required)
+                self.color_by_palette = list(palette)
+            else:
+                palette_dict = bokeh.palettes.brewer[self.palette_selector.value]
+                palette_sizes = sorted(list(palette_dict.keys()))
+                best_size = bisect.bisect_left(palette_sizes, n_colors_required)
+                palette = palette_dict[best_size]
+                self.color_by_palette = list(palette)
 
     def _color_by_change(self, event) -> None:
-        pass
+        self._palette_change(None)
+        self.color_by_vector = self.dataframe[self.color_by_column.value]
 
     def _hover_text_change(self, event) -> None:
-        pass
+        self.hover_text = self.dataframe[self.hover_text_column.value].to_list()
 
     def _marker_size_change(self, event) -> None:
-        pass
+        self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
