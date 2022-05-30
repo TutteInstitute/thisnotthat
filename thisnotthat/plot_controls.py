@@ -11,7 +11,7 @@ from typing import *
 
 class PlotControlPane(pn.reactive.Reactive):
 
-    color_by_vector = param.Series(doc="Color by")
+    color_by_vector = param.Series(default=[], doc="Color by")
     color_by_palette = param.List([], item_type=str, doc="Color by palette")
     marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
@@ -72,7 +72,7 @@ class PlotControlPane(pn.reactive.Reactive):
             self.palette_selector.value == "Default palette"
             or self.color_by_column.value == "Default"
         ):
-            self.color_by_column = pd.Series([])
+            self.color_by_vector = pd.Series([])
             self.color_by_palette = []
             return
 
@@ -112,7 +112,7 @@ class PlotControlPane(pn.reactive.Reactive):
             self.palette_selector.value == "Default palette"
             or self.color_by_column.value == "Default"
         ):
-            self.color_by_column = pd.Series([])
+            self.color_by_vector = pd.Series([])
             self.color_by_palette = []
             return
 
@@ -120,13 +120,13 @@ class PlotControlPane(pn.reactive.Reactive):
         self.color_by_vector = self.dataframe[self.color_by_column.value]
 
     def _hover_text_change(self, event) -> None:
-        if self.hover_text.value == "Default":
+        if self.hover_text.column.value == "Default":
             self.hover_text = []
         else:
             self.hover_text = self.dataframe[self.hover_text_column.value].to_list()
 
     def _marker_size_change(self, event) -> None:
-        if self.marker_size_column == "Default":
+        if self.marker_size_column.value == "Default":
             self.marker_size = []
         else:
             self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
