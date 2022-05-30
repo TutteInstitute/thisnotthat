@@ -120,7 +120,7 @@ class PlotControlPane(pn.reactive.Reactive):
         self.color_by_vector = self.dataframe[self.color_by_column.value]
 
     def _hover_text_change(self, event) -> None:
-        if self.hover_text.column.value == "Default":
+        if self.hover_text_column.value == "Default":
             self.hover_text = []
         else:
             self.hover_text = self.dataframe[self.hover_text_column.value].to_list()
