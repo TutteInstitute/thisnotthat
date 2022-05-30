@@ -280,7 +280,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.points.glyph.fill_color = colormap
             self._color_by_renderer.glyph.fill_color = colormap
-            self._color_by_legend_source.data["label"] = [
+            self._color_by_legend_source.data["color_by"] = [
                 np.round(x, decimals=2)
                 for x in np.linspace(
                     self.color_by_vector.min(), self.color_by_vector.max(), 16,
