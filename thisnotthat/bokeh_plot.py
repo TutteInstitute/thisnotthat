@@ -232,17 +232,6 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if len(self.color_by_vector) == 0:
             self.points.glyph.fill_color = self._label_colormap
             self.plot.legend.items[0].renderers = [self.points]
-            # self.plot.legend.items = [
-            #     bokeh.models.LegendItem(
-            #         label={"field": "label"}, renderers=[self.points]
-            #     )
-            # ]
-            # HACK! Force update; not sure why this is required but ...
-            # if self.plot.x_range.start is not None:
-            #     self.plot.x_range.start += 1e-12
-            #     pn.io.push_notebook(self.pane)
-            #     self.plot.x_range.start -= 1e-12
-            #     pn.io.push_notebook(self.pane)
 
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             self.data_source.data["color_by"] = self.color_by_vector
@@ -252,20 +241,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.min(),
                 self.color_by_vector.max(),
             )
-            self.points.glyph.fill_color = colormap
             self._color_by_renderer.glyph.fill_color = colormap
-            self._color_by_legend_source.data["label"] = [
+            self._color_by_legend_source.data["color_by"] = [
                 np.round(x, decimals=2)
                 for x in np.linspace(
                     self.color_by_vector.min(), self.color_by_vector.max(), 16,
                 )
             ]
             self.plot.legend.items[0].renderers = [self._color_by_renderer]
-            # self.plot.legend.items = [
-            #     bokeh.models.LegendItem(
-            #         label={"field": "color_by"}, renderers=[self._color_by_renderer]
-            #     )
-            # ]
+            self.points.glyph.fill_color = colormap
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
