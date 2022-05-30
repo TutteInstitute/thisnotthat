@@ -230,9 +230,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @param.depends("color_by_vector", watch=True)
     def _update_color_by_vectors(self) -> None:
         if len(self.color_by_vector) == 0:
-            self.data_source.data["color_by"] = self.color_by_vector
+            self.data_source.data["color_by"] = np.zeros(len(self.labels))
             colormap = bokeh.transform.factor_cmap(
-                "color_by", self.color_by_palette, list(self.color_by_vector.unique())
+                "color_by", self.color_by_palette, [0]
             )
             self.points.glyph.fill_color = colormap
             self.points.glyph.fill_color = self._label_colormap
