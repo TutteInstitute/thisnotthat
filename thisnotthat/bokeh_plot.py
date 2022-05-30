@@ -246,15 +246,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.min(),
                 self.color_by_vector.max(),
             )
-            self._color_by_renderer.glyph.fill_color = colormap
             self._color_by_legend_source.data["color_by"] = [
                 np.round(x, decimals=2)
                 for x in np.linspace(
                     self.color_by_vector.min(), self.color_by_vector.max(), 16,
                 )
             ]
-            self.plot.legend.items[0].renderers = [self._color_by_renderer]
+            self._color_by_renderer.glyph.fill_color = colormap
             self.points.glyph.fill_color = colormap
+            self.plot.legend.items[0].renderers = [self._color_by_renderer]
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
@@ -278,14 +278,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.min(),
                 self.color_by_vector.max(),
             )
-            self.points.glyph.fill_color = colormap
-            self._color_by_renderer.glyph.fill_color = colormap
             self._color_by_legend_source.data["color_by"] = [
                 np.round(x, decimals=2)
                 for x in np.linspace(
                     self.color_by_vector.min(), self.color_by_vector.max(), 16,
                 )
             ]
+            self._color_by_renderer.glyph.fill_color = colormap
+            self.points.glyph.fill_color = colormap
             self.plot.legend.items[0].renderers = [self._color_by_renderer]
         else:
             colormap = bokeh.transform.factor_cmap(
