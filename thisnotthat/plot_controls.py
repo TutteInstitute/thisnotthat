@@ -68,6 +68,14 @@ class PlotControlPane(pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwds)
 
     def _palette_change(self, event) -> None:
+        if (
+            self.palette_selector.value == "Default palette"
+            or self.color_by_column.value == "Default"
+        ):
+            self.color_by_column = pd.Series([])
+            self.color_by_palette = []
+            return
+
         if pd.api.types.is_numeric_dtype(self.dataframe[self.color_by_column.value]):
             # Continuous scale required
             if (
@@ -100,11 +108,25 @@ class PlotControlPane(pn.reactive.Reactive):
                 self.color_by_palette = list(palette)
 
     def _color_by_change(self, event) -> None:
+        if (
+            self.palette_selector.value == "Default palette"
+            or self.color_by_column.value == "Default"
+        ):
+            self.color_by_column = pd.Series([])
+            self.color_by_palette = []
+            return
+
         self._palette_change(None)
         self.color_by_vector = self.dataframe[self.color_by_column.value]
 
     def _hover_text_change(self, event) -> None:
-        self.hover_text = self.dataframe[self.hover_text_column.value].to_list()
+        if self.hover_text.value == "Default":
+            self.hover_text = []
+        else:
+            self.hover_text = self.dataframe[self.hover_text_column.value].to_list()
 
     def _marker_size_change(self, event) -> None:
-        self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
+        if self.marker_size_column == "Default":
+            self.marker_size = []
+        else:
+            self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
