@@ -153,8 +153,8 @@ class PlotControlPane(pn.reactive.Reactive):
             self.color_by_palette = []
             return
 
-        self._palette_change(None)
         self.color_by_vector = self.dataframe[self.color_by_column.value]
+        self._palette_change(None)
 
     def _hover_text_change(self, event) -> None:
         if self.hover_text_column.value == "Default":
