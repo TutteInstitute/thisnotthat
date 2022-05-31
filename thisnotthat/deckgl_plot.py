@@ -96,9 +96,12 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         }
 
         self.dataframe["color"] = self.dataframe.label.map(self.color_mapping)
+        self.dataframe["color_by"] = [[0, 0, 0, 0]] * self.dataframe.shape[0]
+        self._color_by_enabled = False
         self.brush_radius = selection_brush_radius
 
         self._color_loc = self.dataframe.columns.get_loc("color")
+        self._color_by_loc = self.dataframe.columns.get_loc("color_by")
         self._selected_set = set([])
         self._selected_externally_changed = True
         self._nn_index = NearestNeighbors().fit(data)
@@ -316,25 +319,40 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.dataframe
             )
             if not self._color_map_in_selection_mode:
+                self.dataframe["color_by"] = self.dataframe["color_by"].map(
+                    lambda color: color[:3] + [self._selection_fill_alpha_int]
+                )
                 self.color_mapping = {
                     key: color[:3] + [self._selection_fill_alpha_int]
                     for key, color in self.color_mapping.items()
                 }
                 self._color_map_in_selection_mode = True
 
-            self.dataframe.iloc[selected, self._color_loc] = self.dataframe.label.iloc[
-                selected
-            ].map(color_mapping)
+            if self._color_by_enabled:
+                self.dataframe.iloc[selected, self._color_loc] = self.dataframe.iloc[selected, self._color_by_loc]
+            else:
+                self.dataframe.iloc[selected, self._color_loc] = self.dataframe.label.iloc[
+                    selected
+                ].map(color_mapping)
+
             self.points["data"] = self.dataframe
+
         else:
             if self._color_map_in_selection_mode:
+                self.dataframe["color_by"] = self.dataframe["color_by"].map(
+                    lambda color: color[:3] + [self._fill_alpha_int]
+                )
                 self.color_mapping = {
                     key: color[:3] + [self._fill_alpha_int]
                     for key, color in self.color_mapping.items()
                 }
                 self._color_map_in_selection_mode = False
 
-            self.dataframe["color"] = self.dataframe.label.map(color_mapping)
+            if self._color_by_enabled:
+                self.dataframe["color"] = self.dataframe["color_by"]
+            else:
+                self.dataframe["color"] = self.dataframe.label.map(color_mapping)
+
             self.points["data"] = self.dataframe
 
         self.deck_pane.param.trigger("object")
@@ -369,89 +387,67 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @param.depends("color_by_vector", watch=True)
     def _update_color_by_vectors(self) -> None:
         if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
+            self._color_by_enabled = False
             self._remap_colors(self.selected, self.color_mapping)
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+            self._color_by_enabled = True
             palette = self.color_by_palette
             min_val = self.color_by_vector.min()
             bin_width = (self.color_by_vector.max() - min_val) / (len(palette) - 1)
-            if len(self.selected) > 0:
-                self.dataframe.iloc[
-                    self.selected, self._color_loc
-                ] = self.color_by_vector.iloc[self.selected].map(
-                    lambda val: (
-                        [
-                            int(c * 255)
-                            for c in to_rgb(
-                                palette[int(np.round((val - min_val) / bin_width))]
-                            )
-                        ]
-                        + [self._fill_alpha_int]
-                    )
+            self.dataframe["color_by"] = self.color_by_vector.map(
+                lambda val: (
+                    [
+                        int(c * 255)
+                        for c in to_rgb(
+                            palette[int(np.round((val - min_val) / bin_width))]
+                        )
+                    ]
+                    + [self._fill_alpha_int]
                 )
-            else:
-                self.dataframe["color"] = self.color_by_vector.map(
-                    lambda val: (
-                        [
-                            int(c * 255)
-                            for c in to_rgb(
-                                palette[int(np.round((val - min_val) / bin_width))]
-                            )
-                        ]
-                        + [self._fill_alpha_int]
-                    )
-                )
+            )
             self.points["data"] = self.dataframe
             self.deck_pane.param.trigger("object")
         else:
+            self._color_by_enabled = True
             unique_items = self.color_by_vector.unique()
             color_mapping = {
                 item: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
                 for item, color in zip(unique_items, self.color_by_palette)
             }
+            self.dataframe["color_by"] = self.color_by_vector.map(color_mapping)
             self._remap_colors(self.selected, color_mapping)
 
     @param.depends("color_by_palette", watch=True)
     def _update_color_by_palette(self) -> None:
         if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
+            self._color_by_enabled = False
             self._remap_colors(self.selected, self.color_mapping)
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+            self._color_by_enabled = True
             palette = self.color_by_palette
             min_val = self.color_by_vector.min()
             bin_width = (self.color_by_vector.max() - min_val) / (len(palette) - 1)
-            if len(self.selected) > 0:
-                self.dataframe.iloc[
-                    self.selected, self._color_loc
-                ] = self.color_by_vector.iloc[self.selected].map(
-                    lambda val: (
-                            [
-                                int(c * 255)
-                                for c in to_rgb(
-                                palette[int(np.round((val - min_val) / bin_width))]
-                            )
-                            ]
-                            + [self._fill_alpha_int]
-                    )
+            self.dataframe["color_by"] = self.color_by_vector.map(
+                lambda val: (
+                    [
+                        int(c * 255)
+                        for c in to_rgb(
+                            palette[int(np.round((val - min_val) / bin_width))]
+                        )
+                    ]
+                    + [self._fill_alpha_int]
                 )
-            else:
-                self.dataframe["color"] = self.color_by_vector.map(
-                    lambda val: (
-                            [
-                                int(c * 255)
-                                for c in to_rgb(
-                                palette[int(np.round((val - min_val) / bin_width))]
-                            )
-                            ]
-                            + [self._fill_alpha_int]
-                    )
-                )
+            )
             self.points["data"] = self.dataframe
             self.deck_pane.param.trigger("object")
         else:
+            self._color_by_enabled = True
             unique_items = self.color_by_vector.unique()
             color_mapping = {
                 item: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
                 for item, color in zip(unique_items, self.color_by_palette)
             }
+            self.dataframe["color_by"] = self.color_by_vector.map(color_mapping)
             self._remap_colors(self.selected, color_mapping)
 
     @param.depends("marker_size", watch=True)
