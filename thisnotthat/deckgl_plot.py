@@ -225,7 +225,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     [event.new["coordinate"]], radius=radius, return_distance=False,
                 )
                 self._selected_set.update(neighbors[0])
-                self._remap_colors(list(self._selected_set))
+                self._remap_colors(list(self._selected_set), self.color_mapping)
                 self._selected_externally_changed = False
                 self.selected = list(self._selected_set)
                 self._selected_externally_changed = True
@@ -243,7 +243,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     [event.new["coordinate"]], radius=radius, return_distance=False,
                 )
                 self._selected_set.difference_update(neighbors[0])
-                self._remap_colors(list(self._selected_set))
+                self._remap_colors(list(self._selected_set), self.color_mapping)
                 self._selected_externally_changed = False
                 self.selected = list(self._selected_set)
                 self._selected_externally_changed = True
@@ -256,6 +256,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 else:
                     self._selected_set.discard(event.new["index"])
 
+                self._remap_colors(list(self._selected_set), self.color_mapping)
                 self._selected_externally_changed = False
                 self.selected = list(self._selected_set)
                 self._selected_externally_changed = True
@@ -434,6 +435,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.dataframe["size"] = rescaled_size
 
         self.points["data"] = self.dataframe
+        self.deck_pane.param.trigger("object")
 
     @param.depends("hover_text", watch=True)
     def _update_hover_text(self) -> None:
@@ -443,3 +445,4 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.dataframe["hover_text"] = [str(x) for x in self.hover_text]
 
         self.points["data"] = self.dataframe
+        self.deck_pane.param.trigger("object")
