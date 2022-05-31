@@ -101,6 +101,9 @@ class PlotControlPane(pn.reactive.Reactive):
         else:
             # Discrete scale required
             n_colors_required = self.dataframe[self.color_by_column.value].nunique()
+            if n_colors_required > 256:
+                n_colors_required = 256
+
             if (
                 self.palette_selector.value
                 in self.palette_selector.groups["Smooth palettes"]

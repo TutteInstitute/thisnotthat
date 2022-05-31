@@ -64,7 +64,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             {
                 "position": data.tolist(),
                 "label": labels,
-                "hover_text": hover_text,
+                "hover_text": hover_text if hover_text is not None else labels,
                 "size": marker_size if marker_size is not None else np.full(data.shape[0], 0.1),
             }
         )
@@ -127,6 +127,8 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         )
         zoom = MAGIC_ZOOM_CONSTANT - np.log2(view_size)
         self._base_radius = view_size * self.brush_radius
+        self._base_marker_size = marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
+        self._base_hover_text = hover_text if hover_text is not None else labels
 
         self.deck = {
             "initialViewState": {
@@ -414,3 +416,30 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 item: color for item, color in zip(unique_items, self.color_by_palette)
             }
             self._remap_colors(self.selected, color_mapping)
+
+    @param.depends("marker_size", watch=True)
+    def _update_marker_size(self) -> None:
+        if len(self.marker_size) == 0:
+            self.dataframe["size"] = self._base_marker_size
+        elif len(self.marker_size) == 1:
+            size_vector = pd.Series(
+                np.full(
+                    len(self.dataframe["size"]), self.marker_size[0]
+                )
+            )
+            self.dataframe["size"] = size_vector
+        else:
+            rescaled_size = pd.Series(self.marker_size)
+            rescaled_size = 0.05 * (rescaled_size / rescaled_size.mean())
+            self.dataframe["size"] = rescaled_size
+
+        self.points["data"] = self.dataframe
+
+    @param.depends("hover_text", watch=True)
+    def _update_hover_text(self) -> None:
+        if len(self.hover_text) == 0:
+            self.dataframe["hover_text"] = self._base_hover_text
+        else:
+            self.dataframe["hover_text"] = [str(x) for x in self.hover_text]
+
+        self.points["data"] = self.dataframe
