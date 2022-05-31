@@ -232,7 +232,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     [event.new["coordinate"]], radius=radius, return_distance=False,
                 )
                 self._selected_set.update(neighbors[0])
-                self._remap_colors(list(self._selected_set), self.color_mapping)
+                self._remap_colors(list(self._selected_set))
                 self._selected_externally_changed = False
                 self.selected = list(self._selected_set)
                 self._selected_externally_changed = True
@@ -250,7 +250,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     [event.new["coordinate"]], radius=radius, return_distance=False,
                 )
                 self._selected_set.difference_update(neighbors[0])
-                self._remap_colors(list(self._selected_set), self.color_mapping)
+                self._remap_colors(list(self._selected_set))
                 self._selected_externally_changed = False
                 self.selected = list(self._selected_set)
                 self._selected_externally_changed = True
@@ -263,7 +263,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 else:
                     self._selected_set.discard(event.new["index"])
 
-                self._remap_colors(list(self._selected_set), self.color_mapping)
+                self._remap_colors(list(self._selected_set))
                 self._selected_externally_changed = False
                 self.selected = list(self._selected_set)
                 self._selected_externally_changed = True
@@ -311,7 +311,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.select_message.visible = False
             self.deck_pane.throttle = {"view": 200, "hover": 200}
 
-    def _remap_colors(self, selected=None, color_mapping=None):
+    def _remap_colors(self, selected=None) -> None:
         if selected is None:
             return
         elif len(selected) > 0:
@@ -333,7 +333,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             else:
                 self.dataframe.iloc[selected, self._color_loc] = self.dataframe.label.iloc[
                     selected
-                ].map(color_mapping)
+                ].map(self.color_mapping)
 
             self.points["data"] = self.dataframe
 
@@ -351,7 +351,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             if self._color_by_enabled:
                 self.dataframe["color"] = self.dataframe["color_by"]
             else:
-                self.dataframe["color"] = self.dataframe.label.map(color_mapping)
+                self.dataframe["color"] = self.dataframe.label.map(self.color_mapping)
 
             self.points["data"] = self.dataframe
 
@@ -363,7 +363,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
             for label, color in zip(self.label_color_factors, self.label_color_palette)
         }
-        self._remap_colors(self.selected, self.color_mapping)
+        self._remap_colors(self.selected)
 
     @param.depends("label_color_factors", watch=True)
     def _update_factors(self):
@@ -371,24 +371,24 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             label: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
             for label, color in zip(self.label_color_factors, self.label_color_palette)
         }
-        self._remap_colors(self.selected, self.color_mapping)
+        self._remap_colors(self.selected)
 
     @param.depends("labels", watch=True)
     def _update_labels(self):
         self.dataframe["label"] = self.labels
-        self._remap_colors(self.selected, self.color_mapping)
+        self._remap_colors(self.selected)
 
     @param.depends("selected", watch=True)
     def _update_selection(self):
         if self._selected_externally_changed:
             self._selected_set = set(self.selected)
-            self._remap_colors(self.selected, self.color_mapping)
+            self._remap_colors(self.selected)
 
     @param.depends("color_by_vector", watch=True)
     def _update_color_by_vectors(self) -> None:
         if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
             self._color_by_enabled = False
-            self._remap_colors(self.selected, self.color_mapping)
+            self._remap_colors(self.selected)
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             self._color_by_enabled = True
             palette = self.color_by_palette
@@ -405,7 +405,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     + [self._fill_alpha_int]
                 )
             )
-            self._remap_colors(self.selected, self.color_mapping)
+            self._remap_colors(self.selected)
         else:
             self._color_by_enabled = True
             unique_items = self.color_by_vector.unique()
@@ -414,13 +414,13 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 for item, color in zip(unique_items, self.color_by_palette)
             }
             self.dataframe["color_by"] = self.color_by_vector.map(color_mapping)
-            self._remap_colors(self.selected, color_mapping)
+            self._remap_colors(self.selected)
 
     @param.depends("color_by_palette", watch=True)
     def _update_color_by_palette(self) -> None:
         if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
             self._color_by_enabled = False
-            self._remap_colors(self.selected, self.color_mapping)
+            self._remap_colors(self.selected)
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             self._color_by_enabled = True
             palette = self.color_by_palette
@@ -437,7 +437,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     + [self._fill_alpha_int]
                 )
             )
-            self._remap_colors(self.selected, self.color_mapping)
+            self._remap_colors(self.selected)
         else:
             self._color_by_enabled = True
             unique_items = self.color_by_vector.unique()
@@ -446,7 +446,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 for item, color in zip(unique_items, self.color_by_palette)
             }
             self.dataframe["color_by"] = self.color_by_vector.map(color_mapping)
-            self._remap_colors(self.selected, color_mapping)
+            self._remap_colors(self.selected)
 
     @param.depends("marker_size", watch=True)
     def _update_marker_size(self) -> None:
