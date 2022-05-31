@@ -53,15 +53,11 @@ class PlotControlPane(pn.reactive.Reactive):
             + list(self.dataframe.select_dtypes(include="number").columns),
         )
         self.marker_size_column.param.watch(self._marker_size_change, "value")
-        # self.apply_button = pn.widgets.Button(
-        #     name="Apply", button_type="success"
-        # )
         self.pane = pn.WidgetBox(
             self.palette_selector,
             self.color_by_column,
             self.marker_size_column,
             self.hover_text_column,
-            # self.apply_button,
         )
 
     def _get_model(self, *args, **kwds):
