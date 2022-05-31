@@ -115,8 +115,15 @@ class PlotControlPane(pn.reactive.Reactive):
             ):
                 palette_dict = bokeh.palettes.brewer[self.palette_selector.value]
                 palette_sizes = sorted(list(palette_dict.keys()))
-                best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
-                palette = palette_dict[palette_sizes[best_size_index]]
+
+                if n_colors_required <= max(palette_sizes):
+                    best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
+                    palette = palette_dict[palette_sizes[best_size_index]]
+                else:
+                    max_size = max(palette_sizes)
+                    n_copies = (n_colors_required // max_size) + 1
+                    palette = palette_dict[max_size] * n_copies
+
                 self.color_by_palette = list(palette)
             elif (
                 self.palette_selector.value
@@ -124,8 +131,15 @@ class PlotControlPane(pn.reactive.Reactive):
             ):
                 palette_dict = bokeh.palettes.d3[self.palette_selector.value]
                 palette_sizes = sorted(list(palette_dict.keys()))
-                best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
-                palette = palette_dict[palette_sizes[best_size_index]]
+
+                if n_colors_required <= max(palette_sizes):
+                    best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
+                    palette = palette_dict[palette_sizes[best_size_index]]
+                else:
+                    max_size = max(palette_sizes)
+                    n_copies = (n_colors_required // max_size) + 1
+                    palette = palette_dict[max_size] * n_copies
+
                 self.color_by_palette = list(palette)
             else:
                 raise ValueError("Palette option not in a valid palette group")
