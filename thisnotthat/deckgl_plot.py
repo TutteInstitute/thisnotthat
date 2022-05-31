@@ -405,8 +405,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     + [self._fill_alpha_int]
                 )
             )
-            self.points["data"] = self.dataframe
-            self.deck_pane.param.trigger("object")
+            self._remap_colors(self.selected, self.color_mapping)
         else:
             self._color_by_enabled = True
             unique_items = self.color_by_vector.unique()
@@ -438,8 +437,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     + [self._fill_alpha_int]
                 )
             )
-            self.points["data"] = self.dataframe
-            self.deck_pane.param.trigger("object")
+            self._remap_colors(self.selected, self.color_mapping)
         else:
             self._color_by_enabled = True
             unique_items = self.color_by_vector.unique()
