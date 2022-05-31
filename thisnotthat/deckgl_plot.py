@@ -373,7 +373,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             palette = self.color_by_palette
             min_val = self.color_by_vector.min()
-            bin_width = (self.color_by_vector.max() - min_val) / len(palette)
+            bin_width = (self.color_by_vector.max() - min_val) / (len(palette) - 1)
             if len(self.selected) > 0:
                 self.dataframe.iloc[
                     self.selected, self._color_loc
@@ -416,29 +416,32 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self._remap_colors(self.selected, self.color_mapping)
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             palette = self.color_by_palette
-            bin_width = (self.color_by_vector.max() - self.color_by_vector.min()) / len(
-                palette
-            )
+            min_val = self.color_by_vector.min()
+            bin_width = (self.color_by_vector.max() - min_val) / (len(palette) - 1)
             if len(self.selected) > 0:
                 self.dataframe.iloc[
                     self.selected, self._color_loc
                 ] = self.color_by_vector.iloc[self.selected].map(
                     lambda val: (
-                        [
-                            int(c * 255)
-                            for c in to_rgb(palette[np.int(np.round(val / bin_width))])
-                        ]
-                        + [self._fill_alpha_int]
+                            [
+                                int(c * 255)
+                                for c in to_rgb(
+                                palette[int(np.round((val - min_val) / bin_width))]
+                            )
+                            ]
+                            + [self._fill_alpha_int]
                     )
                 )
             else:
                 self.dataframe["color"] = self.color_by_vector.map(
                     lambda val: (
-                        [
-                            int(c * 255)
-                            for c in to_rgb(palette[np.int(np.round(val / bin_width))])
-                        ]
-                        + [self._fill_alpha_int]
+                            [
+                                int(c * 255)
+                                for c in to_rgb(
+                                palette[int(np.round((val - min_val) / bin_width))]
+                            )
+                            ]
+                            + [self._fill_alpha_int]
                     )
                 )
             self.points["data"] = self.dataframe
