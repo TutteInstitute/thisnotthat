@@ -65,7 +65,9 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "position": data.tolist(),
                 "label": labels,
                 "hover_text": hover_text if hover_text is not None else labels,
-                "size": marker_size if marker_size is not None else np.full(data.shape[0], 0.1),
+                "size": marker_size
+                if marker_size is not None
+                else np.full(data.shape[0], 0.1),
             }
         )
 
@@ -127,7 +129,9 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         )
         zoom = MAGIC_ZOOM_CONSTANT - np.log2(view_size)
         self._base_radius = view_size * self.brush_radius
-        self._base_marker_size = marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
+        self._base_marker_size = (
+            marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
+        )
         self._base_hover_text = hover_text if hover_text is not None else labels
 
         self.deck = {
@@ -364,7 +368,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     @param.depends("color_by_vector", watch=True)
     def _update_color_by_vectors(self) -> None:
-        if len(self.color_by_vector) == 0:
+        if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
             self._remap_colors(self.selected, self.color_mapping)
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             palette = self.color_by_palette
@@ -375,24 +379,37 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.dataframe.iloc[
                     self.selected, self._color_loc
                 ] = self.color_by_vector.iloc[self.selected].map(
-                    lambda val: palette[np.int(np.round(val / bin_width))]
+                    lambda val: (
+                        [
+                            int(c * 255)
+                            for c in to_rgb(palette[np.int(np.round(val / bin_width))])
+                        ]
+                        + [self._fill_alpha_int]
+                    )
                 )
             else:
                 self.dataframe["color"] = self.color_by_vector.map(
-                    lambda val: palette[np.int(np.round(val / bin_width))]
+                    lambda val: (
+                        [
+                            int(c * 255)
+                            for c in to_rgb(palette[np.int(np.round(val / bin_width))])
+                        ]
+                        + [self._fill_alpha_int]
+                    )
                 )
             self.points["data"] = self.dataframe
             self.deck_pane.param.trigger("object")
         else:
             unique_items = self.color_by_vector.unique()
             color_mapping = {
-                item: color for item, color in zip(unique_items, self.color_by_palette)
+                item: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
+                for item, color in zip(unique_items, self.color_by_palette)
             }
             self._remap_colors(self.selected, color_mapping)
 
     @param.depends("color_by_palette", watch=True)
     def _update_color_by_palette(self) -> None:
-        if len(self.color_by_vector) == 0:
+        if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
             self._remap_colors(self.selected, self.color_mapping)
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             palette = self.color_by_palette
@@ -403,18 +420,31 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.dataframe.iloc[
                     self.selected, self._color_loc
                 ] = self.color_by_vector.iloc[self.selected].map(
-                    lambda val: palette[np.int(np.round(val / bin_width))]
+                    lambda val: (
+                        [
+                            int(c * 255)
+                            for c in to_rgb(palette[np.int(np.round(val / bin_width))])
+                        ]
+                        + [self._fill_alpha_int]
+                    )
                 )
             else:
                 self.dataframe["color"] = self.color_by_vector.map(
-                    lambda val: palette[np.int(np.round(val / bin_width))]
+                    lambda val: (
+                        [
+                            int(c * 255)
+                            for c in to_rgb(palette[np.int(np.round(val / bin_width))])
+                        ]
+                        + [self._fill_alpha_int]
+                    )
                 )
             self.points["data"] = self.dataframe
             self.deck_pane.param.trigger("object")
         else:
             unique_items = self.color_by_vector.unique()
             color_mapping = {
-                item: color for item, color in zip(unique_items, self.color_by_palette)
+                item: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
+                for item, color in zip(unique_items, self.color_by_palette)
             }
             self._remap_colors(self.selected, color_mapping)
 
@@ -424,9 +454,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.dataframe["size"] = self._base_marker_size
         elif len(self.marker_size) == 1:
             size_vector = pd.Series(
-                np.full(
-                    len(self.dataframe["size"]), self.marker_size[0]
-                )
+                np.full(len(self.dataframe["size"]), self.marker_size[0])
             )
             self.dataframe["size"] = size_vector
         else:
