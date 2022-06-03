@@ -13,6 +13,45 @@ from .utils import _palette_index
 from typing import *
 
 
+def add_text_layer(plot_figure, text_dataframe, text_size, layer_type="middle"):
+    label_data_source = bokeh.models.ColumnDataSource(text_dataframe)
+    labels = bokeh.models.Text(
+        text_font_size=str(text_size) + "pt",
+        text_baseline="bottom",
+        text_align="center",
+    )
+    text_resize_callback = bokeh.models.callbacks.CustomJS(
+        args=dict(labels=labels),
+        code="""
+    const scale = cb_obj.end - cb_obj.start;
+    const text_size = (%f / scale);
+    if (text_size > 48 && %s) {
+        var alpha = (64 - text_size) / 16.0;
+
+    } else if (text_size < 14 && %s) {
+        var alpha = (text_size - 2.0) / 12.0;
+
+    } else {
+        var alpha = 1.0;
+    }
+    if (alpha > 0) {
+        labels.text_alpha = alpha;
+    } else {
+        labels.text_alpha = 0.0;
+    }
+    labels.text_font_size = text_size + "pt";
+    labels.change.emit();
+    """
+        % (
+            text_size,
+            "false" if layer_type == "bottom" else "true",
+            "false" if layer_type == "top" else "true",
+        ),
+    )
+    plot_figure.add_glyph(label_data_source, labels)
+    plot_figure.x_range.js_on_change("start", text_resize_callback)
+
+
 class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     labels = param.Series(doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
@@ -66,7 +105,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "y": np.asarray(data).T[1],
                 "label": labels,
                 "hover_text": hover_text if hover_text is not None else labels,
-                "size": marker_size if marker_size is not None else np.full(data.shape[0], 0.1),
+                "size": marker_size
+                if marker_size is not None
+                else np.full(data.shape[0], 0.1),
                 "apparent_size": marker_size
                 if marker_size is not None
                 else np.full(data.shape[0], 0.1),
@@ -252,14 +293,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
         elif len(self.marker_size) == 1:
             size_vector = pd.Series(
-                np.full(
-                    len(self.data_source.data["size"]), self.marker_size[0]
-                )
+                np.full(len(self.data_source.data["size"]), self.marker_size[0])
             )
             self.data_source.data["size"] = size_vector
-            self.data_source.data["apparent_size"] = size_vector.map(
-                _map_apparent_size
-            )
+            self.data_source.data["apparent_size"] = size_vector.map(_map_apparent_size)
         else:
             rescaled_size = pd.Series(self.marker_size)
             rescaled_size = 0.05 * (rescaled_size / rescaled_size.mean())
@@ -359,3 +396,26 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.plot.legend.items[0].renderers = [self.points]
 
         pn.io.push_notebook(self.pane)
+
+    def add_cluster_labels(self, cluster_labelling):
+        for i, (label_locations, label_strings) in enumerate(
+            zip(cluster_labelling.location_layers, cluster_labelling.labels_for_display)
+        ):
+            cluster_label_layer = pd.DataFrame(
+                {
+                    "x": label_locations.T[0],
+                    "y": label_locations.T[1],
+                    "text": label_strings,
+                }
+            )
+
+            if i == 0:
+                layer_type = "bottom"
+            elif i == len(cluster_labelling.location_layers) - 1:
+                layer_type = "top"
+            else:
+                layer_type = "middle"
+
+            add_text_layer(
+                self.plot, cluster_label_layer, 12 * 2 ** i, layer_type=layer_type
+            )
