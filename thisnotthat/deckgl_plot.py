@@ -217,7 +217,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
 
-    def _hover_event_handler(self, event):
+    def _hover_event_handler(self, event) -> None:
         if self.select_method.value == "Brush":
             if self._brushing_on:
                 if len(self.deck_pane.view_state) > 0:
@@ -255,7 +255,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.selected = list(self._selected_set)
                 self._selected_externally_changed = True
 
-    def _click_event_handler(self, event):
+    def _click_event_handler(self, event) -> None:
         if self.select_method.value == "Click":
             if event.new["layer"] == "ScatterplotLayer":
                 if event.new["index"] not in self._selected_set:
@@ -290,7 +290,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.select_message.alert_type = "success"
                 self.select_message.object = ERASER_ON_MESSAGE
 
-    def _change_selection_type(self, event):
+    def _change_selection_type(self, event) -> None:
         if event.new == "Reset":
             self.select_message.visible = False
             self.selected = []
