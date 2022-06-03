@@ -6,7 +6,14 @@ from sklearn.metrics import pairwise_distances
 from pynndescent import NNDescent
 
 import numpy as np
+import numpy.typing as npt
 import networkx as nx
+
+from typing import *
+
+
+def string_label_formatter(label_list: List[str]):
+    return "\n".join(label_list)
 
 
 def build_fine_grained_cluster_centers(
@@ -208,9 +215,7 @@ def text_labels(
     query_size=10,
 ):
     text_label_nn_index = NNDescent(
-        text_representations,
-        metric=vector_metric,
-        n_neighbors=pynnd_n_neighbors,
+        text_representations, metric=vector_metric, n_neighbors=pynnd_n_neighbors,
     )
     text_label_nn_index.prepare()
 
@@ -221,14 +226,89 @@ def text_labels(
         layer_labels = []
         for cluster in layer:
             text_rep_indices, _ = text_label_nn_index.query([cluster], k=query_size)
-            nearest_text = [x for x in text_rep_indices[0] if x not in keyword_set and x not in layer_keyword_set]
+            nearest_text = [
+                x
+                for x in text_rep_indices[0]
+                if x not in keyword_set and x not in layer_keyword_set
+            ]
             layer_keyword_set.update(set(nearest_text[:items_per_label]))
-            layer_labels.append([text_label_dictionary[x] for x in nearest_text[:items_per_label]])
+            layer_labels.append(
+                [text_label_dictionary[x] for x in nearest_text[:items_per_label]]
+            )
         keyword_set.update(layer_keyword_set)
         labels.append(layer_labels)
 
     return labels[::-1]
 
-class TextVectorLabelLayers(object):
 
-    pass
+class TextVectorLabelLayers(object):
+    def __init__(
+        self,
+        source_vectors: npt.ArrayLike,
+        map_representation: npt.ArrayLike,
+        labelling_vectors: npt.ArrayLike,
+        labels: Dict[int, Any],
+        *,
+        vector_metric="cosine",
+        umap_n_components=5,
+        umap_n_neighbors=15,
+        hdbscan_min_samples=10,
+        hdbscan_min_cluster_size=20,
+        min_clusters_in_layer=4,
+        contamination=0.05,
+        cluster_distance_threshold=0.025,
+        contamination_multiplier=1.5,
+        max_contamination=0.25,
+        adjust_label_locations=True,
+        label_adjust_spring_constant=0.1,
+        label_adjust_spring_constant_multiplier=1.5,
+        label_adjust_edge_weight=1.0,
+        items_per_label=3,
+        pynnd_n_neighbors=40,
+        pynnd_query_size=10,
+        label_formatter=string_label_formatter,
+    ):
+        cluster_vectors, cluster_locations = build_fine_grained_cluster_centers(
+            source_vectors,
+            map_representation,
+            umap_metric=vector_metric,
+            umap_n_components=umap_n_components,
+            umap_n_neighbors=umap_n_neighbors,
+            hdbscan_min_samples=hdbscan_min_samples,
+            hdbscan_min_cluster_size=hdbscan_min_cluster_size,
+        )
+        vector_layers, self.location_layers = build_cluster_layers(
+            cluster_vectors,
+            cluster_locations,
+            min_clusters=min_clusters_in_layer,
+            contamination=contamination,
+            vector_metric=vector_metric,
+            cluster_distance_threshold=cluster_distance_threshold,
+            contamination_multiplier=contamination_multiplier,
+            max_contamination=max_contamination,
+        )
+        if adjust_label_locations:
+            self.location_layers = text_locations(
+                self.location_layers,
+                spring_constant=label_adjust_spring_constant,
+                spring_constant_multiplier=label_adjust_spring_constant_multiplier,
+                edge_weight=label_adjust_edge_weight,
+            )
+
+        self.labels = text_labels(
+            vector_layers,
+            labelling_vectors,
+            labels,
+            items_per_label=items_per_label,
+            vector_metric=vector_metric,
+            pynnd_n_neighbors=pynnd_n_neighbors,
+            query_size=pynnd_query_size,
+        )
+        self.label_formatter = label_formatter
+
+    @property
+    def labels_for_display(self):
+        return [
+            [self.label_formatter(label) for label in label_layer]
+            for label_layer in self.labels
+        ]
