@@ -25,12 +25,14 @@ def build_fine_grained_cluster_centers(
     umap_n_neighbors=15,
     hdbscan_min_samples=10,
     hdbscan_min_cluster_size=20,
+    random_state=None,
 ):
     clusterable_representation = UMAP(
         n_components=umap_n_components,
         metric=umap_metric,
         n_neighbors=umap_n_neighbors,
         min_dist=1e-8,
+        random_state=random_state,
     ).fit_transform(source_vectors)
 
     clusterer = HDBSCAN(
@@ -267,6 +269,7 @@ class TextVectorLabelLayers(object):
         pynnd_n_neighbors=40,
         pynnd_query_size=10,
         label_formatter=string_label_formatter,
+        random_state=None,
     ):
         cluster_vectors, cluster_locations = build_fine_grained_cluster_centers(
             source_vectors,
@@ -276,6 +279,7 @@ class TextVectorLabelLayers(object):
             umap_n_neighbors=umap_n_neighbors,
             hdbscan_min_samples=hdbscan_min_samples,
             hdbscan_min_cluster_size=hdbscan_min_cluster_size,
+            random_state=random_state,
         )
         vector_layers, self.location_layers = build_cluster_layers(
             cluster_vectors,
