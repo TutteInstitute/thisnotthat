@@ -21,7 +21,7 @@ def add_text_layer(
     *,
     angle=0,
     text_color="#444444",
-    text_font="helvetica",
+    text_font={"value": "helvetica"},
     text_font_style="normal",
     text_line_height=0.9,
     text_alpha=1.0,
@@ -360,15 +360,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.min(),
                 self.color_by_vector.max(),
             )
-            self._color_by_legend_source.data["color_by"] = [
-                np.round(x, decimals=2)
-                for x in np.linspace(
-                    self.color_by_vector.min(), self.color_by_vector.max(), 16,
-                )
-            ]
-            self._color_by_renderer.glyph.fill_color = colormap
             self.points.glyph.fill_color = colormap
             if self.show_legend:
+                self._color_by_legend_source.data["color_by"] = [
+                    np.round(x, decimals=2)
+                    for x in np.linspace(
+                        self.color_by_vector.min(), self.color_by_vector.max(), 16,
+                    )
+                ]
+                self._color_by_renderer.glyph.fill_color = colormap
                 self.plot.legend.items[0].renderers = [self._color_by_renderer]
                 self.plot.legend.items[0].label["field"] = "color_by"
         else:
@@ -399,15 +399,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.color_by_vector.min(),
                 self.color_by_vector.max(),
             )
-            self._color_by_legend_source.data["color_by"] = [
-                np.round(x, decimals=2)
-                for x in np.linspace(
-                    self.color_by_vector.min(), self.color_by_vector.max(), 16,
-                )
-            ]
-            self._color_by_renderer.glyph.fill_color = colormap
             self.points.glyph.fill_color = colormap
             if self.show_legend:
+                self._color_by_legend_source.data["color_by"] = [
+                    np.round(x, decimals=2)
+                    for x in np.linspace(
+                        self.color_by_vector.min(), self.color_by_vector.max(), 16,
+                    )
+                ]
+                self._color_by_renderer.glyph.fill_color = colormap
                 self.plot.legend.items[0].renderers = [self._color_by_renderer]
                 self.plot.legend.items[0].label["field"] = "color_by"
         else:
@@ -428,7 +428,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         angle=0,
         text_size_scale=12,
         text_color="#444444",
-        text_font="helvetica",
+        text_font={"value": "helvetica"},
         text_font_style="normal",
         text_line_height=0.9,
         text_alpha=1.0,
