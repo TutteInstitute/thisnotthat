@@ -426,6 +426,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         cluster_labelling,
         *,
         angle=0,
+        text_size_scale=12,
         text_color="#444444",
         text_font="helvetica",
         text_font_style="normal",
@@ -453,7 +454,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             add_text_layer(
                 self.plot,
                 cluster_label_layer,
-                12 * 2 ** i,
+                text_size_scale * 2 ** i,
                 layer_type=layer_type,
                 angle=angle,
                 text_color=text_color,
