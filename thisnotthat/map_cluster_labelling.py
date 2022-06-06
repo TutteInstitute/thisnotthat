@@ -177,8 +177,8 @@ def text_locations(
     if len(location_layers) <= 1:
         return location_layers
 
-    fixed_layer = location_layers[0]
-    adjustable_layer = location_layers[1]
+    fixed_layer = np.array(location_layers[0])
+    adjustable_layer = np.array(location_layers[1])
     adjusted_locations = adjust_layer_locations(
         fixed_layer,
         adjustable_layer,
