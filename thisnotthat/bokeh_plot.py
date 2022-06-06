@@ -13,12 +13,30 @@ from .utils import _palette_index
 from typing import *
 
 
-def add_text_layer(plot_figure, text_dataframe, text_size, layer_type="middle"):
+def add_text_layer(
+    plot_figure,
+    text_dataframe,
+    text_size,
+    layer_type="middle",
+    *,
+    angle=0,
+    text_color="#444444",
+    text_font="helvetica",
+    text_font_style="normal",
+    text_line_height=0.9,
+    text_alpha=1.0,
+):
     label_data_source = bokeh.models.ColumnDataSource(text_dataframe)
     labels = bokeh.models.Text(
         text_font_size=str(text_size) + "pt",
         text_baseline="bottom",
         text_align="center",
+        angle=angle,
+        text_color=text_color,
+        text_font=text_font,
+        text_font_style=text_font_style,
+        text_line_height=text_line_height,
+        text_alpha=text_alpha,
     )
     text_resize_callback = bokeh.models.callbacks.CustomJS(
         args=dict(labels=labels),
@@ -403,7 +421,17 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         pn.io.push_notebook(self.pane)
 
-    def add_cluster_labels(self, cluster_labelling):
+    def add_cluster_labels(
+        self,
+        cluster_labelling,
+        *,
+        angle=0,
+        text_color="#444444",
+        text_font="helvetica",
+        text_font_style="normal",
+        text_line_height=0.9,
+        text_alpha=1.0,
+    ):
         for i, (label_locations, label_strings) in enumerate(
             zip(cluster_labelling.location_layers, cluster_labelling.labels_for_display)
         ):
@@ -423,5 +451,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 layer_type = "middle"
 
             add_text_layer(
-                self.plot, cluster_label_layer, 12 * 2 ** i, layer_type=layer_type
+                self.plot,
+                cluster_label_layer,
+                12 * 2 ** i,
+                layer_type=layer_type,
+                angle=angle,
+                text_color=text_color,
+                text_font=text_font,
+                text_font_style=text_font_style,
+                text_line_height=text_line_height,
+                text_alpha=text_alpha,
             )
