@@ -187,7 +187,7 @@ def text_locations(
     )
     text_locations = [fixed_layer, adjusted_locations]
 
-    for i, layer in range(2, len(location_layers)):
+    for i in range(2, len(location_layers)):
         fixed_layer = np.vstack(text_locations)
         adjustable_layer = np.array(location_layers[i])
 
