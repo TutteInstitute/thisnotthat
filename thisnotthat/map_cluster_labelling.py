@@ -1,7 +1,11 @@
+import pandas as pd
 from umap import UMAP
 from hdbscan import HDBSCAN
+from hdbscan._hdbscan_tree import recurse_leaf_dfs, get_cluster_tree_leaves
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.cluster import AgglomerativeClustering
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import pairwise_distances
 from pynndescent import NNDescent
 
@@ -61,7 +65,46 @@ def build_fine_grained_cluster_centers(
         if cluster_id != -1
     ]
 
-    return np.array(cluster_vectors), np.array(map_cluster_locations)
+    return (
+        np.array(cluster_vectors),
+        np.array(map_cluster_locations),
+        clusterer.condensed_tree_,
+    )
+
+
+def hdbscan_tree_based_cluster_merger(tree, clusters_to_merge):
+    to_be_merged = list(clusters_to_merge[:])
+    leaves_to_merge = set(clusters_to_merge)
+    result = []
+    while len(to_be_merged) > 0:
+        merge_candidate = to_be_merged[0]
+        merged_leaves = {merge_candidate}
+        while True:
+            parent = tree["parent"][tree["child"] == merge_candidate][0]
+            leaves_under_parent = set(recurse_leaf_dfs(tree, parent))
+            if leaves_under_parent <= leaves_to_merge:
+                merge_candidate = parent
+                merged_leaves = leaves_under_parent
+            else:
+                break
+
+        result.append(merge_candidate)
+        for leaf in merged_leaves:
+            to_be_merged.remove(leaf)
+
+    return result
+
+
+def point_set_from_cluster(tree, cluster_indices, topic_mask, leaf_mapping):
+    cluster_tree = tree[tree["child_size"] > 1]
+    cluster = np.arange(topic_mask.shape[0])[topic_mask][cluster_indices]
+    leaves_to_merge = [leaf_mapping[x] for x in cluster]
+    merged_cluster_set = hdbscan_tree_based_cluster_merger(
+        cluster_tree, leaves_to_merge
+    )
+    result = sorted(sum([recurse_leaf_dfs(tree, x) for x in merged_cluster_set], []))
+
+    return result
 
 
 def build_cluster_layers(
@@ -74,9 +117,30 @@ def build_cluster_layers(
     cluster_distance_threshold=0.025,
     contamination_multiplier=1.5,
     max_contamination=0.25,
+    return_pointsets=False,
+    hdbscan_tree=None,
 ):
     vector_layers = [cluster_vectors]
     location_layers = [cluster_locations]
+
+    if return_pointsets:
+        if hdbscan_tree is None:
+            raise ValueError("Must supply a hdbscan_tree if returning pointsets")
+        full_tree = hdbscan_tree.to_numpy()
+        cluster_tree = full_tree[full_tree["child_size"] > 1]
+        leaf_mapping = {
+            n: c for n, c in enumerate(sorted(get_cluster_tree_leaves(cluster_tree)))
+        }
+        pointset_layers = [
+            [
+                recurse_leaf_dfs(full_tree, leaf_mapping[x])
+                for x in range(cluster_vectors.shape[0])
+            ]
+        ]
+    else:
+        pointset_layers = []
+        full_tree = None
+        leaf_mapping = {}
 
     n_clusters = cluster_vectors.shape[0] // 2
     min_cluster_size = 2
@@ -103,6 +167,15 @@ def build_cluster_layers(
 
             vector = vectors_for_clustering[layer_metaclusters == label].mean(axis=0)
             location = locations_for_clusters[layer_metaclusters == label].mean(axis=0)
+            if return_pointsets:
+                pointset = point_set_from_cluster(
+                    full_tree,
+                    np.where(layer_metaclusters == label),
+                    robust_cluster_indicator,
+                    leaf_mapping,
+                )
+            else:
+                pointset = None
 
             for i, l in enumerate(vector_layers):
                 if np.any(
@@ -113,6 +186,7 @@ def build_cluster_layers(
             else:
                 layer_vectors.append(vector)
                 layer_locations.append(location)
+                pointset_layers.append(pointset)
 
         if len(layer_vectors) >= min_clusters:
             vector_layers.append(layer_vectors)
@@ -123,7 +197,10 @@ def build_cluster_layers(
         if contamination >= max_contamination:
             contamination = max_contamination
 
-    return vector_layers, location_layers
+    if return_pointsets:
+        return vector_layers, location_layers, pointset_layers
+    else:
+        return vector_layers, location_layers
 
 
 def adjust_layer_locations(
@@ -131,7 +208,6 @@ def adjust_layer_locations(
 ):
     fixed_node_pos = fixed_layer
     anchor_node_pos = layer_to_adjust
-    distances = pairwise_distances(anchor_node_pos, fixed_node_pos, metric="euclidean")
 
     position_dict = {}
     fixed_nodes = []
@@ -206,7 +282,7 @@ def text_locations(
     return text_locations
 
 
-def text_labels(
+def text_labels_from_joint_vector_space(
     vector_layers,
     text_representations,
     text_label_dictionary,
@@ -215,9 +291,13 @@ def text_labels(
     vector_metric="cosine",
     pynnd_n_neighbors=40,
     query_size=10,
+    random_state=None,
 ):
     text_label_nn_index = NNDescent(
-        text_representations, metric=vector_metric, n_neighbors=pynnd_n_neighbors,
+        text_representations,
+        metric=vector_metric,
+        n_neighbors=pynnd_n_neighbors,
+        random_state=random_state,
     )
     text_label_nn_index.prepare()
 
@@ -243,7 +323,42 @@ def text_labels(
     return labels[::-1]
 
 
-class TextVectorLabelLayers(object):
+def text_labels_from_source_metadata(
+    pointset_layers, source_metadataframe, *, items_per_label=3,
+):
+    n_numeric_cols = source_metadataframe.select_dtypes(
+        exclude=["object", "category"]
+    ).shape[1]
+    logistic_regression_dataframe = pd.get_dummies(source_metadataframe)
+    logistic_regression_data = RobustScaler().fit_transform(
+        logistic_regression_dataframe
+    )
+    labels = []
+    for layer in pointset_layers:
+        layer_labels = []
+        for cluster in layer:
+            target_vector = np.zeros(logistic_regression_data.shape[0], dtype=np.int32)
+            target_vector[cluster] = 1
+
+            model = LogisticRegression().fit(logistic_regression_data, target_vector)
+
+            coeff_sign_mask = np.ones_like(model.coef_[0])
+            coeff_sign_mask[:n_numeric_cols] = np.sign(model.coef_[0][:n_numeric_cols])
+            coeff_order = np.argsort(model.coef_[0] * coeff_sign_mask)[::-1]
+            coeff_signs = np.sign(model.coef_[0])[coeff_order]
+            cluster_label = [
+                f"{('low'  if coeff_signs[i] < 0 else 'high ') if coeff_order[i] < n_numeric_cols else ''}"
+                f"{logistic_regression_dataframe.columns[coeff_order[i]]}"
+                for i in range(items_per_label)
+            ]
+            layer_labels.append(cluster_label)
+
+        labels.append(layer_labels)
+
+    return labels
+
+
+class JointVectorLabelLayers(object):
     def __init__(
         self,
         source_vectors: npt.ArrayLike,
@@ -271,7 +386,7 @@ class TextVectorLabelLayers(object):
         label_formatter=string_label_formatter,
         random_state=None,
     ):
-        cluster_vectors, cluster_locations = build_fine_grained_cluster_centers(
+        cluster_vectors, cluster_locations, _ = build_fine_grained_cluster_centers(
             source_vectors,
             map_representation,
             umap_metric=vector_metric,
@@ -299,7 +414,7 @@ class TextVectorLabelLayers(object):
                 edge_weight=label_adjust_edge_weight,
             )
 
-        self.labels = text_labels(
+        self.labels = text_labels_from_joint_vector_space(
             vector_layers,
             labelling_vectors,
             labels,
@@ -309,6 +424,77 @@ class TextVectorLabelLayers(object):
             query_size=pynnd_query_size,
         )
         self.label_formatter = label_formatter
+
+    @property
+    def labels_for_display(self):
+        return [
+            [self.label_formatter(label) for label in label_layer]
+            for label_layer in self.labels
+        ]
+
+class MetadataLabelLayers(object):
+
+    def __init__(
+        self,
+        source_vectors: npt.ArrayLike,
+        map_representation: npt.ArrayLike,
+        metadata_dataframe: pd.Dataframe,
+        *,
+        vector_metric="cosine",
+        umap_n_components=5,
+        umap_n_neighbors=15,
+        hdbscan_min_samples=10,
+        hdbscan_min_cluster_size=20,
+        min_clusters_in_layer=4,
+        contamination=0.05,
+        cluster_distance_threshold=0.025,
+        contamination_multiplier=1.5,
+        max_contamination=0.25,
+        adjust_label_locations=True,
+        label_adjust_spring_constant=0.1,
+        label_adjust_spring_constant_multiplier=1.5,
+        label_adjust_edge_weight=1.0,
+        items_per_label=3,
+        label_formatter=string_label_formatter,
+        random_state=None,
+    ):
+        cluster_vectors, cluster_locations, hdbscan_tree = build_fine_grained_cluster_centers(
+            source_vectors,
+            map_representation,
+            umap_metric=vector_metric,
+            umap_n_components=umap_n_components,
+            umap_n_neighbors=umap_n_neighbors,
+            hdbscan_min_samples=hdbscan_min_samples,
+            hdbscan_min_cluster_size=hdbscan_min_cluster_size,
+            random_state=random_state,
+        )
+        vector_layers, self.location_layers, self.pointset_layers = build_cluster_layers(
+            cluster_vectors,
+            cluster_locations,
+            min_clusters=min_clusters_in_layer,
+            contamination=contamination,
+            vector_metric=vector_metric,
+            cluster_distance_threshold=cluster_distance_threshold,
+            contamination_multiplier=contamination_multiplier,
+            max_contamination=max_contamination,
+            return_pointsets=True,
+            hdbscan_tree=hdbscan_tree,
+        )
+        if adjust_label_locations:
+            self.location_layers = text_locations(
+                self.location_layers,
+                spring_constant=label_adjust_spring_constant,
+                spring_constant_multiplier=label_adjust_spring_constant_multiplier,
+                edge_weight=label_adjust_edge_weight,
+            )
+
+        self.labels = text_labels_from_source_metadata(
+            self.pointset_layers,
+            metadata_dataframe,
+            items_per_label=items_per_label,
+        )
+        self.label_formatter = label_formatter
+
 
     @property
     def labels_for_display(self):

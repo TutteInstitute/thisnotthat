@@ -6,6 +6,7 @@ from .search import SearchPane
 from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlPane
+from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers
 
 __all__ = [
     "BokehPlotPane",
@@ -16,4 +17,6 @@ __all__ = [
     "SearchPane",
     "InformationPane",
     "PlotControlPane",
+    "JointVectorLabelLayers",
+    "MetadataLabelLayers",
 ]
