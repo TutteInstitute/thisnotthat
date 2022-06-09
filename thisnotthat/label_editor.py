@@ -226,5 +226,5 @@ class LabelEditorPane(pn.reactive.Reactive):
             bidirectional=True,
         )
         self.new_label_button.link(
-            self, label="labels", selected="selected", bidirectional=True,
+            self, labels="labels", selected="selected", bidirectional=True,
         )
