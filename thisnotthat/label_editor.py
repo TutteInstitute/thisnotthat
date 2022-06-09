@@ -13,8 +13,8 @@ from typing import *
 class LegendPane(pn.reactive.Reactive):
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
-    color_palette = param.List([], item_type=str, doc="Color palette")
-    color_factors = param.List([], item_type=str, doc="Color palette")
+    label_color_palette = param.List([], item_type=str, doc="Color palette")
+    label_color_factors = param.List([], item_type=str, doc="Color palette")
 
     def __init__(
         self,
@@ -34,8 +34,8 @@ class LegendPane(pn.reactive.Reactive):
     ) -> None:
         super().__init__(name=name)
         self.label_set = set(np.unique(labels))
-        self.color_factors = factors
-        self.color_palette = (
+        self.label_color_factors = factors
+        self.label_color_palette = (
             palette
             if palette is not None
             else [Turbo256[x] for x in _palette_index(256)]
@@ -45,17 +45,18 @@ class LegendPane(pn.reactive.Reactive):
         self.color_picker_width = color_picker_width
         self.color_picker_height = color_picker_height
         self.color_picker_margin = color_picker_margin
-        self.label_width = (label_width,)
-        self.label_height = (label_height,)
-        self.label_max_width = (label_max_width,)
+        self.label_width = label_width
+        self.label_height = label_height
+        self.label_max_width = label_max_width
         self.label_min_width = label_min_width
-        self.label_margin = (label_margin,)
+        self.label_margin = label_margin
         self.pane = pn.Column()
         self._rebuild_pane()
 
     def _color_callback(self, event: param.parameterized.Event) -> None:
-        self.color_palette = [
-            event.new if color == event.old else color for color in self.color_palette
+        self.label_color_palette = [
+            event.new if color == event.old else color
+            for color in self.label_color_palette
         ]
 
     def _label_callback(self, event: param.parameterized.Event) -> None:
@@ -63,9 +64,9 @@ class LegendPane(pn.reactive.Reactive):
             label: event.new if label == event.old else label
             for label in self.labels.unique()
         }
-        self.color_factors = [
+        self.label_color_factors = [
             label_mapping[factor] if factor in label_mapping else factor
-            for factor in self.color_factors
+            for factor in self.label_color_factors
         ]
         new_labels = self.labels.map(label_mapping)
         self.labels = new_labels
@@ -75,10 +76,10 @@ class LegendPane(pn.reactive.Reactive):
         self.label_set = set(self.labels.unique())
         legend_labels = set([])
         legend_items = []
-        for idx, label in enumerate(self.color_factors):
+        for idx, label in enumerate(self.label_color_factors):
             if label in self.label_set and label not in legend_labels:
                 legend_labels.add(label)
-                color = self.color_palette[idx]
+                color = self.label_color_palette[idx]
                 legend_item = pn.Row(
                     pn.widgets.ColorPicker(
                         value=color,
@@ -112,8 +113,8 @@ class LegendPane(pn.reactive.Reactive):
     @param.depends("labels", watch=True)
     def _update_labels(self) -> None:
         new_label_set = set(self.labels.unique())
-        self.color_factors = self.color_factors + list(
-            new_label_set - set(self.color_factors)
+        self.label_color_factors = self.label_color_factors + list(
+            new_label_set - set(self.label_color_factors)
         )
 
         if new_label_set != self.label_set:
@@ -210,4 +211,4 @@ class LabelEditorPane(pn.reactive.Reactive):
         self.new_label_button = NewLabelButton(
             labels, button_type=newlabel_button_type, button_text=newlabel_button_text,
         )
-        self.new_label.link(self.legend, bidirectional=True, labels="labels")
+        self.new_label_button.link(self.legend, bidirectional=True, labels="labels")
