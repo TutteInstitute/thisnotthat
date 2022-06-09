@@ -474,3 +474,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 text_line_height=text_line_height,
                 text_alpha=text_alpha,
             )
+
+    @property
+    def dataframe(self):
+        result = pd.DataFrame(self.data_source.data)
+        result = result.drop(columns=["apparent_size", "color_by"])
+        return result
