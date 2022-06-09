@@ -160,21 +160,27 @@ class NewLabelButton(pn.reactive.Reactive):
 
 
 class LabelEditorPane(pn.reactive.Reactive):
-    @property
-    def labels(self) -> pd.Series:
-        return self.legend.labels
 
-    @labels.setter
-    def labels(self, new_labels: npt.ArrayLike) -> None:
-        self.legend.labels = pd.Series(new_labels)
+    labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
+    label_color_palette = param.List([], item_type=str, doc="Color palette")
+    label_color_factors = param.List([], item_type=str, doc="Color palette")
+    selected = param.List(default=[], doc="Indices of selected samples")
 
-    @property
-    def selected(self) -> List[int]:
-        return self.new_label_button.selected
-
-    @selected.setter
-    def selected(self, selection: List[int]) -> None:
-        self.new_label_button.selected = selection
+    # @property
+    # def labels(self) -> pd.Series:
+    #     return self.legend.labels
+    #
+    # @labels.setter
+    # def labels(self, new_labels: npt.ArrayLike) -> None:
+    #     self.legend.labels = pd.Series(new_labels)
+    #
+    # @property
+    # def selected(self) -> List[int]:
+    #     return self.new_label_button.selected
+    #
+    # @selected.setter
+    # def selected(self, selection: List[int]) -> None:
+    #     self.new_label_button.selected = selection
 
     def __init__(
         self,
@@ -211,4 +217,14 @@ class LabelEditorPane(pn.reactive.Reactive):
         self.new_label_button = NewLabelButton(
             labels, button_type=newlabel_button_type, button_text=newlabel_button_text,
         )
-        self.new_label_button.link(self.legend, bidirectional=True, labels="labels")
+        # self.new_label_button.link(self.legend, bidirectional=True, labels="labels")
+        self.legend.link(
+            self,
+            labels="labels",
+            label_color_palette="label_color_palette",
+            label_color_factors="label_color_factors",
+            bidirectional=True,
+        )
+        self.new_label_button.link(
+            self, label="labels", selected="selected", bidirectional=True,
+        )
