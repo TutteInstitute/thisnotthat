@@ -37,7 +37,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def __init__(
         self,
         data: npt.ArrayLike,
-        labels: Iterable[str],
+        labels: Optional[Iterable[str]] = None,
         hover_text: Optional[Iterable[str]] = None,
         marker_size: Optional[Iterable[float]] = None,
         *,
@@ -60,6 +60,9 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         name: str = "Plot",
     ):
         super().__init__(name=name)
+        if labels is None:
+            labels = ["unlabelled"] * len(data)
+
         self.dataframe = pd.DataFrame(
             {
                 "position": data.tolist(),
@@ -136,6 +139,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
         )
         self._base_hover_text = hover_text if hover_text is not None else labels
+        self._base_hover_is_labels = hover_text is None
 
         self.deck = {
             "initialViewState": {
@@ -329,11 +333,13 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._color_map_in_selection_mode = True
 
             if self._color_by_enabled:
-                self.dataframe.iloc[selected, self._color_loc] = self.dataframe.iloc[selected, self._color_by_loc]
+                self.dataframe.iloc[selected, self._color_loc] = self.dataframe.iloc[
+                    selected, self._color_by_loc
+                ]
             else:
-                self.dataframe.iloc[selected, self._color_loc] = self.dataframe.label.iloc[
-                    selected
-                ].map(self.color_mapping)
+                self.dataframe.iloc[
+                    selected, self._color_loc
+                ] = self.dataframe.label.iloc[selected].map(self.color_mapping)
 
             self.points["data"] = self.dataframe
 
@@ -377,6 +383,10 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _update_labels(self):
         self.dataframe["label"] = self.labels
         self._remap_colors(self.selected)
+        if self._base_hover_is_labels:
+            if len(self.hover_text) == 0:
+                self.data_source.data["hover_text"] = self.labels
+            self._base_hover_text = self.labels
 
     @param.depends("selected", watch=True)
     def _update_selection(self):

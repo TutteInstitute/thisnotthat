@@ -71,6 +71,7 @@ def add_text_layer(
 
 
 class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
+
     labels = param.Series(doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
     label_color_factors = param.List([], item_type=str, doc="Color palette")
@@ -88,7 +89,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def __init__(
         self,
         data: npt.ArrayLike,
-        labels: Iterable[str],
+        labels: Optional[Iterable[str]] = None,
         hover_text: Optional[Iterable[str]] = None,
         marker_size: Optional[Iterable[float]] = None,
         *,
@@ -117,6 +118,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         name: str = "Plot",
     ):
         super().__init__(name=name)
+        if labels is None:
+            labels = ["unlabelled"] * len(data)
+
         self.data_source = bokeh.models.ColumnDataSource(
             {
                 "x": np.asarray(data).T[0],
@@ -132,10 +136,13 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             }
         )
         self.data_source.selected.on_change("indices", self._update_selected)
+
         self._base_marker_size = pd.Series(
             marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
         )
         self._base_hover_text = hover_text if hover_text is not None else labels
+        self._base_hover_is_labels = hover_text is None
+
         if label_color_mapping is not None:
             factors = []
             colors = []
@@ -281,6 +288,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @param.depends("labels", watch=True)
     def _update_labels(self) -> None:
         self.data_source.data["label"] = self.labels  # self.dataframe["label"]
+        if self._base_hover_is_labels:
+            if len(self.hover_text) == 0:
+                self.data_source.data["hover_text"] = self.labels
+            self._base_hover_text = self.labels
         # We auto-update the factors from elsewhere (? from legend yes, but not from table edits)
         #         self.factors = list(self.color_mapping.factors) + [
         #             x for x in self.labels.unique() if x not in self.color_mapping.factors

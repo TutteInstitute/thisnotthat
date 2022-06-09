@@ -166,22 +166,6 @@ class LabelEditorPane(pn.reactive.Reactive):
     label_color_factors = param.List([], item_type=str, doc="Color palette")
     selected = param.List(default=[], doc="Indices of selected samples")
 
-    # @property
-    # def labels(self) -> pd.Series:
-    #     return self.legend.labels
-    #
-    # @labels.setter
-    # def labels(self, new_labels: npt.ArrayLike) -> None:
-    #     self.legend.labels = pd.Series(new_labels)
-    #
-    # @property
-    # def selected(self) -> List[int]:
-    #     return self.new_label_button.selected
-    #
-    # @selected.setter
-    # def selected(self, selection: List[int]) -> None:
-    #     self.new_label_button.selected = selection
-
     def __init__(
         self,
         labels: npt.ArrayLike,
