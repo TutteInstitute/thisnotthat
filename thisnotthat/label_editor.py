@@ -217,7 +217,6 @@ class LabelEditorPane(pn.reactive.Reactive):
         self.new_label_button = NewLabelButton(
             labels, button_type=newlabel_button_type, button_text=newlabel_button_text,
         )
-        # self.new_label_button.link(self.legend, bidirectional=True, labels="labels")
         self.legend.link(
             self,
             labels="labels",
@@ -228,3 +227,7 @@ class LabelEditorPane(pn.reactive.Reactive):
         self.new_label_button.link(
             self, labels="labels", selected="selected", bidirectional=True,
         )
+        self.pane = pn.Column(self.legend, self.new_label_button)
+
+    def _get_model(self, *args, **kwds):
+        return self.pane._get_model(*args, **kwds)
