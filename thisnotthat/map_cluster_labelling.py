@@ -347,7 +347,9 @@ def text_labels_from_source_metadata(
     n_numeric_cols = source_metadataframe.select_dtypes(
         exclude=["object", "category"]
     ).shape[1]
-    logistic_regression_dataframe = pd.get_dummies(source_metadataframe)
+    logistic_regression_dataframe = pd.get_dummies(
+        source_metadataframe, prefix_sep=": "
+    )
     logistic_regression_data = RobustScaler().fit_transform(
         logistic_regression_dataframe
     )
@@ -365,7 +367,7 @@ def text_labels_from_source_metadata(
             coeff_order = np.argsort(model.coef_[0] * coeff_sign_mask)[::-1]
             coeff_signs = np.sign(model.coef_[0])[coeff_order]
             cluster_label = [
-                f"{('low'  if coeff_signs[i] < 0 else 'high ') if coeff_order[i] < n_numeric_cols else ''}"
+                f"{('low '  if coeff_signs[i] < 0 else 'high ') if coeff_order[i] < n_numeric_cols else ''}"
                 f"{logistic_regression_dataframe.columns[coeff_order[i]]}"
                 for i in range(items_per_label)
             ]
