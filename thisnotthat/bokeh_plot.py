@@ -307,13 +307,20 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def _update_marker_size(self):
         scale = self.plot.x_range.end - self.plot.x_range.start
 
-        def _map_apparent_size(x):
-            if (x / scale) > self.max_point_size:
-                return self.max_point_size * scale
-            elif (x / scale) < self.min_point_size:
-                return self.min_point_size * scale
-            else:
+        if self.max_point_size is None and self.min_point_size is None:
+
+            def _map_apparent_size(x):
                 return x
+
+        else:
+
+            def _map_apparent_size(x):
+                if (x / scale) > self.max_point_size:
+                    return self.max_point_size * scale
+                elif (x / scale) < self.min_point_size:
+                    return self.min_point_size * scale
+                else:
+                    return x
 
         if len(self.marker_size) == 0:
             self.data_source.data["size"] = self._base_marker_size
