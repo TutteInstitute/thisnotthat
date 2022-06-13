@@ -207,7 +207,7 @@ def build_cluster_layers(
 
         if len(layer_vectors) >= min_clusters:
             vector_layers.append(layer_vectors)
-            location_layers.append(layer_locations)
+            location_layers.append(np.array(layer_locations))
             pointset_layers.append(layer_pointsets)
 
         n_clusters = n_clusters // 2
