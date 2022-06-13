@@ -176,6 +176,7 @@ def build_cluster_layers(
 
         layer_vectors = []
         layer_locations = []
+        layer_pointsets = []
 
         for label in np.unique(layer_metaclusters):
             if np.sum(layer_metaclusters == label) <= min_cluster_size:
@@ -202,11 +203,12 @@ def build_cluster_layers(
             else:
                 layer_vectors.append(vector)
                 layer_locations.append(location)
-                pointset_layers.append(pointset)
+                layer_pointsets.append(pointset)
 
         if len(layer_vectors) >= min_clusters:
             vector_layers.append(layer_vectors)
             location_layers.append(layer_locations)
+            pointset_layers.append(layer_pointsets)
 
         n_clusters = n_clusters // 2
         contamination *= contamination_multiplier
