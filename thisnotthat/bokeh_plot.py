@@ -428,8 +428,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     )
                 ]
                 self._color_by_renderer.glyph.fill_color = colormap
-                self.plot.legend.items[0].renderers = [self._color_by_renderer]
                 self.plot.legend.items[0].label["field"] = "color_by"
+                self.plot.legend.items[0].renderers = [self._color_by_renderer]
         else:
             colormap = bokeh.transform.factor_cmap(
                 "color_by", self.color_by_palette, list(self.color_by_vector.unique())
