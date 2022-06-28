@@ -142,6 +142,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         )
         self._base_hover_text = hover_text if hover_text is not None else labels
         self._base_hover_is_labels = hover_text is None
+        self._base_palette = list(palette)
 
         if label_color_mapping is not None:
             factors = []
@@ -270,6 +271,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.labels = pd.Series(labels)
         self.label_color_palette = list(self.color_mapping.palette)
         self.label_color_factors = list(self.color_mapping.factors)
+        self.color_by_vector = []
+        self.color_by_palette = list(self.color_mapping.palette)
 
     # Reactive requires this to make the model auto-display as requires
     def _get_model(self, *args, **kwds):
@@ -365,18 +368,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         pn.io.push_notebook(self.pane)
 
+    @param.depends("color_by_palette", watch=True)
     @param.depends("color_by_vector", watch=True)
-    def _update_color_by_vectors(self) -> None:
+    def _update_color_by(self) -> None:
+        if len(self.color_by_palette) == 0:
+            palette = self._base_palette
+        else:
+            palette = self.color_by_palette
+
         if len(self.color_by_vector) == 0:
-            # # HACK: Not sure why this is needed, but things don't update without it?
-            # self.data_source.data["color_by"] = ["nil"] * len(
-            #     self.data_source.data["label"]
-            # )
-            # colormap = bokeh.transform.factor_cmap(
-            #     "color_by", self.color_by_palette, ["nil"],
-            # )
-            # self.points.glyph.fill_color = colormap
-            # # END HACK
             self.points.glyph.fill_color = self._label_colormap
             if self.show_legend:
                 if self.plot.legend.items[0].label["field"] != "label":
@@ -387,7 +387,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.linear_cmap(
                 "color_by",
-                self.color_by_palette,
+                palette,
                 self.color_by_vector.min(),
                 self.color_by_vector.max(),
             )
@@ -405,7 +405,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
-                "color_by", self.color_by_palette, list(self.color_by_vector.unique())
+                "color_by", palette, list(self.color_by_vector.unique())
             )
             self.points.glyph.fill_color = colormap
             if self.show_legend:
@@ -414,7 +414,6 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         pn.io.push_notebook(self.pane)
 
-    @param.depends("color_by_palette", watch=True)
     def _update_color_by_palette(self) -> None:
         if len(self.color_by_vector) == 0:
             # # HACK: Not sure why this is needed, but things don't update without it?
