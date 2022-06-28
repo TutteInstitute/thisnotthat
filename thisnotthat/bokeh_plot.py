@@ -271,7 +271,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.labels = pd.Series(labels)
         self.label_color_palette = list(self.color_mapping.palette)
         self.label_color_factors = list(self.color_mapping.factors)
-        self.color_by_vector = []
+        self.color_by_vector = pd.Series([])
         self.color_by_palette = list(self.color_mapping.palette)
 
     # Reactive requires this to make the model auto-display as requires
