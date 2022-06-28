@@ -305,19 +305,31 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     @param.depends("marker_size", watch=True)
     def _update_marker_size(self):
-        scale = self.plot.x_range.end - self.plot.x_range.start
 
-        if self.max_point_size is None and self.min_point_size is None:
+        if (
+            self.max_point_size is None and self.min_point_size is None
+        ) or self.plot.x_range.start is None:
 
             def _map_apparent_size(x):
                 return x
 
         else:
+            if self.max_point_size is None:
+                max_point_size = 1.0e6
+            else:
+                max_point_size = self.max_point_size
+
+            if self.min_point_size is None:
+                min_point_size = 0.0
+            else:
+                min_point_size = self.min_point_size
+
+            scale = self.plot.x_range.end - self.plot.x_range.start
 
             def _map_apparent_size(x):
-                if (x / scale) > self.max_point_size:
+                if (x / scale) > max_point_size:
                     return self.max_point_size * scale
-                elif (x / scale) < self.min_point_size:
+                elif (x / scale) < min_point_size:
                     return self.min_point_size * scale
                 else:
                     return x
@@ -337,7 +349,6 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             rescaled_size = pd.Series(self.marker_size)
             rescaled_size = (rescaled_size - rescaled_size.mean()) / rescaled_size.std()
             rescaled_size = 0.05 * (rescaled_size - rescaled_size.min() + 1)
-            # rescaled_size = 0.05 * (rescaled_size / rescaled_size.mean())
             self.data_source.data["size"] = rescaled_size
             self.data_source.data["apparent_size"] = rescaled_size.map(
                 _map_apparent_size
