@@ -37,41 +37,48 @@ class PlotControlPane(pn.reactive.Reactive):
                 ],
             },
         )
-        self.palette_selector.param.watch(self._palette_change, "value")
+        self.palette_selector.param.watch(
+            self._options_changed, "value", onlychanged=True
+        )
         self.color_by_column = pn.widgets.Select(
             name="Color by column", options=["Default"] + list(self.dataframe.columns),
         )
-        self.color_by_column.param.watch(self._color_by_change, "value")
+        self.color_by_column.param.watch(
+            self._options_changed, "value", onlychanged=True
+        )
         self.hover_text_column = pn.widgets.Select(
             name="Hover text column",
             options=["Default"] + list(self.dataframe.columns),
         )
-        self.hover_text_column.param.watch(self._hover_text_change, "value")
+        self.hover_text_column.param.watch(
+            self._options_changed, "value", onlychanged=True
+        )
         self.marker_size_column = pn.widgets.Select(
             name="Marker size column",
             options=["Default"]
             + list(self.dataframe.select_dtypes(include="number").columns),
         )
-        self.marker_size_column.param.watch(self._marker_size_change, "value")
+        self.marker_size_column.param.watch(
+            self._options_changed, "value", onlychanged=True
+        )
+        self.apply_changes = pn.widgets.Button(
+            name="Apply Changes", button_type="default",
+        )
         self.pane = pn.WidgetBox(
             self.palette_selector,
             self.color_by_column,
             self.marker_size_column,
             self.hover_text_column,
+            self.apply_changes,
         )
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
 
-    def _palette_change(self, event) -> None:
-        if (
-            self.palette_selector.value == "Default palette"
-            or self.color_by_column.value == "Default"
-        ):
-            self.color_by_vector = pd.Series([])
-            self.color_by_palette = []
-            return
+    def _options_changed(self, event) -> None:
+        self.apply_changes.button_type = "success"
 
+    def _change_palette(self):
         if pd.api.types.is_numeric_dtype(self.dataframe[self.color_by_column.value]):
             # Continuous scale required
             if (
@@ -120,7 +127,9 @@ class PlotControlPane(pn.reactive.Reactive):
                 palette_sizes = sorted(list(palette_dict.keys()))
 
                 if n_colors_required <= max(palette_sizes):
-                    best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
+                    best_size_index = bisect.bisect_left(
+                        palette_sizes, n_colors_required
+                    )
                     palette = palette_dict[palette_sizes[best_size_index]]
                 else:
                     max_size = max(palette_sizes)
@@ -136,7 +145,9 @@ class PlotControlPane(pn.reactive.Reactive):
                 palette_sizes = sorted(list(palette_dict.keys()))
 
                 if n_colors_required <= max(palette_sizes):
-                    best_size_index = bisect.bisect_left(palette_sizes, n_colors_required)
+                    best_size_index = bisect.bisect_left(
+                        palette_sizes, n_colors_required
+                    )
                     palette = palette_dict[palette_sizes[best_size_index]]
                 else:
                     max_size = max(palette_sizes)
@@ -147,28 +158,65 @@ class PlotControlPane(pn.reactive.Reactive):
             else:
                 raise ValueError("Palette option not in a valid palette group")
 
-    def _color_by_change(self, event) -> None:
-        if (
-            self.palette_selector.value == "Default palette"
-            or self.color_by_column.value == "Default"
-        ):
-            self.color_by_vector = pd.Series([])
+    def _apply_changes(self, event) -> None:
+        if self.palette_selector.value == "Default palette":
             self.color_by_palette = []
-            return
+        else:
+            self._change_palette()
 
-        self.color_by_vector = self.dataframe[self.color_by_column.value]
-        self._palette_change(None)
+        if self.color_by_column.value == "Default":
+            self.color_by_vector = pd.Series([])
+        else:
+            self.color_by_vector = self.dataframe[self.color_by_column.value]
+            if self.palette_selector.value != "Default palette":
+                self._change_palette()
 
-    def _hover_text_change(self, event) -> None:
         if self.hover_text_column.value == "Default":
             self.hover_text = []
         else:
-            self.hover_text = self.dataframe[self.hover_text_column.value].map(str).to_list()
+            self.hover_text = (
+                self.dataframe[self.hover_text_column.value].map(str).to_list()
+            )
 
-    def _marker_size_change(self, event) -> None:
         if self.marker_size_column.value == "Default":
             self.marker_size = []
         else:
-            self.marker_size = (
-                self.dataframe[self.marker_size_column.value].to_list()
-            )
+            self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
+
+        self.apply_changes.button_type = "default"
+
+    # def _palette_change(self, event) -> None:
+    #     if (
+    #         self.palette_selector.value == "Default palette"
+    #         or self.color_by_column.value == "Default"
+    #     ):
+    #         self.color_by_vector = pd.Series([])
+    #         self.color_by_palette = []
+    #         return
+    #
+    #
+    # def _color_by_change(self, event) -> None:
+    #     if (
+    #         self.palette_selector.value == "Default palette"
+    #         or self.color_by_column.value == "Default"
+    #     ):
+    #         self.color_by_vector = pd.Series([])
+    #         self.color_by_palette = []
+    #         return
+    #
+    #     self.color_by_vector = self.dataframe[self.color_by_column.value]
+    #     self._palette_change(None)
+    #
+    # def _hover_text_change(self, event) -> None:
+    #     if self.hover_text_column.value == "Default":
+    #         self.hover_text = []
+    #     else:
+    #         self.hover_text = self.dataframe[self.hover_text_column.value].map(str).to_list()
+    #
+    # def _marker_size_change(self, event) -> None:
+    #     if self.marker_size_column.value == "Default":
+    #         self.marker_size = []
+    #     else:
+    #         self.marker_size = (
+    #             self.dataframe[self.marker_size_column.value].to_list()
+    #         )
