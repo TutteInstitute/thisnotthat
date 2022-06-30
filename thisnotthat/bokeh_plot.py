@@ -369,7 +369,13 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         pn.io.push_notebook(self.pane)
 
     @param.depends("color_by_palette", watch=True)
+    def _update_color_by_palette(self) -> None:
+        self._update_color_by()
+
     @param.depends("color_by_vector", watch=True)
+    def _update_color_by_vector(self) -> None:
+        self._update_color_by()
+
     def _update_color_by(self) -> None:
         if len(self.color_by_palette) == 0:
             palette = self._base_palette
