@@ -33,7 +33,7 @@ class LegendPane(pn.reactive.Reactive):
         name: str = "Editable Legend",
     ) -> None:
         super().__init__(name=name)
-        label_series = pd.Series(labels).reset_index(drop=True)
+        label_series = pd.Series(labels).copy()  # reset_index(drop=True)
         self.label_set = set(label_series.unique())
         self.label_color_factors = factors
         self.label_color_palette = (
@@ -140,12 +140,12 @@ class NewLabelButton(pn.reactive.Reactive):
             pn.widgets.Button(name=button_text, button_type=button_type)
         )
         self.pane[0].on_click(self._on_click)
-        self.labels = pd.Series(labels).reset_index(drop=True)
+        self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
 
     def _on_click(self, event: param.parameterized.Event) -> None:
         if len(self.selected) > 0:
             new_labels = self.labels
-            new_labels[self.selected] = f"new_label_{self.label_count}"
+            new_labels.iloc[self.selected] = f"new_label_{self.label_count}"
             self.labels = new_labels
             self.label_count += 1
 
@@ -185,7 +185,7 @@ class LabelEditorPane(pn.reactive.Reactive):
         name: str = "Label Editor",
     ) -> None:
         super().__init__(name=name)
-        self.labels = pd.Series(labels).reset_index(drop=True)
+        self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
 
         if color_factors is None:
             color_factors = list(set(labels))
