@@ -40,9 +40,6 @@ class DataPane(pn.reactive.Reactive):
             self.data = raw_dataframe.copy()
         else:
             self.data = raw_dataframe.reset_index()
-        #
-        # if labels is not None:
-        #     self.data["label"] = labels
 
         self._base_selection: List[int] = []
         self.table = pn.widgets.Tabulator(

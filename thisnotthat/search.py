@@ -12,7 +12,15 @@ class SearchPane(pn.reactive.Reactive):
     selected = param.List(default=[], doc="Indices of selected samples")
     data = param.DataFrame(doc="Source data")
 
-    def __init__(self, raw_dataframe: pd.DataFrame, *, name: str = "Search") -> None:
+    def __init__(
+        self,
+        raw_dataframe: pd.DataFrame,
+        *,
+        title: str = "#### Search",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        name: str = "Search",
+    ) -> None:
         super().__init__(name=name)
         if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
             self.data = raw_dataframe
@@ -37,12 +45,16 @@ class SearchPane(pn.reactive.Reactive):
         )
         self.query_style_selector.param.watch(self._query_style_change, "value")
         self.warning_area = pn.pane.Alert("", alert_type="light")
+        self.warning_area.visible = False
         self.pane = pn.WidgetBox(
+            title,
             self.query_style_selector,
             self.query_box,
             self.query_button,
             self.columns_to_search,
             self.warning_area,
+            width=width,
+            height=height,
         )
 
     def _query_style_change(self, event: param.parameterized.Event) -> None:
@@ -58,6 +70,7 @@ class SearchPane(pn.reactive.Reactive):
     def _run_query(self, event: param.parameterized.Event) -> None:
         self.warning_area.alert_type = "light"
         self.warning_area.object = ""
+        self.warning_area.visible = False
         if len(self.query_box.value) == 0:
             self.selected = []
         elif self.query_style_selector.value == "String search":
@@ -76,6 +89,7 @@ class SearchPane(pn.reactive.Reactive):
                     self.warning_area.object = (
                         f"No matches found for search string {self.query_box.value}!"
                     )
+                    self.warning_area.visible = True
                 self.selected = sorted(indices)
             except Exception as err:
                 self.warning_area.alert_type = "danger"
@@ -94,6 +108,7 @@ class SearchPane(pn.reactive.Reactive):
                 if len(indices) == 0:
                     self.warning_area.alert_type = "warning"
                     self.warning_area.object = f"No matches found for search with regex {self.query_box.value}!"
+                    self.warning_area.visible = True
                 self.selected = sorted(indices)
             except Exception as err:
                 self.warning_area.alert_type = "danger"
@@ -106,9 +121,11 @@ class SearchPane(pn.reactive.Reactive):
                 if len(self.selected) == 0:
                     self.warning_area.alert_type = "warning"
                     self.warning_area.object = f"No matches found for search with pandas query {self.query_box.value}!"
+                    self.warning_area.visible = True
             except Exception as err:
                 self.warning_area.alert_type = "danger"
                 self.warning_area.object = str(err)
+                self.warning_area.visible = True
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
