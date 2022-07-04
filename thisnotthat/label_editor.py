@@ -185,7 +185,7 @@ class LabelEditorPane(pn.reactive.Reactive):
         name: str = "Label Editor",
     ) -> None:
         super().__init__(name=name)
-        self.labels = pd.Series(labels)
+        self.labels = pd.Series(labels).reset_index(drop=True)
 
         if color_factors is None:
             color_factors = list(set(labels))
