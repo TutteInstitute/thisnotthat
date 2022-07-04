@@ -149,11 +149,20 @@ class NewLabelButton(pn.reactive.Reactive):
             self.labels = new_labels
             self.label_count += 1
 
+            self.selected = []
+
             if len(self.pane) > 1:
                 self.pane.pop(1)
 
         elif len(self.pane) < 2:
-            self.pane.append(pn.pane.Alert("No data selected!", alert_type="danger"))
+            self.pane.append(pn.pane.Alert("No data selected!", alert_type="warning"))
+
+    @param.depends("selected", watch=True)
+    def _toggle_active(self):
+        if len(self.selected) > 0:
+            self.pane[0].disabled = False
+        else:
+            self.pane[0].disabled = True
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
