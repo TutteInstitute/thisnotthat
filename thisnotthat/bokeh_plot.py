@@ -500,5 +500,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @property
     def dataframe(self):
         result = pd.DataFrame(self.data_source.data)
-        result = result.drop(columns=["apparent_size", "color_by"])
+        if "color_by" in result:
+            result = result.drop(columns=["apparent_size", "color_by"])
+        else:
+            result = result.drop(columns=["apparent_size"])
         return result
