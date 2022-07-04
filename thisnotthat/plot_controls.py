@@ -16,7 +16,15 @@ class PlotControlPane(pn.reactive.Reactive):
     marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
 
-    def __init__(self, raw_dataframe: pd.DataFrame, *, name="Plot Controls"):
+    def __init__(
+        self,
+        raw_dataframe: pd.DataFrame,
+        *,
+        width=None,
+        height=None,
+        title="#### Plot Controls",
+        name="Plot Controls",
+    ):
         super().__init__(name=name)
         self.dataframe = raw_dataframe
 
@@ -66,11 +74,14 @@ class PlotControlPane(pn.reactive.Reactive):
         )
         self.apply_changes.on_click(self._apply_changes)
         self.pane = pn.WidgetBox(
+            title,
             self.palette_selector,
             self.color_by_column,
             self.marker_size_column,
             self.hover_text_column,
             self.apply_changes,
+            width=width,
+            height=height,
         )
 
     def _get_model(self, *args, **kwds):

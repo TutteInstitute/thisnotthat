@@ -135,11 +135,14 @@ class NewLabelButton(pn.reactive.Reactive):
         *,
         button_type: str = "success",
         button_text: str = "New Label",
+        width: Optional[int] = None,
         name: str = "New Label",
     ) -> None:
         super().__init__(name=name)
         self.label_count = 1
-        self.pane = pn.widgets.Button(name=button_text, button_type=button_type)
+        self.pane = pn.widgets.Button(
+            name=button_text, button_type=button_type, width=width
+        )
         self.pane.on_click(self._on_click)
         self.pane.disabled = True
         self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
@@ -187,6 +190,9 @@ class LabelEditorPane(pn.reactive.Reactive):
         label_margin: Sequence[int] = [0, 0],
         newlabel_button_type: str = "success",
         newlabel_button_text: str = "New Label",
+        title: str = "#### Label Editor",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
         name: str = "Label Editor",
     ) -> None:
         super().__init__(name=name)
@@ -209,7 +215,10 @@ class LabelEditorPane(pn.reactive.Reactive):
             label_margin=label_margin,
         )
         self.new_label_button = NewLabelButton(
-            labels, button_type=newlabel_button_type, button_text=newlabel_button_text,
+            labels,
+            button_type=newlabel_button_type,
+            button_text=newlabel_button_text,
+            width=label_width + color_picker_width,
         )
         self.legend.link(
             self,
@@ -221,7 +230,9 @@ class LabelEditorPane(pn.reactive.Reactive):
         self.new_label_button.link(
             self, labels="labels", selected="selected", bidirectional=True,
         )
-        self.pane = pn.Column(self.legend, self.new_label_button)
+        self.pane = pn.WidgetBox(
+            title, self.legend, self.new_label_button, width=width, height=height
+        )
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
