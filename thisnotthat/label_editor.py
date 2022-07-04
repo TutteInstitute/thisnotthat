@@ -169,13 +169,13 @@ class LabelEditorPane(pn.reactive.Reactive):
     def __init__(
         self,
         labels: npt.ArrayLike,
-        color_factors: List[str],
+        color_factors: Optional[List[str]] = None,
         color_palette: Optional[Sequence[str]] = None,
         *,
-        color_picker_width: int = 50,
-        color_picker_height: int = 50,
+        color_picker_width: int = 48,
+        color_picker_height: int = 36,
         color_picker_margin: Sequence[int] = [1, 5],
-        label_height: int = 50,
+        label_height: int = 36,
         label_width: int = 225,
         label_max_width: int = 225,
         label_min_width: int = 125,
@@ -185,6 +185,9 @@ class LabelEditorPane(pn.reactive.Reactive):
         name: str = "Label Editor",
     ) -> None:
         super().__init__(name=name)
+        if color_factors is None:
+            color_factors = list(set(labels))
+
         self.legend = LegendPane(
             labels,
             color_factors,

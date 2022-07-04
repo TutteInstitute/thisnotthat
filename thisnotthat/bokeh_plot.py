@@ -183,11 +183,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.plot.add_layout(self._legend, "right")
 
             self._color_by_legend_source = bokeh.models.ColumnDataSource(
-                {
-                    "x": np.zeros(16),
-                    "y": np.zeros(16),
-                    "color_by": np.linspace(0, 1, 16),
-                }
+                {"x": np.zeros(8), "y": np.zeros(8), "color_by": np.linspace(0, 1, 8),}
             )
             self._color_by_renderer = self.plot.square(
                 source=self._color_by_legend_source, line_width=0, visible=False,
@@ -368,14 +364,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         pn.io.push_notebook(self.pane)
 
-    @param.depends("color_by_palette", watch=True)
-    def _update_color_by_palette(self) -> None:
-        self._update_color_by()
-
-    @param.depends("color_by_vector", watch=True)
-    def _update_color_by_vector(self) -> None:
-        self._update_color_by()
-
+    @param.depends("color_by_palette", "color_by_vector", watch=True)
     def _update_color_by(self) -> None:
         if len(self.color_by_palette) == 0:
             palette = self._base_palette
@@ -402,7 +391,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._color_by_legend_source.data["color_by"] = [
                     np.round(x, decimals=2)
                     for x in np.linspace(
-                        self.color_by_vector.max(), self.color_by_vector.min(), 16,
+                        self.color_by_vector.max(), self.color_by_vector.min(), 8,
                     )
                 ]
                 self._color_by_renderer.glyph.fill_color = colormap
