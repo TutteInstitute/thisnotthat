@@ -40,10 +40,11 @@ class DataPane(pn.reactive.Reactive):
             self.data = raw_dataframe.copy()
         else:
             self.data = raw_dataframe.reset_index()
-        if labels is not None:
-            self.data["label"] = labels
+        #
+        # if labels is not None:
+        #     self.data["label"] = labels
 
-        self._base_selection = []
+        self._base_selection: List[int] = []
         self.table = pn.widgets.Tabulator(
             self.data,
             pagination="remote",
@@ -72,7 +73,7 @@ class DataPane(pn.reactive.Reactive):
         )
         self.pane = pn.Column(self.table, self.file_download)
         if labels is not None:
-            self.labels = pd.Series(labels)
+            self.labels = pd.Series(labels).copy()
 
     def _get_csv(self) -> BytesIO:
         return BytesIO(self.table.value.to_csv().encode())
@@ -96,7 +97,7 @@ class DataPane(pn.reactive.Reactive):
 
     @param.depends("labels", watch=True)
     def _update_labels(self) -> None:
-        self.data["label"] = self.labels
+        self.data["label"] = self.labels.values
         if len(self.selected) > 0:
             self.table.value = self.data.iloc[self.selected]
         else:

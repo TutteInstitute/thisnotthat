@@ -20,10 +20,10 @@ class PlotControlPane(pn.reactive.Reactive):
         self,
         raw_dataframe: pd.DataFrame,
         *,
-        width=None,
-        height=None,
-        title="#### Plot Controls",
-        name="Plot Controls",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        title: str = "#### Plot Controls",
+        name: str = "Plot Controls",
     ):
         super().__init__(name=name)
         self.dataframe = raw_dataframe
