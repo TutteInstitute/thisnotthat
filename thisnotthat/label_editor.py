@@ -33,14 +33,15 @@ class LegendPane(pn.reactive.Reactive):
         name: str = "Editable Legend",
     ) -> None:
         super().__init__(name=name)
+        label_series = pd.Series(labels).reset_index(drop=True)
+        self.label_set = set(label_series.unique())
         self.label_color_factors = factors
         self.label_color_palette = (
             palette
             if palette is not None
             else [Turbo256[x] for x in _palette_index(256)]
         )
-        self.labels = pd.Series(labels).reset_index(drop=True)
-        self.label_set = set(self.labels.unique())
+        self.labels = label_series
         self.color_picker_width = color_picker_width
         self.color_picker_height = color_picker_height
         self.color_picker_margin = color_picker_margin
