@@ -19,9 +19,9 @@ class LegendPane(pn.reactive.Reactive):
     def __init__(
         self,
         labels: npt.ArrayLike,
-        factors: List[str],
-        palette: Optional[Sequence[str]] = None,
         *,
+        factors: Optional[List[str]] = None,
+        palette: Optional[Sequence[str]] = None,
         color_picker_width: int = 50,
         color_picker_height: int = 50,
         color_picker_margin: Sequence[int] = [1, 5],
@@ -35,7 +35,10 @@ class LegendPane(pn.reactive.Reactive):
         super().__init__(name=name)
         label_series = pd.Series(labels).copy()  # reset_index(drop=True)
         self.label_set = set(label_series.unique())
-        self.label_color_factors = factors
+        if factors is not None:
+            self.label_color_factors = factors
+        else:
+            self.label_color_factors = list(self.label_set)
         self.label_color_palette = (
             palette
             if palette is not None
@@ -171,9 +174,9 @@ class LabelEditorPane(pn.reactive.Reactive):
     def __init__(
         self,
         labels: npt.ArrayLike,
+        *,
         color_factors: Optional[List[str]] = None,
         color_palette: Optional[Sequence[str]] = None,
-        *,
         color_picker_width: int = 48,
         color_picker_height: int = 36,
         color_picker_margin: Sequence[int] = [1, 5],
@@ -194,8 +197,8 @@ class LabelEditorPane(pn.reactive.Reactive):
 
         self.legend = LegendPane(
             labels,
-            color_factors,
-            color_palette,
+            factors=color_factors,
+            palette=color_palette,
             color_picker_width=color_picker_width,
             color_picker_height=color_picker_height,
             color_picker_margin=color_picker_margin,
