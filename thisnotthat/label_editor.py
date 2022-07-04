@@ -33,15 +33,14 @@ class LegendPane(pn.reactive.Reactive):
         name: str = "Editable Legend",
     ) -> None:
         super().__init__(name=name)
-        self.label_set = set(np.unique(labels))
         self.label_color_factors = factors
         self.label_color_palette = (
             palette
             if palette is not None
             else [Turbo256[x] for x in _palette_index(256)]
         )
-        self.labels = pd.Series(labels)
-        self.label_set = set(self.labels)
+        self.labels = pd.Series(labels).reset_index(drop=True)
+        self.label_set = set(self.labels.unique())
         self.color_picker_width = color_picker_width
         self.color_picker_height = color_picker_height
         self.color_picker_margin = color_picker_margin
@@ -140,7 +139,7 @@ class NewLabelButton(pn.reactive.Reactive):
             pn.widgets.Button(name=button_text, button_type=button_type)
         )
         self.pane[0].on_click(self._on_click)
-        self.labels = pd.Series(labels)
+        self.labels = pd.Series(labels).reset_index(drop=True)
 
     def _on_click(self, event: param.parameterized.Event) -> None:
         if len(self.selected) > 0:
