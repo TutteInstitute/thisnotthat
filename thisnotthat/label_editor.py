@@ -136,10 +136,9 @@ class NewLabelButton(pn.reactive.Reactive):
     ) -> None:
         super().__init__(name=name)
         self.label_count = 1
-        self.pane = pn.Column(
-            pn.widgets.Button(name=button_text, button_type=button_type)
-        )
-        self.pane[0].on_click(self._on_click)
+        self.pane = pn.widgets.Button(name=button_text, button_type=button_type)
+        self.pane.on_click(self._on_click)
+        self.pane.disabled = True
         self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
 
     def _on_click(self, event: param.parameterized.Event) -> None:
@@ -151,18 +150,12 @@ class NewLabelButton(pn.reactive.Reactive):
 
             self.selected = []
 
-            if len(self.pane) > 1:
-                self.pane.pop(1)
-
-        elif len(self.pane) < 2:
-            self.pane.append(pn.pane.Alert("No data selected!", alert_type="warning"))
-
     @param.depends("selected", watch=True)
     def _toggle_active(self):
         if len(self.selected) > 0:
-            self.pane[0].disabled = False
+            self.pane.disabled = False
         else:
-            self.pane[0].disabled = True
+            self.pane.disabled = True
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
