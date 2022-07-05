@@ -15,6 +15,7 @@ class LegendPane(pn.reactive.Reactive):
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
     label_color_factors = param.List([], item_type=str, doc="Color palette")
+    selected = param.List([], item_type=int, doc="Indices of selected samples")
 
     def __init__(
         self,
@@ -81,9 +82,15 @@ class LegendPane(pn.reactive.Reactive):
         if toggle_state:
             button.name = "✓"
             button.button_type = "success"
+            indices_to_select = np.where(self.labels == button.label_id)[0]
+            new_selection = np.union1d(self.selected, indices_to_select).to_list()
+            self.selected = new_selection
         else:
             button.name = ""
             button.button_type = "default"
+            indices_to_deselect = np.where(self.labels == button.label_id)[0]
+            new_selection = np.setdiff1d(self.selected, indices_to_deselect).to_list()
+            self.selected = new_selection
 
     def _rebuild_pane(self) -> None:
         self.label_set = set(self.labels.unique())
@@ -113,6 +120,7 @@ class LegendPane(pn.reactive.Reactive):
                         button_type="default",
                         width=self.label_height,
                         height=self.label_height,
+                        margin=[0, 2],
                     ),
                 )
                 legend_items.append(legend_item)
@@ -243,6 +251,7 @@ class LabelEditorPane(pn.reactive.Reactive):
             labels="labels",
             label_color_palette="label_color_palette",
             label_color_factors="label_color_factors",
+            selected="selected",
             bidirectional=True,
         )
         self.new_label_button.link(
