@@ -83,13 +83,13 @@ class LegendPane(pn.reactive.Reactive):
             button.name = "✓"
             button.button_type = "success"
             indices_to_select = np.where(self.labels == button.label_id)[0]
-            new_selection = np.union1d(self.selected, indices_to_select).to_list()
+            new_selection = np.union1d(self.selected, indices_to_select).tolist()
             self.selected = new_selection
         else:
             button.name = ""
             button.button_type = "default"
             indices_to_deselect = np.where(self.labels == button.label_id)[0]
-            new_selection = np.setdiff1d(self.selected, indices_to_deselect).to_list()
+            new_selection = np.setdiff1d(self.selected, indices_to_deselect).tolist()
             self.selected = new_selection
 
     def _rebuild_pane(self) -> None:
@@ -153,7 +153,7 @@ class LegendPane(pn.reactive.Reactive):
 class NewLabelButton(pn.reactive.Reactive):
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
-    selected = param.List(default=[], doc="Indices of selected samples")
+    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
 
     def __init__(
         self,
@@ -198,7 +198,7 @@ class LabelEditorPane(pn.reactive.Reactive):
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
     label_color_factors = param.List([], item_type=str, doc="Color palette")
-    selected = param.List(default=[], doc="Indices of selected samples")
+    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
 
     def __init__(
         self,
