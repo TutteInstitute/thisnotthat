@@ -100,7 +100,7 @@ class LegendPane(pn.reactive.Reactive):
             self.selected = new_selection
             self._internal_selection = False
 
-    @param.depends(selected, watch=True)
+    @param.depends("selected", watch=True)
     def _update_selected(self):
         if not self._internal_selection:
             selected_set = set(self.selected)
