@@ -83,6 +83,8 @@ class LegendPane(pn.reactive.Reactive):
             button.name = "✓"
             button.button_type = "success"
             indices_to_select = np.where(self.labels == button.label_id)[0]
+            self.indices_to_select = indices_to_select
+            self.last_label_id = button.label_id
             new_selection = np.union1d(self.selected, indices_to_select).tolist()
             self.selected = new_selection
         else:
