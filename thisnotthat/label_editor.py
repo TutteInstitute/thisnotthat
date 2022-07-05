@@ -83,15 +83,17 @@ class LegendPane(pn.reactive.Reactive):
             button.name = "✓"
             button.button_type = "success"
             indices_to_select = np.where(self.labels == button.label_id)[0]
-            self.indices_to_select = indices_to_select
-            self.last_label_id = button.label_id
-            new_selection = np.union1d(self.selected, indices_to_select).tolist()
+            new_selection = (
+                np.union1d(self.selected, indices_to_select).astype(int).tolist()
+            )
             self.selected = new_selection
         else:
             button.name = ""
             button.button_type = "default"
             indices_to_deselect = np.where(self.labels == button.label_id)[0]
-            new_selection = np.setdiff1d(self.selected, indices_to_deselect).tolist()
+            new_selection = (
+                np.setdiff1d(self.selected, indices_to_deselect).astype(int).tolist()
+            )
             self.selected = new_selection
 
     def _rebuild_pane(self) -> None:
