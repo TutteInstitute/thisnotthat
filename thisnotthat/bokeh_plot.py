@@ -366,11 +366,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @param.depends("color_by_palette", "color_by_vector", watch=True)
     def _update_color_by(self) -> None:
         if len(self.color_by_palette) == 0:
+            print("choosing base palette")
             palette = self._base_palette
         else:
+            print("choosing palette: ", str(self.color_by_palette))
             palette = self.color_by_palette
 
         if len(self.color_by_vector) == 0:
+            print("using default color-mapping")
             self.points.glyph.fill_color = self._label_colormap
             if self.show_legend:
                 if self.plot.legend.items[0].label["field"] != "label":
@@ -378,6 +381,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self.plot.legend.items[0].renderers = [self.points]
 
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+            print("color_by_vector is numeric")
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.linear_cmap(
                 "color_by",
@@ -393,10 +397,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                         self.color_by_vector.max(), self.color_by_vector.min(), 8,
                     )
                 ]
+                print(
+                    f"setting  renderer for legend to {self._color_by_renderer} instead of {self.points}"
+                )
                 self._color_by_renderer.glyph.fill_color = colormap
                 self.plot.legend.items[0].label["field"] = "color_by"
                 self.plot.legend.items[0].renderers = [self._color_by_renderer]
         else:
+            print("treating color_by_vector as categorical")
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
                 "color_by", palette, list(self.color_by_vector.unique())
