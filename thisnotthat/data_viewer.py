@@ -63,7 +63,7 @@ class DataPane(pn.reactive.Reactive):
             disabled=True,
         )
         self._table_watch = self.table.param.watch(
-            self._data_pane_update_selected, "selection"
+            self._update_table_selection, "selection"
         )
         self.file_download = pn.widgets.FileDownload(
             filename="data.csv", callback=self._get_csv, button_type="primary"
@@ -75,7 +75,7 @@ class DataPane(pn.reactive.Reactive):
     def _get_csv(self) -> BytesIO:
         return BytesIO(self.table.value.to_csv().encode())
 
-    def _data_pane_update_selected(self, event: param.parameterized.Event) -> None:
+    def _update_table_selection(self, event: param.parameterized.Event) -> None:
         if len(event.old) == 0:
             self._base_selection = self.selected
         if len(event.new) > 0:
@@ -87,9 +87,13 @@ class DataPane(pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwds)
 
     @param.depends("selected", watch=True)
-    def _data_pane_update_selection(self) -> None:
+    def _update_selected(self) -> None:
         if len(self.table.selection) != len(self.selected):
             self.table.selection = []
+            self.table.value = self.data.iloc[self.selected]
+        if len(self.selected) == 0:
+            self.table.value = self.data
+        else:
             self.table.value = self.data.iloc[self.selected]
 
     @param.depends("labels", watch=True)
