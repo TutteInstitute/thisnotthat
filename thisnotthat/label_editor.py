@@ -75,6 +75,16 @@ class LegendPane(pn.reactive.Reactive):
         self.labels = new_labels
         self.label_set = set(self.labels.unique())
 
+    def toggle_select(self, event) -> None:
+        button = event.obj
+        toggle_state = bool(button.clicks % 2)
+        if toggle_state:
+            button.name = "✓"
+            button.button_type = "success"
+        else:
+            button.name = ""
+            button.button_type = "default"
+
     def _rebuild_pane(self) -> None:
         self.label_set = set(self.labels.unique())
         legend_labels = set([])
@@ -98,6 +108,12 @@ class LegendPane(pn.reactive.Reactive):
                         max_width=self.label_max_width,
                         min_width=self.label_min_width,
                     ),
+                    pn.widgets.Button(
+                        name="",
+                        button_type="default",
+                        width=self.label_height,
+                        height=self.label_height,
+                    ),
                 )
                 legend_items.append(legend_item)
                 legend_item[0].param.watch(
@@ -106,6 +122,8 @@ class LegendPane(pn.reactive.Reactive):
                 legend_item[1].param.watch(
                     self._label_callback, "value", onlychanged=True
                 )
+                legend_item[2].label_id = label
+                legend_item[2].on_click(self.toggle_select)
         self.pane.clear()
         self.pane.extend(legend_items)
 
