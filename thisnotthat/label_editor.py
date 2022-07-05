@@ -76,7 +76,7 @@ class LegendPane(pn.reactive.Reactive):
         self.labels = new_labels
         self.label_set = set(self.labels.unique())
 
-    def toggle_select(self, event) -> None:
+    def _toggle_select(self, event) -> None:
         button = event.obj
         toggle_state = bool(button.clicks % 2)
         if toggle_state:
@@ -86,7 +86,9 @@ class LegendPane(pn.reactive.Reactive):
             new_selection = (
                 np.union1d(self.selected, indices_to_select).astype(int).tolist()
             )
+            self._internal_selection = True
             self.selected = new_selection
+            self._internal_selection = False
         else:
             button.name = ""
             button.button_type = "default"
@@ -94,7 +96,25 @@ class LegendPane(pn.reactive.Reactive):
             new_selection = (
                 np.setdiff1d(self.selected, indices_to_deselect).astype(int).tolist()
             )
+            self._internal_selection = True
             self.selected = new_selection
+            self._internal_selection = False
+
+    @param.depends(selected, watch=True)
+    def _update_selected(self):
+        if not self._internal_selection:
+            selected_set = set(self.selected)
+            for legend_item in self.pane:
+                selection_button = legend_item[2]
+                indices_to_test = set(
+                    np.where(self.labels == selection_button.label_id)[0]
+                )
+                if indices_to_test <= selected_set:
+                    # Ensure toggle is selected
+                    selection_button.clicks = 1
+                else:
+                    # Ensure toggle is unselected
+                    selection_button.clicks = 0
 
     def _rebuild_pane(self) -> None:
         self.label_set = set(self.labels.unique())
@@ -135,7 +155,7 @@ class LegendPane(pn.reactive.Reactive):
                     self._label_callback, "value", onlychanged=True
                 )
                 legend_item[2].label_id = label
-                legend_item[2].on_click(self.toggle_select)
+                legend_item[2].on_click(self._toggle_select)
         self.pane.clear()
         self.pane.extend(legend_items)
 
