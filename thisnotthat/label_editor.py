@@ -23,6 +23,7 @@ class LegendPane(pn.reactive.Reactive):
         *,
         factors: Optional[List[str]] = None,
         palette: Optional[Sequence[str]] = None,
+        selectable: bool = False,
         color_picker_width: int = 50,
         color_picker_height: int = 50,
         color_picker_margin: Sequence[int] = [1, 5],
@@ -46,6 +47,7 @@ class LegendPane(pn.reactive.Reactive):
             else [Turbo256[x] for x in _palette_index(256)]
         )
         self.labels = label_series
+        self.selectable = selectable
         self.color_picker_width = color_picker_width
         self.color_picker_height = color_picker_height
         self.color_picker_margin = color_picker_margin
@@ -102,7 +104,7 @@ class LegendPane(pn.reactive.Reactive):
 
     @param.depends("selected", watch=True)
     def _update_selected(self):
-        if not self._internal_selection:
+        if self.selectable and not self._internal_selection:
             selected_set = set(self.selected)
             for legend_item in self.pane:
                 selection_button = legend_item[2]
@@ -154,8 +156,11 @@ class LegendPane(pn.reactive.Reactive):
                 legend_item[1].param.watch(
                     self._label_callback, "value", onlychanged=True
                 )
-                legend_item[2].label_id = label
-                legend_item[2].on_click(self._toggle_select)
+                if self.selectable:
+                    legend_item[2].label_id = label
+                    legend_item[2].on_click(self._toggle_select)
+                else:
+                    legend_item[2].visible = False
         self.pane.clear()
         self.pane.extend(legend_items)
 
@@ -230,6 +235,7 @@ class LabelEditorPane(pn.reactive.Reactive):
         *,
         color_factors: Optional[List[str]] = None,
         color_palette: Optional[Sequence[str]] = None,
+        selectable_legend: bool = False,
         color_picker_width: int = 48,
         color_picker_height: int = 36,
         color_picker_margin: Sequence[int] = [1, 5],
@@ -255,6 +261,7 @@ class LabelEditorPane(pn.reactive.Reactive):
             labels,
             factors=color_factors,
             palette=color_palette,
+            selectable=selectable_legend,
             color_picker_width=color_picker_width,
             color_picker_height=color_picker_height,
             color_picker_margin=color_picker_margin,
