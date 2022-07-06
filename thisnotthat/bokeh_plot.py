@@ -406,7 +406,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 print(
                     f"setting  renderer for legend to {self._color_by_renderer} instead of {self.points}"
                 )
-                # self._color_by_renderer.glyph.fill_color = colormap
+                self._color_by_renderer.glyph.fill_color = colormap
                 # self._legend.items[0].label["field"] = "color_by"
                 # self._legend.items[0].renderers = [self._color_by_renderer]
                 self._legend.visible = False
