@@ -177,30 +177,22 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             title=title,
             title_location=title_location,
         )
-        if show_legend:
-            # if legend_location == "outside":
-            #     self._legend = bokeh.models.Legend(location="center", label_width=150)
-            # else:
-            #     self._legend = bokeh.models.Legend(
-            #         location=legend_location, label_width=150
-            #     )
-            #     self.plot.add_layout(self._legend, "right")
 
-            self.points = self.plot.circle(
-                source=self.data_source,
-                radius="apparent_size",
-                fill_color=self._label_colormap,
-                fill_alpha=fill_alpha,
-                line_color=line_color,
-                line_width=line_width,
-                hover_fill_color=hover_fill_color,
-                hover_line_color=hover_line_color,
-                hover_line_width=hover_line_width,
-                selection_fill_alpha=selection_fill_alpha,
-                nonselection_fill_alpha=nonselection_fill_alpha,
-                nonselection_fill_color=nonselection_fill_color,
-                # legend_field="label",
-            )
+        self.points = self.plot.circle(
+            source=self.data_source,
+            radius="apparent_size",
+            fill_color=self._label_colormap,
+            fill_alpha=fill_alpha,
+            line_color=line_color,
+            line_width=line_width,
+            hover_fill_color=hover_fill_color,
+            hover_line_color=hover_line_color,
+            hover_line_width=hover_line_width,
+            selection_fill_alpha=selection_fill_alpha,
+            nonselection_fill_alpha=nonselection_fill_alpha,
+            nonselection_fill_color=nonselection_fill_color,
+        )
+        if show_legend:
             self._legend = bokeh.models.Legend(
                 items=[
                     bokeh.models.LegendItem(
@@ -234,24 +226,6 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "right" if legend_location == "outside" else "center",
             )
             self._color_by_legend.visible = False
-
-            # if legend_location != "outside":
-            #     self.plot.legend.location = legend_location
-        else:
-            self.points = self.plot.circle(
-                source=self.data_source,
-                radius="apparent_size",
-                fill_color=self._label_colormap,
-                fill_alpha=fill_alpha,
-                line_color=line_color,
-                line_width=line_width,
-                hover_fill_color=hover_fill_color,
-                hover_line_color=hover_line_color,
-                hover_line_width=hover_line_width,
-                selection_fill_alpha=selection_fill_alpha,
-                nonselection_fill_alpha=nonselection_fill_alpha,
-                nonselection_fill_color=nonselection_fill_color,
-            )
 
         self.max_point_size = max_point_size
         self.min_point_size = min_point_size
@@ -408,7 +382,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             if self.show_legend:
                 if self._legend.items[0].label["field"] != "label":
                     self._legend.items[0].label["field"] = "label"
-                self._legend.items[0].renderers = [self.points]
+                # self._legend.items[0].renderers = [self.points]
+                self._legend.visible = True
+                self._color_by_legend.visible = False
 
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             print("color_by_vector is numeric")
@@ -430,9 +406,11 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 print(
                     f"setting  renderer for legend to {self._color_by_renderer} instead of {self.points}"
                 )
-                self._color_by_renderer.glyph.fill_color = colormap
-                self._legend.items[0].label["field"] = "color_by"
-                self._legend.items[0].renderers = [self._color_by_renderer]
+                # self._color_by_renderer.glyph.fill_color = colormap
+                # self._legend.items[0].label["field"] = "color_by"
+                # self._legend.items[0].renderers = [self._color_by_renderer]
+                self._legend.visible = False
+                self._color_by_legend.visible = True
         else:
             print("treating color_by_vector as categorical")
             self.data_source.data["color_by"] = self.color_by_vector
@@ -442,7 +420,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.points.glyph.fill_color = colormap
             if self.show_legend:
                 self._legend.items[0].label["field"] = "color_by"
-                self._legend.items[0].renderers = [self.points]
+                # self._legend.items[0].renderers = [self.points]
+                self._legend.visible = True
+                self._color_by_legend.visible = False
 
         pn.io.push_notebook(self.pane)
 
