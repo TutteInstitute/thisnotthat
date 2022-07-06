@@ -214,10 +214,13 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                         label="color_by", renderers=[self._color_by_renderer]
                     )
                 ],
-                location=legend_location,
+                location=legend_location if legend_location != "outside" else "center",
                 label_width=150,
             )
-            self.plot.add_layout(self._color_by_legend)
+            self.plot.add_layout(
+                self._color_by_legend,
+                "right" if legend_location == "outside" else "center",
+            )
             self._color_by_legend.visible = False
 
             # if legend_location != "outside":
