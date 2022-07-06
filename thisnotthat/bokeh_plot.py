@@ -178,13 +178,13 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             title_location=title_location,
         )
         if show_legend:
-            if legend_location == "outside":
-                self._legend = bokeh.models.Legend(location="center", label_width=150)
-            else:
-                self._legend = bokeh.models.Legend(
-                    location=legend_location, label_width=150
-                )
-                self.plot.add_layout(self._legend, "right")
+            # if legend_location == "outside":
+            #     self._legend = bokeh.models.Legend(location="center", label_width=150)
+            # else:
+            #     self._legend = bokeh.models.Legend(
+            #         location=legend_location, label_width=150
+            #     )
+            #     self.plot.add_layout(self._legend, "right")
 
             self.points = self.plot.circle(
                 source=self.data_source,
@@ -199,7 +199,19 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 selection_fill_alpha=selection_fill_alpha,
                 nonselection_fill_alpha=nonselection_fill_alpha,
                 nonselection_fill_color=nonselection_fill_color,
-                legend_field="label",
+                # legend_field="label",
+            )
+            self._legend = bokeh.models.Legend(
+                items=[
+                    bokeh.models.LegendItem(
+                        label={"field": "label"}, renderers=[self.points]
+                    )
+                ],
+                location=legend_location if legend_location != "outside" else "center",
+                label_width=150,
+            )
+            self.plot.add_layout(
+                self._legend, "right" if legend_location == "outside" else "center",
             )
 
             self._color_by_legend_source = bokeh.models.ColumnDataSource(
