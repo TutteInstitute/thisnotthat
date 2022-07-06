@@ -211,7 +211,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self._color_by_legend = bokeh.models.Legend(
                 items=[
                     bokeh.models.LegendItem(
-                        label="color_by", renderers=[self._color_by_renderer]
+                        label={"field": "color_by"}, renderers=[self._color_by_renderer]
                     )
                 ],
                 location=legend_location if legend_location != "outside" else "center",
@@ -394,9 +394,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             print("using default color-mapping")
             self.points.glyph.fill_color = self._label_colormap
             if self.show_legend:
-                if self.plot.legend.items[0].label["field"] != "label":
-                    self.plot.legend.items[0].label["field"] = "label"
-                self.plot.legend.items[0].renderers = [self.points]
+                if self._legend.items[0].label["field"] != "label":
+                    self._legend.items[0].label["field"] = "label"
+                self._legend.items[0].renderers = [self.points]
 
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             print("color_by_vector is numeric")
@@ -419,8 +419,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     f"setting  renderer for legend to {self._color_by_renderer} instead of {self.points}"
                 )
                 self._color_by_renderer.glyph.fill_color = colormap
-                self.plot.legend.items[0].label["field"] = "color_by"
-                self.plot.legend.items[0].renderers = [self._color_by_renderer]
+                self._legend.items[0].label["field"] = "color_by"
+                self._legend.items[0].renderers = [self._color_by_renderer]
         else:
             print("treating color_by_vector as categorical")
             self.data_source.data["color_by"] = self.color_by_vector
@@ -429,8 +429,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.points.glyph.fill_color = colormap
             if self.show_legend:
-                self.plot.legend.items[0].label["field"] = "color_by"
-                self.plot.legend.items[0].renderers = [self.points]
+                self._legend.items[0].label["field"] = "color_by"
+                self._legend.items[0].renderers = [self.points]
 
         pn.io.push_notebook(self.pane)
 
