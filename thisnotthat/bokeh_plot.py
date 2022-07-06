@@ -180,14 +180,11 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if show_legend:
             if legend_location == "outside":
                 self._legend = bokeh.models.Legend(location="center", label_width=150)
+            else:
+                self._legend = bokeh.models.Legend(
+                    location=legend_location, label_width=150
+                )
                 self.plot.add_layout(self._legend, "right")
-
-            self._color_by_legend_source = bokeh.models.ColumnDataSource(
-                {"x": np.zeros(8), "y": np.zeros(8), "color_by": np.linspace(0, 1, 8),}
-            )
-            self._color_by_renderer = self.plot.square(
-                source=self._color_by_legend_source, line_width=0, visible=False,
-            )
 
             self.points = self.plot.circle(
                 source=self.data_source,
@@ -205,8 +202,26 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 legend_field="label",
             )
 
-            if legend_location != "outside":
-                self.plot.legend.location = legend_location
+            self._color_by_legend_source = bokeh.models.ColumnDataSource(
+                {"x": np.zeros(8), "y": np.zeros(8), "color_by": np.linspace(0, 1, 8),}
+            )
+            self._color_by_renderer = self.plot.square(
+                source=self._color_by_legend_source, line_width=0, visible=False,
+            )
+            self._color_by_legend = bokeh.models.Legend(
+                items=[
+                    bokeh.models.LegendItem(
+                        label="color_by", renderers=[self._color_by_renderer]
+                    )
+                ],
+                location=legend_location,
+                label_width=150,
+            )
+            self.plot.add_layout(self._color_by_legend)
+            self._color_by_legend.visible = False
+
+            # if legend_location != "outside":
+            #     self.plot.legend.location = legend_location
         else:
             self.points = self.plot.circle(
                 source=self.data_source,
@@ -326,9 +341,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
             def _map_apparent_size(x):
                 if (x / scale) > max_point_size:
-                    return self.max_point_size * scale
+                    return max_point_size * scale
                 elif (x / scale) < min_point_size:
-                    return self.min_point_size * scale
+                    return min_point_size * scale
                 else:
                     return x
 
