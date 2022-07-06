@@ -133,6 +133,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "apparent_size": marker_size
                 if marker_size is not None
                 else np.full(data.shape[0], 0.1),
+                "color_by": np.zeros(data.shape[0], dtype=np.int8),
             }
         )
         self.data_source.selected.on_change("indices", self._update_selected)
