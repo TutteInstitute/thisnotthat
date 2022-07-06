@@ -72,7 +72,7 @@ class PlotControlPane(pn.reactive.Reactive):
         self.apply_changes = pn.widgets.Button(
             name="Apply Changes", button_type="default",
         )
-        self.apply_changes.on_click(self._apply_changes)
+        self.apply_changes.on_click(self._reapply_changes)
         self.pane = pn.WidgetBox(
             title,
             self.palette_selector,
@@ -194,3 +194,7 @@ class PlotControlPane(pn.reactive.Reactive):
             self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
 
         self.apply_changes.button_type = "default"
+
+    def _reapply_changes(self, event):
+        self._apply_changes(None)
+        self._apply_changes(None)
