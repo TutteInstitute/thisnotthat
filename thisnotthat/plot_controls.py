@@ -70,7 +70,7 @@ class PlotControlPane(pn.reactive.Reactive):
             self._options_changed, "value", onlychanged=True
         )
         self.apply_changes = pn.widgets.Button(
-            name="Apply Changes", button_type="default",
+            name="Apply Changes", button_type="success", disabled=True,
         )
         self.apply_changes.on_click(self._reapply_changes)
         self.pane = pn.WidgetBox(
@@ -88,7 +88,7 @@ class PlotControlPane(pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwds)
 
     def _options_changed(self, event) -> None:
-        self.apply_changes.button_type = "success"
+        self.apply_changes.disabled = False
 
     def _change_palette(self):
         if pd.api.types.is_numeric_dtype(self.color_by_vector):
@@ -193,8 +193,9 @@ class PlotControlPane(pn.reactive.Reactive):
         else:
             self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
 
-        self.apply_changes.button_type = "default"
+        self.apply_changes.disabled = True
 
+    # I have no idea why, but thjis fixes issues with marker size changes in plots. Don't ask
     def _reapply_changes(self, event):
         self._apply_changes(None)
         self._apply_changes(None)
