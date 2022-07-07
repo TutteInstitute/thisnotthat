@@ -417,6 +417,7 @@ def text_labels_from_per_sample_labels(
         selector = RandomSampleSelection(items_per_label, random_state=random_state)
 
     labels = []
+    labels_per_sample = np.asarray(labels_per_sample)
     for layer in pointset_layers:
         layer_labels = []
         for cluster in layer:
