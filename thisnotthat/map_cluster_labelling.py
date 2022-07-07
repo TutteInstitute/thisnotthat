@@ -427,7 +427,7 @@ def text_labels_from_per_sample_labels(
                 source_vectors[cluster_with_exclusion],
                 labels_per_sample[cluster_with_exclusion],
             )
-            indices = np.where(np.isin(labels_per_sample, label_selection))
+            indices = np.where(np.isin(labels_per_sample, label_selection))[0]
             excluded_indices.update(indices)
             layer_labels.append(list(label_selection))
 
