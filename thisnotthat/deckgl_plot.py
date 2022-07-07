@@ -105,7 +105,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self._color_loc = self.dataframe.columns.get_loc("color")
         self._color_by_loc = self.dataframe.columns.get_loc("color_by")
-        self._selected_set = set([])
+        self._selected_set: Set[int] = set([])
         self._selected_externally_changed = True
         self._nn_index = NearestNeighbors().fit(data)
         self._brushing_on = False
@@ -394,7 +394,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self._selected_set = set(self.selected)
             self._remap_colors(self.selected)
 
-    @param.depends("color_by_vector", watch=True)
+    @param.depends("color_by_vector", "color_by_palette", watch=True)
     def _update_color_by_vectors(self) -> None:
         if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
             self._color_by_enabled = False
@@ -426,50 +426,49 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.dataframe["color_by"] = self.color_by_vector.map(color_mapping)
             self._remap_colors(self.selected)
 
-    @param.depends("color_by_palette", watch=True)
-    def _update_color_by_palette(self) -> None:
-        if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
-            self._color_by_enabled = False
-            self._remap_colors(self.selected)
-        elif pd.api.types.is_numeric_dtype(self.color_by_vector):
-            self._color_by_enabled = True
-            palette = self.color_by_palette
-            min_val = self.color_by_vector.min()
-            bin_width = (self.color_by_vector.max() - min_val) / (len(palette) - 1)
-            self.dataframe["color_by"] = self.color_by_vector.map(
-                lambda val: (
-                    [
-                        int(c * 255)
-                        for c in to_rgb(
-                            palette[int(np.round((val - min_val) / bin_width))]
-                        )
-                    ]
-                    + [self._fill_alpha_int]
-                )
-            )
-            self._remap_colors(self.selected)
-        else:
-            self._color_by_enabled = True
-            unique_items = self.color_by_vector.unique()
-            color_mapping = {
-                item: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
-                for item, color in zip(unique_items, self.color_by_palette)
-            }
-            self.dataframe["color_by"] = self.color_by_vector.map(color_mapping)
-            self._remap_colors(self.selected)
+    # @param.depends("color_by_palette", watch=True)
+    # def _update_color_by_palette(self) -> None:
+    #     if len(self.color_by_vector) == 0 or len(self.color_by_palette) == 0:
+    #         self._color_by_enabled = False
+    #         self._remap_colors(self.selected)
+    #     elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+    #         self._color_by_enabled = True
+    #         palette = self.color_by_palette
+    #         min_val = self.color_by_vector.min()
+    #         bin_width = (self.color_by_vector.max() - min_val) / (len(palette) - 1)
+    #         self.dataframe["color_by"] = self.color_by_vector.map(
+    #             lambda val: (
+    #                 [
+    #                     int(c * 255)
+    #                     for c in to_rgb(
+    #                         palette[int(np.round((val - min_val) / bin_width))]
+    #                     )
+    #                 ]
+    #                 + [self._fill_alpha_int]
+    #             )
+    #         )
+    #         self._remap_colors(self.selected)
+    #     else:
+    #         self._color_by_enabled = True
+    #         unique_items = self.color_by_vector.unique()
+    #         color_mapping = {
+    #             item: ([int(c * 255) for c in to_rgb(color)] + [self._fill_alpha_int])
+    #             for item, color in zip(unique_items, self.color_by_palette)
+    #         }
+    #         self.dataframe["color_by"] = self.color_by_vector.map(color_mapping)
+    #         self._remap_colors(self.selected)
 
     @param.depends("marker_size", watch=True)
     def _update_marker_size(self) -> None:
         if len(self.marker_size) == 0:
             self.dataframe["size"] = self._base_marker_size
         elif len(self.marker_size) == 1:
-            size_vector = pd.Series(
-                np.full(len(self.dataframe["size"]), self.marker_size[0])
-            )
+            size_vector = np.full(len(self.dataframe["size"]), self.marker_size[0])
             self.dataframe["size"] = size_vector
         else:
-            rescaled_size = pd.Series(self.marker_size)
-            rescaled_size = 0.05 * (rescaled_size / rescaled_size.mean())
+            rescaled_size = np.asarray(self.marker_size)
+            rescaled_size = (rescaled_size - rescaled_size.mean()) / rescaled_size.std()
+            rescaled_size = 0.05 * (rescaled_size - rescaled_size.min() + 1)
             self.dataframe["size"] = rescaled_size
 
         self.points["data"] = self.dataframe
