@@ -164,7 +164,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.color_mapping = self._label_colormap["transform"]
             self.color_mapping.palette = [
-                self.color_mapping.palette[x] for x in _palette_index(256)
+                self.color_mapping.palette[x] for x in _palette_index(len(palette))
             ]
 
         self.plot = bokeh.plotting.figure(
