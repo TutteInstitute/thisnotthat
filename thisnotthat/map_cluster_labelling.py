@@ -418,12 +418,17 @@ def text_labels_from_per_sample_labels(
 
     labels = []
     labels_per_sample = np.asarray(labels_per_sample)
+    excluded_indices: Set[int] = set([])
     for layer in pointset_layers:
         layer_labels = []
         for cluster in layer:
+            cluster_with_exclusion = list(set(cluster) - excluded_indices)
             vector_selection, label_selection = selector.fit_transform(
-                source_vectors[cluster], labels_per_sample[cluster]
+                source_vectors[cluster_with_exclusion],
+                labels_per_sample[cluster_with_exclusion],
             )
+            indices = np.where(np.isin(labels_per_sample, label_selection))
+            excluded_indices.update(indices)
             layer_labels.append(list(label_selection))
 
         labels.append(layer_labels)
