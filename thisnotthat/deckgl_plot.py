@@ -213,7 +213,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         )
         self.select_controls.visible = show_selection_controls
         self.title.visible = title is not None
-        self.labels = pd.Series(labels).reset_index(drop=True)
+        self.labels = pd.Series(labels).copy()  # reset_index(drop=True)
         self.label_color_palette = base_color_palette
         self.label_color_factors = base_color_factors
 
