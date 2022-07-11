@@ -385,7 +385,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self._remap_colors(self.selected)
         if self._base_hover_is_labels:
             if len(self.hover_text) == 0:
-                self.data_source.data["hover_text"] = self.labels
+                self.dataframe["hover_text"] = self.labels
             self._base_hover_text = self.labels
 
     @param.depends("selected", watch=True)
