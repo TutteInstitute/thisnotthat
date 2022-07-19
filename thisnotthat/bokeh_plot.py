@@ -122,6 +122,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         background_fill_color: str = "#ffffff",
         border_fill_color: str = "whitesmoke",
         toolbar_location: str = "above",
+        tools="pan,wheel_zoom,lasso_select,save,reset,help",
         title: Optional[str] = None,
         title_location: str = "above",
         show_legend: bool = True,
@@ -185,10 +186,11 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             background_fill_color=background_fill_color,
             border_fill_color=border_fill_color,
             toolbar_location=toolbar_location,
-            tools="pan,wheel_zoom,lasso_select,save,reset,help",
+            tools=tools,
             title=title,
             title_location=title_location,
         )
+        self.plot.toolbar.active_scroll = "auto"
 
         self.points = self.plot.circle(
             source=self.data_source,
