@@ -25,6 +25,9 @@ def add_text_layer(
     text_font_style="normal",
     text_line_height=0.9,
     text_alpha=1.0,
+    max_text_size=64.0,
+    min_text_size=2.0,
+    text_transition_width=16.0,
 ):
     label_data_source = bokeh.models.ColumnDataSource(text_dataframe)
     labels = bokeh.models.Text(
@@ -38,16 +41,18 @@ def add_text_layer(
         text_line_height=text_line_height,
         text_alpha=text_alpha,
     )
+    upper_transition_val = max_text_size - text_transition_width
+    lower_transition_val = min_text_size + text_transition_width
     text_resize_callback = bokeh.models.callbacks.CustomJS(
         args=dict(labels=labels),
         code="""
     const scale = cb_obj.end - cb_obj.start;
     const text_size = (%f / scale);
-    if (text_size > 48 && %s) {
-        var alpha = (64 - text_size) / 16.0;
+    if (text_size > %f && %s) {
+        var alpha = (%f - text_size) / %f;
 
-    } else if (text_size < 14 && %s) {
-        var alpha = (text_size - 2.0) / 12.0;
+    } else if (text_size < %f && %s) {
+        var alpha = (text_size - %f) / %f;
 
     } else {
         var alpha = 1.0;
@@ -62,8 +67,14 @@ def add_text_layer(
     """
         % (
             text_size,
+            upper_transition_val,
             "false" if layer_type == "bottom" else "true",
+            max_text_size,
+            text_transition_width,
+            lower_transition_val,
             "false" if layer_type == "top" else "true",
+            min_text_size,
+            text_transition_width,
         ),
     )
     plot_figure.add_glyph(label_data_source, labels)
@@ -467,11 +478,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         *,
         angle=0,
         text_size_scale=12,
+        text_layer_scale_factor=2.0,
         text_color="#444444",
         text_font={"value": "helvetica"},
         text_font_style="normal",
         text_line_height=0.9,
         text_alpha=1.0,
+        max_text_size=64.0,
+        min_text_size=2.0,
+        text_transition_width=16.0,
     ):
         for i, (label_locations, label_strings) in enumerate(
             zip(cluster_labelling.location_layers, cluster_labelling.labels_for_display)
@@ -494,7 +509,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             add_text_layer(
                 self.plot,
                 cluster_label_layer,
-                text_size_scale * 2 ** i,
+                text_size_scale * text_layer_scale_factor ** i,
                 layer_type=layer_type,
                 angle=angle,
                 text_color=text_color,
@@ -502,6 +517,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 text_font_style=text_font_style,
                 text_line_height=text_line_height,
                 text_alpha=text_alpha,
+                max_text_size=max_text_size,
+                min_text_size=min_text_size,
+                text_transition_width=text_transition_width,
             )
 
     @property
