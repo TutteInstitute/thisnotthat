@@ -110,6 +110,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         height: int = 600,
         max_point_size: Optional[float] = None,
         min_point_size: Optional[float] = None,
+        marker_scale_factor: Optional[float] = None,
         fill_alpha: float = 0.75,
         line_color: str = "white",
         line_width: float = 0.25,
@@ -155,7 +156,11 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self._base_marker_size = pd.Series(
             marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
         )
-        self._base_marker_scale = np.mean(marker_size)
+        if marker_scale_factor is None:
+            self._base_marker_scale = np.mean(marker_size)
+        else:
+            self._base_marker_scale = marker_scale_factor
+
         self._base_hover_text = hover_text if hover_text is not None else labels
         self._base_hover_is_labels = hover_text is None
         self._base_palette = list(palette)
