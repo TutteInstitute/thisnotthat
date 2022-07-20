@@ -193,7 +193,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             title=title,
             title_location=title_location,
         )
-        self.plot.toolbar.active_scroll = "wheel_zoom"
+        self.plot.toolbar.active_scroll = self.plot.select_one(
+            bokeh.models.WheelZoomTool
+        )
 
         self.points = self.plot.circle(
             source=self.data_source,
