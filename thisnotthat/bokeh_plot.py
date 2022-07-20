@@ -132,6 +132,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         super().__init__(name=name)
         if labels is None:
             labels = ["unlabelled"] * len(data)
+        if type(marker_size) in (int, float):
+            marker_size = np.full(data.shape[0], marker_size, dtype=np.float64)
 
         self.data_source = bokeh.models.ColumnDataSource(
             {
@@ -153,6 +155,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self._base_marker_size = pd.Series(
             marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
         )
+        self._base_marker_scale = np.mean(marker_size)
         self._base_hover_text = hover_text if hover_text is not None else labels
         self._base_hover_is_labels = hover_text is None
         self._base_palette = list(palette)
@@ -190,7 +193,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             title=title,
             title_location=title_location,
         )
-        self.plot.toolbar.active_scroll = "auto"
+        self.plot.toolbar.active_scroll = "wheel_zoom"
 
         self.points = self.plot.circle(
             source=self.data_source,
@@ -364,7 +367,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         else:
             rescaled_size = pd.Series(self.marker_size)
             rescaled_size = (rescaled_size - rescaled_size.mean()) / rescaled_size.std()
-            rescaled_size = 0.05 * (rescaled_size - rescaled_size.min() + 1)
+            rescaled_size = self._base_marker_scale * (
+                rescaled_size - rescaled_size.min() + 1
+            )
             self.data_source.data["size"] = rescaled_size
             self.data_source.data["apparent_size"] = rescaled_size.map(
                 _map_apparent_size
