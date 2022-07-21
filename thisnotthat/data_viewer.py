@@ -7,6 +7,7 @@ import numpy.typing as npt
 
 from typing import *
 
+
 class DataPane(pn.reactive.Reactive):
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
@@ -14,33 +15,33 @@ class DataPane(pn.reactive.Reactive):
     data = param.DataFrame(doc="Source data")
 
     def __init__(
-            self,
-            labels: npt.ArrayLike,
-            raw_dataframe: pd.DataFrame,
-            *,
-            width: int = 600,
-            height: int = 600,
-            tabulator_configuration: dict = {},
-            formatters: dict = {},
-            header_align: Union[dict, str] = "center",
-            hidden_columns: List[str] = [],
-            layout: str = "fit_data_table",
-            frozen_columns: List[str] = [],
-            page_size: int = 20,
-            row_height: int = 30,
-            show_index: bool = True,
-            sorters: List[Dict[str, str]] = [],
-            theme: str = "materialize",
-            widths: Dict[str, int] = {},
-            name: str = "Data Table",
+        self,
+        raw_dataframe: pd.DataFrame,
+        *,
+        labels: Optional[npt.ArrayLike] = None,
+        width: int = 600,
+        height: int = 600,
+        tabulator_configuration: dict = {},
+        formatters: dict = {},
+        header_align: Union[dict, str] = "center",
+        hidden_columns: List[str] = [],
+        layout: str = "fit_data_table",
+        frozen_columns: List[str] = [],
+        page_size: int = 20,
+        row_height: int = 30,
+        show_index: bool = True,
+        sorters: List[Dict[str, str]] = [],
+        theme: str = "materialize",
+        widths: Dict[str, int] = {},
+        name: str = "Data Table",
     ) -> None:
         super().__init__(name=name)
         if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
             self.data = raw_dataframe.copy()
         else:
             self.data = raw_dataframe.reset_index()
-        self.data["label"] = labels
-        self._base_selection = []
+
+        self._base_selection: List[int] = []
         self.table = pn.widgets.Tabulator(
             self.data,
             pagination="remote",
@@ -62,18 +63,19 @@ class DataPane(pn.reactive.Reactive):
             disabled=True,
         )
         self._table_watch = self.table.param.watch(
-            self._data_pane_update_selected, "selection"
+            self._update_table_selection, "selection"
         )
         self.file_download = pn.widgets.FileDownload(
             filename="data.csv", callback=self._get_csv, button_type="primary"
         )
         self.pane = pn.Column(self.table, self.file_download)
-        self.labels = pd.Series(labels)
+        if labels is not None:
+            self.labels = pd.Series(labels).copy()
 
     def _get_csv(self) -> BytesIO:
         return BytesIO(self.table.value.to_csv().encode())
 
-    def _data_pane_update_selected(self, event: param.parameterized.Event) -> None:
+    def _update_table_selection(self, event: param.parameterized.Event) -> None:
         if len(event.old) == 0:
             self._base_selection = self.selected
         if len(event.new) > 0:
@@ -85,14 +87,18 @@ class DataPane(pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwds)
 
     @param.depends("selected", watch=True)
-    def _data_pane_update_selection(self) -> None:
+    def _update_selected(self) -> None:
         if len(self.table.selection) != len(self.selected):
             self.table.selection = []
+            self.table.value = self.data.iloc[self.selected]
+        if len(self.selected) == 0:
+            self.table.value = self.data
+        else:
             self.table.value = self.data.iloc[self.selected]
 
     @param.depends("labels", watch=True)
     def _update_labels(self) -> None:
-        self.data["label"] = self.labels
+        self.data["label"] = self.labels.values
         if len(self.selected) > 0:
             self.table.value = self.data.iloc[self.selected]
         else:

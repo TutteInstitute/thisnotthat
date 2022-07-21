@@ -13,7 +13,76 @@ from .utils import _palette_index
 from typing import *
 
 
+def add_text_layer(
+    plot_figure,
+    text_dataframe,
+    text_size,
+    layer_type="middle",
+    *,
+    angle=0,
+    text_color="#444444",
+    text_font={"value": "helvetica"},
+    text_font_style="normal",
+    text_line_height=0.9,
+    text_alpha=1.0,
+    max_text_size=64.0,
+    min_text_size=2.0,
+    text_transition_width=16.0,
+):
+    label_data_source = bokeh.models.ColumnDataSource(text_dataframe)
+    labels = bokeh.models.Text(
+        text_font_size=str(text_size) + "pt",
+        text_baseline="bottom",
+        text_align="center",
+        angle=angle,
+        text_color=text_color,
+        text_font=text_font,
+        text_font_style=text_font_style,
+        text_line_height=text_line_height,
+        text_alpha=text_alpha,
+    )
+    upper_transition_val = max_text_size - text_transition_width
+    lower_transition_val = min_text_size + text_transition_width
+    text_resize_callback = bokeh.models.callbacks.CustomJS(
+        args=dict(labels=labels),
+        code="""
+    const scale = cb_obj.end - cb_obj.start;
+    const text_size = (%f / scale);
+    if (text_size > %f && %s) {
+        var alpha = (%f - text_size) / %f;
+
+    } else if (text_size < %f && %s) {
+        var alpha = (text_size - %f) / %f;
+
+    } else {
+        var alpha = 1.0;
+    }
+    if (alpha > 0) {
+        labels.text_alpha = alpha;
+    } else {
+        labels.text_alpha = 0.0;
+    }
+    labels.text_font_size = text_size + "pt";
+    labels.change.emit();
+    """
+        % (
+            text_size,
+            upper_transition_val,
+            "false" if layer_type == "bottom" else "true",
+            max_text_size,
+            text_transition_width,
+            lower_transition_val,
+            "false" if layer_type == "top" else "true",
+            min_text_size,
+            text_transition_width,
+        ),
+    )
+    plot_figure.add_glyph(label_data_source, labels)
+    plot_figure.x_range.js_on_change("start", text_resize_callback)
+
+
 class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
+
     labels = param.Series(doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
     label_color_factors = param.List([], item_type=str, doc="Color palette")
@@ -31,7 +100,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     def __init__(
         self,
         data: npt.ArrayLike,
-        labels: Iterable[str],
+        labels: Optional[Iterable[str]] = None,
         hover_text: Optional[Iterable[str]] = None,
         marker_size: Optional[Iterable[float]] = None,
         *,
@@ -41,6 +110,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         height: int = 600,
         max_point_size: Optional[float] = None,
         min_point_size: Optional[float] = None,
+        marker_scale_factor: Optional[float] = None,
         fill_alpha: float = 0.75,
         line_color: str = "white",
         line_width: float = 0.25,
@@ -53,6 +123,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         background_fill_color: str = "#ffffff",
         border_fill_color: str = "whitesmoke",
         toolbar_location: str = "above",
+        tools="pan,wheel_zoom,lasso_select,save,reset,help",
         title: Optional[str] = None,
         title_location: str = "above",
         show_legend: bool = True,
@@ -60,23 +131,40 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         name: str = "Plot",
     ):
         super().__init__(name=name)
+        if labels is None:
+            labels = ["unlabelled"] * len(data)
+        if type(marker_size) in (int, float):
+            marker_size = np.full(data.shape[0], marker_size, dtype=np.float64)
+
         self.data_source = bokeh.models.ColumnDataSource(
             {
                 "x": np.asarray(data).T[0],
                 "y": np.asarray(data).T[1],
                 "label": labels,
                 "hover_text": hover_text if hover_text is not None else labels,
-                "size": marker_size if marker_size is not None else np.full(data.shape[0], 0.1),
+                "size": marker_size
+                if marker_size is not None
+                else np.full(data.shape[0], 0.1),
                 "apparent_size": marker_size
                 if marker_size is not None
                 else np.full(data.shape[0], 0.1),
+                "color_by": np.zeros(data.shape[0], dtype=np.int8),
             }
         )
         self.data_source.selected.on_change("indices", self._update_selected)
+
         self._base_marker_size = pd.Series(
             marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
         )
+        if marker_scale_factor is None:
+            self._base_marker_scale = np.mean(marker_size)
+        else:
+            self._base_marker_scale = marker_scale_factor
+
         self._base_hover_text = hover_text if hover_text is not None else labels
+        self._base_hover_is_labels = hover_text is None
+        self._base_palette = list(palette)
+
         if label_color_mapping is not None:
             factors = []
             colors = []
@@ -96,7 +184,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.color_mapping = self._label_colormap["transform"]
             self.color_mapping.palette = [
-                self.color_mapping.palette[x] for x in _palette_index(256)
+                self.color_mapping.palette[x] for x in _palette_index(len(palette))
             ]
 
         self.plot = bokeh.plotting.figure(
@@ -106,59 +194,62 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             background_fill_color=background_fill_color,
             border_fill_color=border_fill_color,
             toolbar_location=toolbar_location,
-            tools="pan,wheel_zoom,lasso_select,save,reset,help",
+            tools=tools,
             title=title,
             title_location=title_location,
         )
+        self.plot.toolbar.active_scroll = self.plot.select_one(
+            bokeh.models.WheelZoomTool
+        )
+
+        self.points = self.plot.circle(
+            source=self.data_source,
+            radius="apparent_size",
+            fill_color=self._label_colormap,
+            fill_alpha=fill_alpha,
+            line_color=line_color,
+            line_width=line_width,
+            hover_fill_color=hover_fill_color,
+            hover_line_color=hover_line_color,
+            hover_line_width=hover_line_width,
+            selection_fill_alpha=selection_fill_alpha,
+            nonselection_fill_alpha=nonselection_fill_alpha,
+            nonselection_fill_color=nonselection_fill_color,
+        )
         if show_legend:
-            if legend_location == "outside":
-                self._legend = bokeh.models.Legend(location="center", label_width=150)
-                self.plot.add_layout(self._legend, "right")
+            self._legend = bokeh.models.Legend(
+                items=[
+                    bokeh.models.LegendItem(
+                        label={"field": "label"}, renderers=[self.points]
+                    )
+                ],
+                location=legend_location if legend_location != "outside" else "center",
+                label_width=150,
+            )
+            self.plot.add_layout(
+                self._legend, "right" if legend_location == "outside" else "center",
+            )
 
             self._color_by_legend_source = bokeh.models.ColumnDataSource(
-                {
-                    "x": np.zeros(16),
-                    "y": np.zeros(16),
-                    "color_by": np.linspace(0, 1, 16),
-                }
+                {"x": np.zeros(8), "y": np.zeros(8), "color_by": np.linspace(0, 1, 8),}
             )
             self._color_by_renderer = self.plot.square(
                 source=self._color_by_legend_source, line_width=0, visible=False,
             )
-
-            self.points = self.plot.circle(
-                source=self.data_source,
-                radius="apparent_size",
-                fill_color=self._label_colormap,
-                fill_alpha=fill_alpha,
-                line_color=line_color,
-                line_width=line_width,
-                hover_fill_color=hover_fill_color,
-                hover_line_color=hover_line_color,
-                hover_line_width=hover_line_width,
-                selection_fill_alpha=selection_fill_alpha,
-                nonselection_fill_alpha=nonselection_fill_alpha,
-                nonselection_fill_color=nonselection_fill_color,
-                legend_field="label",
+            self._color_by_legend = bokeh.models.Legend(
+                items=[
+                    bokeh.models.LegendItem(
+                        label={"field": "color_by"}, renderers=[self._color_by_renderer]
+                    )
+                ],
+                location=legend_location if legend_location != "outside" else "center",
+                label_width=150,
             )
-
-            if legend_location != "outside":
-                self.plot.legend.location = legend_location
-        else:
-            self.points = self.plot.circle(
-                source=self.data_source,
-                radius="apparent_size",
-                fill_color=self._label_colormap,
-                fill_alpha=fill_alpha,
-                line_color=line_color,
-                line_width=line_width,
-                hover_fill_color=hover_fill_color,
-                hover_line_color=hover_line_color,
-                hover_line_width=hover_line_width,
-                selection_fill_alpha=selection_fill_alpha,
-                nonselection_fill_alpha=nonselection_fill_alpha,
-                nonselection_fill_color=nonselection_fill_color,
+            self.plot.add_layout(
+                self._color_by_legend,
+                "right" if legend_location == "outside" else "center",
             )
+            self._color_by_legend.visible = False
 
         self.max_point_size = max_point_size
         self.min_point_size = min_point_size
@@ -201,9 +292,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self.show_legend = show_legend
         self.color_by_vector = pd.Series([], dtype=object)
-        self.labels = pd.Series(labels)
+        self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
         self.label_color_palette = list(self.color_mapping.palette)
         self.label_color_factors = list(self.color_mapping.factors)
+        self.color_by_palette = list(self.color_mapping.palette)
 
     # Reactive requires this to make the model auto-display as requires
     def _get_model(self, *args, **kwds):
@@ -222,6 +314,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     @param.depends("labels", watch=True)
     def _update_labels(self) -> None:
         self.data_source.data["label"] = self.labels  # self.dataframe["label"]
+        if self._base_hover_is_labels:
+            if len(self.hover_text) == 0:
+                self.data_source.data["hover_text"] = self.labels
+            self._base_hover_text = self.labels
         # We auto-update the factors from elsewhere (? from legend yes, but not from table edits)
         #         self.factors = list(self.color_mapping.factors) + [
         #             x for x in self.labels.unique() if x not in self.color_mapping.factors
@@ -235,15 +331,34 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     @param.depends("marker_size", watch=True)
     def _update_marker_size(self):
-        scale = self.plot.x_range.end - self.plot.x_range.start
 
-        def _map_apparent_size(x):
-            if (x / scale) > self.max_point_size:
-                return self.max_point_size * scale
-            elif (x / scale) < self.min_point_size:
-                return self.min_point_size * scale
-            else:
+        if (
+            self.max_point_size is None and self.min_point_size is None
+        ) or self.plot.x_range.start is None:
+
+            def _map_apparent_size(x):
                 return x
+
+        else:
+            if self.max_point_size is None:
+                max_point_size = 1.0e6
+            else:
+                max_point_size = self.max_point_size
+
+            if self.min_point_size is None:
+                min_point_size = 0.0
+            else:
+                min_point_size = self.min_point_size
+
+            scale = self.plot.x_range.end - self.plot.x_range.start
+
+            def _map_apparent_size(x):
+                if (x / scale) > max_point_size:
+                    return max_point_size * scale
+                elif (x / scale) < min_point_size:
+                    return min_point_size * scale
+                else:
+                    return x
 
         if len(self.marker_size) == 0:
             self.data_source.data["size"] = self._base_marker_size
@@ -252,17 +367,16 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
         elif len(self.marker_size) == 1:
             size_vector = pd.Series(
-                np.full(
-                    len(self.data_source.data["size"]), self.marker_size[0]
-                )
+                np.full(len(self.data_source.data["size"]), self.marker_size[0])
             )
             self.data_source.data["size"] = size_vector
-            self.data_source.data["apparent_size"] = size_vector.map(
-                _map_apparent_size
-            )
+            self.data_source.data["apparent_size"] = size_vector.map(_map_apparent_size)
         else:
             rescaled_size = pd.Series(self.marker_size)
-            rescaled_size = 0.05 * (rescaled_size / rescaled_size.mean())
+            rescaled_size = (rescaled_size - rescaled_size.mean()) / rescaled_size.std()
+            rescaled_size = self._base_marker_scale * (
+                rescaled_size - rescaled_size.min() + 1
+            )
             self.data_source.data["size"] = rescaled_size
             self.data_source.data["apparent_size"] = rescaled_size.map(
                 _map_apparent_size
@@ -279,83 +393,154 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         pn.io.push_notebook(self.pane)
 
-    @param.depends("color_by_vector", watch=True)
-    def _update_color_by_vectors(self) -> None:
+    @param.depends("color_by_palette", "color_by_vector", watch=True)
+    def _update_color_by(self) -> None:
+        if len(self.color_by_palette) == 0:
+            palette = self._base_palette
+        else:
+            palette = self.color_by_palette
+
         if len(self.color_by_vector) == 0:
-            # HACK: Not sure why this is needed, but things don't update without it?
-            self.data_source.data["color_by"] = ["nil"] * len(
-                self.data_source.data["label"]
-            )
-            colormap = bokeh.transform.factor_cmap(
-                "color_by", self.color_by_palette, ["nil"],
-            )
-            self.points.glyph.fill_color = colormap
-            # END HACK
             self.points.glyph.fill_color = self._label_colormap
-            if self.plot.legend.items[0].label["field"] != "label":
-                self.plot.legend.items[0].label["field"] = "label"
-            self.plot.legend.items[0].renderers = [self.points]
+            if self.show_legend:
+                if self._legend.items[0].label["field"] != "label":
+                    self._legend.items[0].label["field"] = "label"
+                self._legend.visible = True
+                self._color_by_legend.visible = False
 
         elif pd.api.types.is_numeric_dtype(self.color_by_vector):
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.linear_cmap(
                 "color_by",
-                self.color_by_palette,
+                palette,
                 self.color_by_vector.min(),
                 self.color_by_vector.max(),
             )
-            self._color_by_legend_source.data["color_by"] = [
-                np.round(x, decimals=2)
-                for x in np.linspace(
-                    self.color_by_vector.min(), self.color_by_vector.max(), 16,
-                )
-            ]
-            self._color_by_renderer.glyph.fill_color = colormap
             self.points.glyph.fill_color = colormap
-            self.plot.legend.items[0].renderers = [self._color_by_renderer]
-            self.plot.legend.items[0].label["field"] = "color_by"
+            if self.show_legend:
+                self._color_by_legend_source.data["color_by"] = [
+                    np.round(x, decimals=2)
+                    for x in np.linspace(
+                        self.color_by_vector.max(), self.color_by_vector.min(), 8,
+                    )
+                ]
+                self._color_by_renderer.glyph.fill_color = colormap
+                self._legend.visible = False
+                self._color_by_legend.visible = True
         else:
             self.data_source.data["color_by"] = self.color_by_vector
             colormap = bokeh.transform.factor_cmap(
-                "color_by", self.color_by_palette, list(self.color_by_vector.unique())
+                "color_by", palette, list(self.color_by_vector.unique())
             )
             self.points.glyph.fill_color = colormap
-            self.plot.legend.items[0].label["field"] = "color_by"
-            self.plot.legend.items[0].renderers = [self.points]
+            if self.show_legend:
+                self._legend.items[0].label["field"] = "color_by"
+                self._legend.visible = True
+                self._color_by_legend.visible = False
 
         pn.io.push_notebook(self.pane)
 
-    @param.depends("color_by_palette", watch=True)
-    def _update_color_by_palette(self) -> None:
-        if len(self.color_by_vector) == 0:
-            self.points.glyph.fill_color = self._label_colormap
-            if self.plot.legend.items[0].label["field"] != "label":
-                self.plot.legend.items[0].label["field"] = "label"
-            self.plot.legend.items[0].renderers = [self.points]
+    # def _update_color_by_palette(self) -> None:
+    #     if len(self.color_by_vector) == 0:
+    #         # # HACK: Not sure why this is needed, but things don't update without it?
+    #         # self.data_source.data["color_by"] = ["nil"] * len(
+    #         #     self.data_source.data["label"]
+    #         # )
+    #         # colormap = bokeh.transform.factor_cmap(
+    #         #     "color_by", self.color_by_palette, ["nil"],
+    #         # )
+    #         # self.points.glyph.fill_color = colormap
+    #         # # END HACK
+    #         self.points.glyph.fill_color = self._label_colormap
+    #         if self.show_legend:
+    #             if self.plot.legend.items[0].label["field"] != "label":
+    #                 self.plot.legend.items[0].label["field"] = "label"
+    #             self.plot.legend.items[0].renderers = [self.points]
+    #
+    #     elif pd.api.types.is_numeric_dtype(self.color_by_vector):
+    #         colormap = bokeh.transform.linear_cmap(
+    #             "color_by",
+    #             self.color_by_palette,
+    #             self.color_by_vector.min(),
+    #             self.color_by_vector.max(),
+    #         )
+    #         self.points.glyph.fill_color = colormap
+    #         if self.show_legend:
+    #             self._color_by_legend_source.data["color_by"] = [
+    #                 np.round(x, decimals=2)
+    #                 for x in np.linspace(
+    #                     self.color_by_vector.max(), self.color_by_vector.min(), 16,
+    #                 )
+    #             ]
+    #             self._color_by_renderer.glyph.fill_color = colormap
+    #             self.plot.legend.items[0].label["field"] = "color_by"
+    #             self.plot.legend.items[0].renderers = [self._color_by_renderer]
+    #     else:
+    #         colormap = bokeh.transform.factor_cmap(
+    #             "color_by", self.color_by_palette, list(self.color_by_vector.unique())
+    #         )
+    #         self.points.glyph.fill_color = colormap
+    #         if self.show_legend:
+    #             self.plot.legend.items[0].label["field"] = "color_by"
+    #             self.plot.legend.items[0].renderers = [self.points]
+    #
+    #     pn.io.push_notebook(self.pane)
 
-        elif pd.api.types.is_numeric_dtype(self.color_by_vector):
-            colormap = bokeh.transform.linear_cmap(
-                "color_by",
-                self.color_by_palette,
-                self.color_by_vector.min(),
-                self.color_by_vector.max(),
+    def add_cluster_labels(
+        self,
+        cluster_labelling,
+        *,
+        angle=0,
+        text_size_scale=12,
+        text_layer_scale_factor=2.0,
+        text_color="#444444",
+        text_font={"value": "helvetica"},
+        text_font_style="normal",
+        text_line_height=0.9,
+        text_alpha=1.0,
+        max_text_size=64.0,
+        min_text_size=2.0,
+        text_transition_width=16.0,
+    ):
+        for i, (label_locations, label_strings) in enumerate(
+            zip(cluster_labelling.location_layers, cluster_labelling.labels_for_display)
+        ):
+            cluster_label_layer = pd.DataFrame(
+                {
+                    "x": label_locations.T[0],
+                    "y": label_locations.T[1],
+                    "text": label_strings,
+                }
             )
-            self._color_by_legend_source.data["color_by"] = [
-                np.round(x, decimals=2)
-                for x in np.linspace(
-                    self.color_by_vector.min(), self.color_by_vector.max(), 16,
-                )
-            ]
-            self._color_by_renderer.glyph.fill_color = colormap
-            self.points.glyph.fill_color = colormap
-            self.plot.legend.items[0].renderers = [self._color_by_renderer]
-            self.plot.legend.items[0].label["field"] = "color_by"
+
+            if i == 0:
+                layer_type = "bottom"
+            elif i == len(cluster_labelling.location_layers) - 1:
+                layer_type = "top"
+            else:
+                layer_type = "middle"
+
+            add_text_layer(
+                self.plot,
+                cluster_label_layer,
+                text_size_scale * text_layer_scale_factor ** i,
+                layer_type=layer_type,
+                angle=angle,
+                text_color=text_color,
+                text_font=text_font,
+                text_font_style=text_font_style,
+                text_line_height=text_line_height,
+                text_alpha=text_alpha,
+                max_text_size=max_text_size,
+                min_text_size=min_text_size,
+                text_transition_width=text_transition_width,
+            )
+
+    @property
+    def dataframe(self):
+        result = pd.DataFrame(self.data_source.data)
+        if "color_by" in result:
+            result = result.drop(columns=["apparent_size", "color_by"])
         else:
-            colormap = bokeh.transform.factor_cmap(
-                "color_by", self.color_by_palette, list(self.color_by_vector.unique())
-            )
-            self.points.glyph.fill_color = colormap
-            self.plot.legend.items[0].label["field"] = "color_by"
-            self.plot.legend.items[0].renderers = [self.points]
-
-        pn.io.push_notebook(self.pane)
+            result = result.drop(columns=["apparent_size"])
+        return result
