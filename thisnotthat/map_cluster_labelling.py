@@ -309,6 +309,7 @@ def text_labels_from_joint_vector_space(
     vector_metric="cosine",
     pynnd_n_neighbors=40,
     query_size=10,
+    exclude_keyword_reuse=True,
     random_state=None,
 ):
     text_label_nn_index = NNDescent(
@@ -326,16 +327,24 @@ def text_labels_from_joint_vector_space(
         layer_labels = []
         for cluster in layer:
             text_rep_indices, _ = text_label_nn_index.query([cluster], k=query_size)
-            nearest_text = [
-                x
-                for x in text_rep_indices[0]
-                if x not in keyword_set and x not in layer_keyword_set
-            ]
-            layer_keyword_set.update(set(nearest_text[:items_per_label]))
+
+            if exclude_keyword_reuse:
+                nearest_text = [
+                    x
+                    for x in text_rep_indices[0]
+                    if x not in keyword_set and x not in layer_keyword_set
+                ]
+                layer_keyword_set.update(set(nearest_text[:items_per_label]))
+            else:
+                nearest_text = text_rep_indices
+
             layer_labels.append(
                 [text_label_dictionary[x] for x in nearest_text[:items_per_label]]
             )
-        keyword_set.update(layer_keyword_set)
+
+        if exclude_keyword_reuse:
+            keyword_set.update(layer_keyword_set)
+
         labels.append(layer_labels)
 
     return labels[::-1]
@@ -461,6 +470,7 @@ class JointVectorLabelLayers(object):
         items_per_label=3,
         pynnd_n_neighbors=40,
         pynnd_query_size=10,
+        exclude_keyword_reuse=True,
         label_formatter=string_label_formatter,
         random_state=None,
     ):
@@ -504,6 +514,8 @@ class JointVectorLabelLayers(object):
             vector_metric=vector_metric,
             pynnd_n_neighbors=pynnd_n_neighbors,
             query_size=pynnd_query_size,
+            exclude_keyword_reuse=exclude_keyword_reuse,
+            random_state=random_state,
         )
         self.label_formatter = label_formatter
 
