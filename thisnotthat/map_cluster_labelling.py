@@ -336,7 +336,7 @@ def text_labels_from_joint_vector_space(
                 ]
                 layer_keyword_set.update(set(nearest_text[:items_per_label]))
             else:
-                nearest_text = text_rep_indices
+                nearest_text = text_rep_indices[0].tolist()
 
             layer_labels.append(
                 [text_label_dictionary[x] for x in nearest_text[:items_per_label]]
