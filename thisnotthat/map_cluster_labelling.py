@@ -40,6 +40,7 @@ def build_fine_grained_cluster_centers(
     source_vectors,
     map_representation,
     *,
+    cluster_map_representation=False,
     umap_n_components=5,
     umap_metric="cosine",
     umap_n_neighbors=15,
@@ -47,13 +48,16 @@ def build_fine_grained_cluster_centers(
     hdbscan_min_cluster_size=20,
     random_state=None,
 ):
-    clusterable_representation = UMAP(
-        n_components=umap_n_components,
-        metric=umap_metric,
-        n_neighbors=umap_n_neighbors,
-        min_dist=1e-8,
-        random_state=random_state,
-    ).fit_transform(source_vectors)
+    if cluster_map_representation:
+        clusterable_representation = map_representation
+    else:
+        clusterable_representation = UMAP(
+            n_components=umap_n_components,
+            metric=umap_metric,
+            n_neighbors=umap_n_neighbors,
+            min_dist=1e-8,
+            random_state=random_state,
+        ).fit_transform(source_vectors)
 
     clusterer = HDBSCAN(
         min_samples=hdbscan_min_samples,
@@ -454,6 +458,7 @@ class JointVectorLabelLayers(object):
         labels: Dict[int, Any],
         *,
         vector_metric="cosine",
+        cluster_map_representation=False,
         umap_n_components=5,
         umap_n_neighbors=15,
         hdbscan_min_samples=10,
@@ -481,6 +486,7 @@ class JointVectorLabelLayers(object):
         cluster_vectors, cluster_locations, _ = build_fine_grained_cluster_centers(
             source_vectors,
             map_representation,
+            cluster_map_representation=cluster_map_representation,
             umap_metric=vector_metric,
             umap_n_components=umap_n_components,
             umap_n_neighbors=umap_n_neighbors,
@@ -535,6 +541,7 @@ class MetadataLabelLayers(object):
         metadata_dataframe: pd.DataFrame,
         *,
         vector_metric="cosine",
+        cluster_map_representation=False,
         umap_n_components=5,
         umap_n_neighbors=15,
         hdbscan_min_samples=10,
@@ -563,6 +570,7 @@ class MetadataLabelLayers(object):
         ) = build_fine_grained_cluster_centers(
             source_vectors,
             map_representation,
+            cluster_map_representation=cluster_map_representation,
             umap_metric=vector_metric,
             umap_n_components=umap_n_components,
             umap_n_neighbors=umap_n_neighbors,
@@ -615,6 +623,7 @@ class SampleLabelLayers(object):
         per_sample_labels: npt.ArrayLike,
         *,
         vector_metric="cosine",
+        cluster_map_representation=False,
         umap_n_components=5,
         umap_n_neighbors=15,
         hdbscan_min_samples=10,
@@ -650,6 +659,7 @@ class SampleLabelLayers(object):
         ) = build_fine_grained_cluster_centers(
             source_vectors,
             map_representation,
+            cluster_map_representation=cluster_map_representation,
             umap_metric=vector_metric,
             umap_n_components=umap_n_components,
             umap_n_neighbors=umap_n_neighbors,
