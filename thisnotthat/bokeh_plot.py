@@ -157,7 +157,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
         )
         if marker_scale_factor is None:
-            self._base_marker_scale = np.mean(marker_size)
+            self._base_marker_scale = np.mean(self._base_marker_size)
         else:
             self._base_marker_scale = marker_scale_factor
 
