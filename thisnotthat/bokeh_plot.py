@@ -281,7 +281,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self.plot.add_tools(
             bokeh.models.HoverTool(
-                tooltips=[("text", "@hover_text")], renderers=[self.points]
+                tooltips="<div>@hover_text</div>", renderers=[self.points]
             )
         )
         self.plot.xgrid.grid_line_color = None
