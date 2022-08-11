@@ -31,6 +31,13 @@ except ImportError:
 
 from typing import *
 
+VALID_SELECTION_METHODS = {
+    "facility_location",
+    "graph_cut",
+    "sum_redundancy",
+    "saturated_coverage",
+}
+
 
 def string_label_formatter(label_list: List[str]):
     return "\n".join(label_list)
@@ -418,14 +425,30 @@ def text_labels_from_per_sample_labels(
     source_vectors,
     labels_per_sample,
     *,
+    sample_selection_method="facility_location",
     items_per_label=3,
     vector_metric="cosine",
     random_state=None,
 ):
-    if HAS_APRICOT:
-        selector = apricot.FacilityLocationSelection(
-            items_per_label, metric=vector_metric
-        )
+    if HAS_APRICOT and sample_selection_method != "random":
+        if sample_selection_method == "facility_location":
+            selector = apricot.FacilityLocationSelection(
+                items_per_label, metric=vector_metric
+            )
+        elif sample_selection_method == "graph_cut":
+            selector = apricot.GraphCutSelection(items_per_label, metric=vector_metric)
+        elif sample_selection_method == "sum_redundancy":
+            selector = apricot.SumRedundancySelection(
+                items_per_label, metric=vector_metric
+            )
+        elif sample_selection_method == "saturated_coverage":
+            selector = apricot.SaturatedCoverageSelection(
+                items_per_label, metric=vector_metric
+            )
+        else:
+            raise ValueError(
+                f'Unrecognized sample_selection_method {sample_selection_method}! Should be one of {VALID_SELECTION_METHODS} or "random"'
+            )
     else:
         selector = RandomSampleSelection(items_per_label, random_state=random_state)
 
@@ -624,6 +647,7 @@ class SampleLabelLayers(object):
         *,
         vector_metric="cosine",
         cluster_map_representation=False,
+        sample_selection_method="facility_location",
         umap_n_components=5,
         umap_n_neighbors=15,
         hdbscan_min_samples=10,
@@ -643,7 +667,7 @@ class SampleLabelLayers(object):
     ):
         self.per_sample_labels = per_sample_labels
 
-        if not HAS_APRICOT:
+        if not HAS_APRICOT and sample_selection_method != "random":
             warn(
                 "Apricot selection library not found; using random selection. Try pip install apricot-select"
             )
@@ -695,6 +719,7 @@ class SampleLabelLayers(object):
             self.pointset_layers,
             source_vectors,
             self.per_sample_labels,
+            sample_selection_method=sample_selection_method,
             items_per_label=items_per_label,
             vector_metric=vector_metric,
             random_state=random_state,
