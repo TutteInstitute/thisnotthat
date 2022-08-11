@@ -117,6 +117,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         hover_fill_color: str = "red",
         hover_line_color: str = "black",
         hover_line_width: float = 2,
+        tooltip_template: str = """<div style="background-color: #29323c; color: #a0a7b4">@hover_text</div>""",
         selection_fill_alpha: float = 1.0,
         nonselection_fill_alpha: float = 0.1,
         nonselection_fill_color: str = "gray",
@@ -280,9 +281,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.plot.x_range.js_on_change("start", circle_resize_callback)
 
         self.plot.add_tools(
-            bokeh.models.HoverTool(
-                tooltips="<div>@hover_text</div>", renderers=[self.points]
-            )
+            bokeh.models.HoverTool(tooltips=tooltip_template, renderers=[self.points])
         )
         self.plot.xgrid.grid_line_color = None
         self.plot.ygrid.grid_line_color = None
