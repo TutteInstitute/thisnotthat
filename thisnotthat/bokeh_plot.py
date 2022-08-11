@@ -117,7 +117,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         hover_fill_color: str = "red",
         hover_line_color: str = "black",
         hover_line_width: float = 2,
-        tooltip_template: str = """<div style="background-color: #29323c; color: #a0a7b4">@hover_text</div>""",
+        tooltip_template: str = """<div>@hover_text</div>""",
         selection_fill_alpha: float = 1.0,
         nonselection_fill_alpha: float = 0.1,
         nonselection_fill_color: str = "gray",
