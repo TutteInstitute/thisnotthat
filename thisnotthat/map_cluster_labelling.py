@@ -405,7 +405,7 @@ class RandomSampleSelection(object):
 
     def fit_transform(self, X, y=None, **fit_params):
         state = check_random_state(self.random_state)
-        indices = state.random_choice(
+        indices = state.choice(
             np.arange(X.shape[0]), size=self.n_samples, replace=False
         )
         X_result = X[indices]
