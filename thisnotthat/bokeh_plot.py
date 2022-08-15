@@ -13,22 +13,28 @@ from .utils import _palette_index
 from typing import *
 
 
+class TextLayers(Protocol):
+    location_layers: List[npt.NDArray]
+    labels: List[List[List[str]]]
+    labels_for_display: List[List[str]]
+
+
 def add_text_layer(
-    plot_figure,
-    text_dataframe,
-    text_size,
-    layer_type="middle",
+    plot_figure: bokeh.plotting.Figure,
+    text_dataframe: pd.DataFrame,
+    text_size: float,
+    layer_type: str = "middle",
     *,
-    angle=0,
-    text_color="#444444",
-    text_font={"value": "helvetica"},
-    text_font_style="normal",
-    text_line_height=0.9,
-    text_alpha=1.0,
-    max_text_size=64.0,
-    min_text_size=2.0,
-    text_transition_width=16.0,
-):
+    angle: int = 0,
+    text_color: str = "#444444",
+    text_font: Dict[str, str] = {"value": "helvetica"},
+    text_font_style: str = "normal",
+    text_line_height: float = 0.9,
+    text_alpha: float = 1.0,
+    max_text_size: float = 64.0,
+    min_text_size: float = 2.0,
+    text_transition_width: float = 16.0,
+) -> None:
     label_data_source = bokeh.models.ColumnDataSource(text_dataframe)
     labels = bokeh.models.Text(
         text_font_size=str(text_size) + "pt",
@@ -228,14 +234,21 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 label_width=150,
             )
             self.plot.add_layout(
-                self._legend, "right" if legend_location == "outside" else "center",
+                self._legend,
+                "right" if legend_location == "outside" else "center",
             )
 
             self._color_by_legend_source = bokeh.models.ColumnDataSource(
-                {"x": np.zeros(8), "y": np.zeros(8), "color_by": np.linspace(0, 1, 8),}
+                {
+                    "x": np.zeros(8),
+                    "y": np.zeros(8),
+                    "color_by": np.linspace(0, 1, 8),
+                }
             )
             self._color_by_renderer = self.plot.square(
-                source=self._color_by_legend_source, line_width=0, visible=False,
+                source=self._color_by_legend_source,
+                line_width=0,
+                visible=False,
             )
             self._color_by_legend = bokeh.models.Legend(
                 items=[
@@ -420,7 +433,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._color_by_legend_source.data["color_by"] = [
                     np.round(x, decimals=2)
                     for x in np.linspace(
-                        self.color_by_vector.max(), self.color_by_vector.min(), 8,
+                        self.color_by_vector.max(),
+                        self.color_by_vector.min(),
+                        8,
                     )
                 ]
                 self._color_by_renderer.glyph.fill_color = colormap
@@ -487,19 +502,19 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     def add_cluster_labels(
         self,
-        cluster_labelling,
+        cluster_labelling: TextLayers,
         *,
-        angle=0,
-        text_size_scale=12,
-        text_layer_scale_factor=2.0,
-        text_color="#444444",
-        text_font={"value": "helvetica"},
-        text_font_style="normal",
-        text_line_height=0.9,
-        text_alpha=1.0,
-        max_text_size=64.0,
-        min_text_size=2.0,
-        text_transition_width=16.0,
+        angle: int = 0,
+        text_size_scale: int = 12,
+        text_layer_scale_factor: float = 2.0,
+        text_color: str = "#444444",
+        text_font: Dict[str, str] = {"value": "helvetica"},
+        text_font_style: str = "normal",
+        text_line_height: float = 0.9,
+        text_alpha: float = 1.0,
+        max_text_size: float = 64.0,
+        min_text_size: float = 2.0,
+        text_transition_width: float = 16.0,
     ):
         for i, (label_locations, label_strings) in enumerate(
             zip(cluster_labelling.location_layers, cluster_labelling.labels_for_display)
