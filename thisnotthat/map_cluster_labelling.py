@@ -1,5 +1,6 @@
 from warnings import warn
 
+import hdbscan.plots
 import pandas as pd
 from sklearn.utils import check_random_state
 from umap import UMAP
@@ -39,22 +40,69 @@ VALID_SELECTION_METHODS = {
 }
 
 
-def string_label_formatter(label_list: List[str]):
+def string_label_formatter(label_list: List[str]) -> str:
     return "\n".join(label_list)
 
 
 def build_fine_grained_cluster_centers(
-    source_vectors,
-    map_representation,
+    source_vectors: npt.ArrayLike,
+    map_representation: npt.ArrayLike,
     *,
-    cluster_map_representation=False,
-    umap_n_components=5,
-    umap_metric="cosine",
-    umap_n_neighbors=15,
-    hdbscan_min_samples=10,
-    hdbscan_min_cluster_size=20,
-    random_state=None,
+    cluster_map_representation: bool = False,
+    umap_n_components: int = 5,
+    umap_metric: str = "cosine",
+    umap_n_neighbors: int = 15,
+    hdbscan_min_samples: int = 10,
+    hdbscan_min_cluster_size: int = 20,
+    random_state: Optional[int] = None,
 ):
+    """Generate a fine grained clustering either from a UMAP projection of the data, or the map representation
+    itself. Return the resulting cluster centroids in the high space, their equivalent centroids in the map
+    representation, and the condensed tree of the clusterig itself (useful for cases where centroids are not suitable
+    cluster representations).
+
+    Parameters
+    ----------
+    source_vectors: ArrayLike of shape (n_samples, n_features)
+        The original high dimensional vector representation of the data
+
+    map_representation: ArrayLike of shape (n_samples, n_map_features)
+        The map representation of the data
+
+    cluster_map_representation: bool (optional, default = False)
+        Whether to directly cluster the map representation, or use UMAP to generate a representation for clustering
+        using ``umap_n_components`` many dimensions.
+
+    umap_n_components: int (optional, default = 5)
+        The number of dimensions to use UMAP to reduce to if ``cluster_map_representation`` is ``False``.
+
+    umap_metric: str (optional, default = "cosine")
+        The metric to pass to UMAP for dimension reduction if ``cluster_map_representation`` is ``False``.
+
+    umap_n_neighbors: int (optional, default = 15)
+        The number of neighbors to use for UMAP  if ``cluster_map_representation`` is ``False``.
+
+    hdbscan_min_samples: int (optional, default = 10)
+        The ``min_samples`` value to use with HDBSCAN for clustering.
+
+    hdbscan_min_cluster_size: int (optional, default = 20)
+        The ``min_cluster_size`` value to use with HDBSCAN for clustering.
+
+    random_state: int or None (optional, default = None)
+        A random state seed that can be fixed to ensure reproducibility.
+
+    Returns
+    -------
+
+    cluster_vectors: ArrayLike of shape (n_clusters, n_features)
+        Centroid representations of each of the fine grained clusters found
+
+    map_cluster_locations: ArrayLike of shape (n_clusters, n_map_features)
+        Centroid bsed map locations of each of the fine grained clusters found
+
+    condensed_tree: CondensedTree object
+        The condensed tree representation of the clustering.
+    """
     if cluster_map_representation:
         clusterable_representation = map_representation
     else:
@@ -99,7 +147,26 @@ def build_fine_grained_cluster_centers(
     )
 
 
-def hdbscan_tree_based_cluster_merger(tree, clusters_to_merge):
+def hdbscan_tree_based_cluster_merger(
+    tree: hdbscan.plots.CondensedTree, clusters_to_merge: List[int]
+) -> List[int]:
+    """Given a lost of leaf nodes, find the clusters in the tree that cover all the leaf nodes in the list, and no leaf
+    nodes outside of the list, using higher nodes in the tree to merge clusters whenever possible. This provides
+    point based representations of sets of fine grained clusters.
+
+    Parameters
+    ----------
+    tree: CondensedTree
+        The condensed tree containing the relevant cluster information for merging
+
+    clusters_to_merge: List of leaf node ids
+        The leaf nodes to attempt to cover via tree based merging
+
+    Returns
+    -------
+    result: List of cluster node ids
+        The cluster nodes that cover the input leaf nodes optimally.
+    """
     to_be_merged = list(clusters_to_merge[:])
     leaves_to_merge = set(clusters_to_merge)
     result = []
@@ -122,7 +189,34 @@ def hdbscan_tree_based_cluster_merger(tree, clusters_to_merge):
     return result
 
 
-def point_set_from_cluster(tree, cluster_indices, topic_mask, leaf_mapping):
+def point_set_from_cluster(
+    tree: hdbscan.plots.CondensedTree,
+    cluster_indices: List[int],
+    topic_mask: npt.NDArray,
+    leaf_mapping: Dict[int, int],
+) -> List[int]:
+    """Given a list of cluster node ids return the source points falling under those cluster ids. We also need to
+    keep track of any masked out clusters, and a mapping to leaf nodes ids.
+
+    Parameters
+    ----------
+    tree: CondensedTree
+         The condensed tree containing the relevant cluster information for merging
+
+    cluster_indices: List of cluster node ids
+        The cluster node ids of which to find the underlying points
+
+    topic_mask: ArrayLike of bool of shape (n_clusters,)
+        A mask vector determining which leaf nodes from the fine grained clustering to ignore at this time
+
+    leaf_mapping: Dict mapping int to int
+        A mapping from cluster label ids of the fine grained clustering to leaf node ids in the condensed tree
+
+    Returns
+    -------
+    points: List of point indices
+        The indices of the points in the input clusters
+    """
     cluster_tree = tree[tree["child_size"] > 1]
     cluster = np.arange(topic_mask.shape[0])[topic_mask][cluster_indices]
     leaves_to_merge = [leaf_mapping[x] for x in cluster]
@@ -135,18 +229,79 @@ def point_set_from_cluster(tree, cluster_indices, topic_mask, leaf_mapping):
 
 
 def build_cluster_layers(
-    cluster_vectors,
-    cluster_locations,
+    cluster_vectors: npt.ArrayLike,
+    cluster_locations: npt.ArrayLike,
     *,
-    min_clusters=4,
-    contamination=0.05,
-    vector_metric="cosine",
-    cluster_distance_threshold=0.025,
-    contamination_multiplier=1.5,
-    max_contamination=0.25,
-    return_pointsets=False,
-    hdbscan_tree=None,
+    min_clusters: int = 4,
+    contamination: float = 0.05,
+    contamination_multiplier: float = 1.5,
+    max_contamination: float = 0.25,
+    vector_metric: str = "cosine",
+    cluster_distance_threshold: float = 0.025,
+    return_pointsets: bool = False,
+    hdbscan_tree: Optional[hdbscan.plots.CondensedTree] = None,
 ):
+    """Given a fine grained clustering generate hierarchical layers of clusters such that each layer is a clustering of
+    fine-grained clusters. For this we want compact clusters in the map representation, so we use complete linkage
+    on the map representation as the clustering approach. We also want to be wary of duplicating clusters, or
+    creating higher level clusters that include otherwise distinct outlying points. We resolve the first issue by
+    checking the distances to existing clusters and not using higher level clusters that are too close to existing lower
+    level clusters. We resolve the second issue by using outlier detection on the fine grained clusters, progressivly
+    removing more outliers for higher level clusterings.
+
+    Depending on whether the desired result is cluster centroids or sets of points a condensed tree may be required.
+
+    Parameters
+    ----------
+    cluster_vectors: ArrayLike of shape (n_clusters, n_features)
+        The centroid vector representations in terms of the source vector data
+
+    cluster_locations: ArrayLike of shape (n_clusters, n_map_features)
+        The centroid map locations of the clusters
+
+    min_clusters: int (optional, default = 4)
+        The number of clusters to have at the highest layer; layers with fewer than this number of clusters will
+        be discarded
+
+    contamination: float (optional, default = 0.05)
+        The base contamination score used for outlier detection of fine grained clusters. Larger values will
+        prune out more outliers
+
+    contamination_multiplier: float (optional, default = 1.5)
+        The value to multiply the contamination score by as we increase the layers -- thus applying
+        higher contamination and removing more outliers from higher layers. Larger values will prune
+        more aggressively
+
+    max_contamination: float (optional, default = 0.25)
+        The maximum contamination value to use in outlier pruning -- once the multiplier increases
+        contamination beyond this value the contamination used will simply be capped at this value.
+
+    vector_metric: str (optional, default = "cosine")
+        The metric to use on the source vector space. This is used to determine if cluster centroid representatives
+        are too close and should be ignored.
+
+    cluster_distance_threshold: float (optional, default = 0.025)
+        Cluster centroid representatives from a higher layer that are within this distance of an already selected
+        cluster centroid in a lower layer will be ignored (so we don't repeat clusters)
+
+    return_pointsets: bool (optional, default = False)
+        Whether to return point set data for clusters. This may be required for various approaches to cluster labelling.
+
+    hdbscan_tree: CondensedTree or None
+        If ``return_pointsets`` is ``True`` then a condensed tree must be provided to generate the relevant pointsets.
+        If ``return_pointsets`` is ``False`` then this can be ``None`` as it will not be used.
+
+    Returns
+    -------
+    vector_layers: List of list Arrays
+        A list of layers; each layer is a list of arrays of the cluster centroids for that layer
+
+    location_layers: List of list of Arrays
+        A list of layers; each layer is a list of arrays of map locations for clusters in that layer
+
+    pointset_layers: List of list of lists (optional; only if ``return_pointsets`` was ``True``)
+        A list of layers, each layer is a list of point sets (a list of indices) for the clusters in that layer
+    """
     vector_layers = [cluster_vectors]
     location_layers = [cluster_locations]
 
@@ -182,7 +337,9 @@ def build_cluster_layers(
         locations_for_clusters = cluster_locations[robust_cluster_indicator]
 
         layer_metaclusters = AgglomerativeClustering(
-            n_clusters=n_clusters, affinity="euclidean", linkage="complete",
+            n_clusters=n_clusters,
+            affinity="euclidean",
+            linkage="complete",
         ).fit_predict(locations_for_clusters)
 
         layer_vectors = []
@@ -195,6 +352,7 @@ def build_cluster_layers(
 
             vector = vectors_for_clustering[layer_metaclusters == label].mean(axis=0)
             location = locations_for_clusters[layer_metaclusters == label].mean(axis=0)
+            pointset: Optional[List[int]]
             if return_pointsets:
                 pointset = point_set_from_cluster(
                     full_tree,
@@ -233,8 +391,35 @@ def build_cluster_layers(
 
 
 def adjust_layer_locations(
-    fixed_layer, layer_to_adjust, *, spring_constant=0.1, edge_weight=1.0
-):
+    fixed_layer: npt.NDArray,
+    layer_to_adjust: npt.NDArray,
+    *,
+    spring_constant: float = 0.1,
+    edge_weight: float = 1.0,
+) -> npt.NDArray:
+    """Use a spring layout style approach to adjust the locations of a layer to conflict/overlap less with a fixed layer
+    (generally a lower layer, or combination of lower layers). Essentially each cluster in the layer to be adjusted is
+    attached to its location by a spring with weight ``edge_weight`` and spring constant ``spring_constant`` and then
+    repelled by all the points in the fixed layer.
+
+    Parameters
+    ----------
+    fixed_layer: Array of shape (n_clusters, n_map_features)
+        cluster positions to remain fixed and which will provide a repulsive force pushing away clusters to be adjusted
+
+    layer_to_adjust: Array of shape (n_clusters, n_map_features)
+        cluster positions to be adjusted
+
+    spring_constant: float (optional, default = 0.1)
+        The "optimal" distance from the source position; larger values will allow the adjusted cluster to move farther
+
+    edge_weight: float (optional, default = 1.0)
+        How strong the springs pull
+
+    Returns
+    -------
+    adjusted_positions: Array of shape (n_clusters, n_map_features)
+    """
     fixed_node_pos = fixed_layer
     anchor_node_pos = layer_to_adjust
 
@@ -275,12 +460,37 @@ def adjust_layer_locations(
 
 
 def text_locations(
-    location_layers,
+    location_layers: List[npt.NDArray],
     *,
-    spring_constant=0.1,
-    spring_constant_multiplier=1.5,
-    edge_weight=1.0,
-):
+    spring_constant: float = 0.1,
+    spring_constant_multiplier: float = 1.5,
+    edge_weight: float = 1.0,
+) -> List[npt.NDArray]:
+    """Adjust locations of clusters in layers to attempt to avoid too much overlap of cluster -- move higher level layer
+    clusters to avoid overlapping with lower level layer clusters, under the assumptions that higher level layers
+    represent more area and thus have some freedom to be moved.
+
+    Parameters
+    ----------
+    location_layers: List of Arrays
+        The list of layers, where each layer is a array of positions on the map representation.
+
+    spring_constant: float (optional, default = 0.1)
+        The "optimal" distance from the source position; larger values will allow the adjusted cluster to move farther
+
+    spring_constant_multiplier: float (optional, default = 1.5)
+        We can increase the spring constant for higher level layers; to do this we multiply by the
+        ``spring_constant_multiplier`` as we go up a layer. Smaller values (closer to 1.0) will ensure locations
+        do no stray too far; this is particularly desireable in the case where there are many layers.
+
+    edge_weight: float (optional, default = 1.0)
+        How strong the springs pull
+
+    Returns
+    -------
+    text_locations: List of list of Arrays
+        The resulting list of layers, where each layer is a list of positions on the map representation.
+    """
     if len(location_layers) <= 1:
         return location_layers
 
@@ -312,17 +522,59 @@ def text_locations(
 
 
 def text_labels_from_joint_vector_space(
-    vector_layers,
-    text_representations,
-    text_label_dictionary,
+    vector_layers: List[List[npt.NDArray]],
+    text_representations: npt.ArrayLike,
+    text_label_dictionary: Dict[int, Any],
     *,
-    items_per_label=3,
-    vector_metric="cosine",
-    pynnd_n_neighbors=40,
-    query_size=10,
-    exclude_keyword_reuse=True,
-    random_state=None,
-):
+    items_per_label: int = 3,
+    vector_metric: str = "cosine",
+    pynnd_n_neighbors: int = 40,
+    query_size: int = 10,
+    exclude_keyword_reuse: bool = True,
+    random_state: Optional[int] = None,
+) -> List[List[List[Any]]]:
+    """Generate labels (usually text) for each cluster in each layer using a joint vector space representation model. To
+    do this we assume we have a ``text_representation`` providing a vector to each "word" such that the vectors exist in
+    the *same* vector space as the ``vector_layers`` vector representations. A cluster is then labelled by the "words"
+    closest to the cluster representation in the vector space. By default we avoid keyword re-use in layers by keeping
+    track of which words have already been used in a layer (starting from the top layers and working downward to the
+    finest grained layers), and exclude "words" that have already been used. This behaviour can be turned off if desired.
+
+    Parameters
+    ----------
+    vector_layers: List of list of Arrays
+        A list of layers; each layer is a list of cluster centroids existing in the source vector space
+
+    text_representations: Array of shape (n_possible_labels, n_features)
+        An array giving a vector (in the source vector space) for each potential label item
+
+    text_label_dictionary: Dict mapping indices to labels
+        A dictionary mapping from indices in the ``text_representation`` array to labels (usually words)
+
+    items_per_label: int (optional, default = 3)
+        The number of items to use for each cluster label
+
+    vector_metric: str (optional, default = "cosine")
+        The metric to use to measure closeness in the source vector space
+
+    pynnd_n_neighbors: int (optional, default = 40)
+        The ``n_neighbors`` parameter to use for PyNNDescent for nearest neighbour lookups
+
+    query_size: int (optional, default = 10)
+        The number of nearest neighbors to return via PyNNDescent queries; this should be at *least* ``items_per_label``
+        and often larger if ``exclude_keyword_reuse`` is ``True``.
+
+    exclude_keyword_reuse: bool (optional, default = True)
+        Whether to ensure keyword/labels don't get reused for lower level clusters.
+
+    random_state: int or None (optional, default = None)
+        A random state parameter, passed to PyNNDescent which can be used to ensure fixed results for reproducibility.
+
+    Returns
+    -------
+    labels: List of list of lists of label items
+        The resulting layers; each layer is a list of cluster labels; each cluster label is a list of label items
+    """
     text_label_nn_index = NNDescent(
         text_representations,
         metric=vector_metric,
@@ -362,8 +614,33 @@ def text_labels_from_joint_vector_space(
 
 
 def text_labels_from_source_metadata(
-    pointset_layers, source_metadataframe, *, items_per_label=3,
-):
+    pointset_layers: List[List[npt.NDArray]],
+    source_metadataframe: pd.DataFrame,
+    *,
+    items_per_label: int = 3,
+) -> List[List[List[Any]]]:
+    """Generate text labels for layers of clusters using a dataframe of metadata associated to points. To label a
+    cluster in a layer we train a one versus the rest classifier to discern the cluster and use feature importance
+    to label a cluster with the most discerning features.
+
+    Parameters
+    ----------
+    pointset_layers: List of list of Arrays
+        A list of layers; each layer is a list of clusters; each cluster is an array of point indices.
+
+    source_metadataframe: DataFrame
+        A dataframe of metadata associated to the points of data / map representation. Each row of the dataframe should
+        correspond to a point in the dataset (assumed to be in the same order as the points). We will attempt to handle
+        relatively diverse datatypes within the dataframe as well as possible.
+
+    items_per_label: int (optional, default = 3)
+        The number of items (features) to label a given cluster with
+
+    Returns
+    -------
+    labels: List of list of lists of label items
+        The resulting layers; each layer is a list of cluster labels; each cluster label is a list of label items
+    """
     n_numeric_cols = source_metadataframe.select_dtypes(
         exclude=["object", "category"]
     ).shape[1]
@@ -421,15 +698,57 @@ class RandomSampleSelection(object):
 
 
 def text_labels_from_per_sample_labels(
-    pointset_layers,
-    source_vectors,
-    labels_per_sample,
+    pointset_layers: List[List[npt.NDArray]],
+    source_vectors: npt.ArrayLike,
+    labels_per_sample: npt.ArrayLike,
     *,
-    sample_selection_method="facility_location",
-    items_per_label=3,
-    vector_metric="cosine",
-    random_state=None,
-):
+    sample_selection_method: str = "facility_location",
+    items_per_label: int = 3,
+    vector_metric: str = "cosine",
+    random_state: Optional[int] = None,
+) -> List[List[List[Any]]]:
+    """Generate text labels for layers of clusters where each source vector has an associated label representation
+    (usually text, usually a word). The labels are generated by sampling labels from the points in the cluster. Various
+    sampling strategies are available. The cheapest approach is ``"random"``. More advanced approaches are available via
+    the apricot-select library which provides submodular-selection. Here we support ``"saturated_coverage"`` which is
+    fast; ``"sum_redundancy"`` and ``"graph_cut"`` which are more expensive, but do a better coverage job; and
+    ``"facility_location"`` which does the best job of ensuring diversity and coverage in the selection, but can be
+    quite expensive computationally. ``"facility_selection"`` is definitely the best option if ``items_per_label`` is
+    very large however.
+
+    Parameters
+    ----------
+    pointset_layers: List of list of Arrays
+        A list of layers; each layer is a list of clusters; each cluster is an array of point indices.
+
+    source_vectors: Array of shape (n_samples, n_features)
+        The source vector data from which the map representation was generated.
+
+    labels_per_sample: Array of shape (n_samples,)
+        An array of label items for each source vector.
+
+    sample_selection_method: str (optional, default = "facility_selection")
+        The selection method to use for sampling from a cluster. Should be one of
+            * ``"facility_selection"``
+            * ``"graph_cut"``
+            * ``"sum_redundancy"``
+            * ``"saturated_coverage"``
+            * ``"random"``
+
+    items_per_label: int (optional, default = 3)
+        The number of items to use for each cluster label
+
+    vector_metric: str (optional, default = "cosine")
+        The distance metric used in the ``source_vectors`` vector space.
+
+    random_state: int or None (optional, default = None)
+        A random state seed to use in random selection.
+
+    Returns
+    -------
+    labels: List of list of lists of label items
+        The resulting layers; each layer is a list of cluster labels; each cluster label is a list of label items
+    """
     if HAS_APRICOT and sample_selection_method != "random":
         if sample_selection_method == "facility_location":
             selector = apricot.FacilityLocationSelection(
@@ -473,6 +792,116 @@ def text_labels_from_per_sample_labels(
 
 
 class JointVectorLabelLayers(object):
+    """Generate multiple layers of labelling for a map based on the existence of a joint vector space representation
+     of the source vector data for the map, and a separate set of label vectors that exist in the same vector space. To
+     do this we assume we have a ``text_representation`` providing a vector to each "word" such that the vectors exist in
+     the *same* vector space as the ``vector_layers`` vector representations.
+
+     Multiple layers of clusters are generated, with higher level layers having larger more general clusters. Each
+     cluster is then labelled by the "words" closest to the cluster representation in the vector space. By default we
+     avoid keyword re-use in layers by keeping track of which words have already been used in a layer (starting from
+     the top layers and working downward to the finest grained layers), and exclude "words" that have already been
+     used. This behaviour can be turned off if desired.
+
+     Parameters
+     ----------
+     source_vectors: Array of shape (n_samples, n_features)
+         The original high dimensional vector representation of the data
+
+     map_representation: Array of shape (n_samples, n_map_features)
+         The map representation of the data
+
+     labelling_vectors: Array of shape (n_possible_labels, n_features)
+         An array giving a vector (in the source vector space) for each potential label item
+
+     labels: Dictionary mapping indices to label items
+         A dictionary mapping from indices in the ``labelling_vectors`` array to labels (usually words)
+
+     vector_metric: str (optional, default = "cosine")
+         The metric to use on the source vector space.
+
+     cluster_map_representation: bool (optional, default = False)
+         Whether to directly cluster the map representation, or use UMAP to generate a representation for clustering
+         using ``umap_n_components`` many dimensions.
+
+     umap_n_components:
+         The number of dimensions to use UMAP to reduce to if ``cluster_map_representation`` is ``False``.
+
+     umap_n_neighbors: int (optional, default = 15)
+         The number of neighbors to use for UMAP  if ``cluster_map_representation`` is ``False``.
+
+     hdbscan_min_samples: int (optional, default = 10)
+         The ``min_samples`` value to use with HDBSCAN for clustering.
+
+     hdbscan_min_cluster_size: int (optional, default = 20)
+         The ``min_cluster_size`` value to use with HDBSCAN for clustering.
+
+     min_clusters: int (optional, default = 4)
+         The number of clusters to have at the highest layer; layers with fewer than this number of clusters will
+         be discarded
+
+     contamination: float (optional, default = 0.05)
+         The base contamination score used for outlier detection of fine grained clusters. Larger values will
+         prune out more outliers
+
+     contamination_multiplier: float (optional, default = 1.5)
+         The value to multiply the contamination score by as we increase the layers -- thus applying
+         higher contamination and removing more outliers from higher layers. Larger values will prune
+         more aggressively
+
+     max_contamination: float (optional, default = 0.25)
+         The maximum contamination value to use in outlier pruning -- once the multiplier increases
+         contamination beyond this value the contamination used will simply be capped at this value.
+
+     cluster_distance_threshold: float (optional, default = 0.025)
+         Cluster centroid representatives from a higher layer that are within this distance of an already selected
+         cluster centroid in a lower layer will be ignored (so we don't repeat clusters)
+
+     adjust_label_locations: bool (optional, default = True)
+         Whether to attempt to adjust label locations to avoid overlaps with lower layers.
+
+     label_adjust_spring_constant: float (optional, default = 0.1)
+          The "optimal" distance from the source position; larger values will allow the adjusted cluster to move farther
+
+    label_adjust_spring_constant_multiplier: float (optional, default = 1.5)
+         We can increase the spring constant for higher level layers; to do this we multiply by the
+         ``spring_constant_multiplier`` as we go up a layer. Smaller values (closer to 1.0) will ensure locations
+         do no stray too far; this is particularly desireable in the case where there are many layers.
+
+    label_adjust_edge_weight: float (optional, default = 1.0)
+        How strong the springs pull
+
+    items_per_label: int (optional, default = 3)
+        The number of items to use for each cluster label
+
+    pynnd_n_neighbors: int (optional, default = 40)
+        The ``n_neighbors`` parameter to use for PyNNDescent for nearest neighbour lookups
+
+    query_size: int (optional, default = 10)
+        The number of nearest neighbors to return via PyNNDescent queries; this should be at *least* ``items_per_label``
+        and often larger if ``exclude_keyword_reuse`` is ``True``.
+
+    exclude_keyword_reuse: bool (optional, default = True)
+        Whether to ensure keyword/labels don't get reused for lower level clusters.
+
+    label_formatter: Function (optional, default = string_label_formatter)
+        A function used for format a list of label items into a usable label (usually a single string).
+
+    random_state: int or None (optional, default = None)
+        A random state parameter which can be used to ensure fixed results for reproducibility.
+
+     Attributes
+     ----------
+    labels: List of list of lists of label items
+        A list of layers; each layer is a list of labels; each label is a list of label ``items_per_label`` many items
+
+    location_layers: List of Arrays of shape (n_cluster_in_layer, n_map_features)
+        A list of layers; each layer is an array of locations in the map representation to place the labels of that layer
+
+    labels_for_display: List of list of labels
+        A list of layers; each layer is a list of labels; each label is formatted for display use by ``label_formatter``
+    """
+
     def __init__(
         self,
         source_vectors: npt.ArrayLike,
@@ -480,27 +909,27 @@ class JointVectorLabelLayers(object):
         labelling_vectors: npt.ArrayLike,
         labels: Dict[int, Any],
         *,
-        vector_metric="cosine",
-        cluster_map_representation=False,
-        umap_n_components=5,
-        umap_n_neighbors=15,
-        hdbscan_min_samples=10,
-        hdbscan_min_cluster_size=20,
-        min_clusters_in_layer=4,
-        contamination=0.05,
-        cluster_distance_threshold=0.025,
-        contamination_multiplier=1.5,
-        max_contamination=0.25,
-        adjust_label_locations=True,
-        label_adjust_spring_constant=0.1,
-        label_adjust_spring_constant_multiplier=1.5,
-        label_adjust_edge_weight=1.0,
-        items_per_label=3,
-        pynnd_n_neighbors=40,
-        pynnd_query_size=10,
-        exclude_keyword_reuse=True,
-        label_formatter=string_label_formatter,
-        random_state=None,
+        vector_metric: str = "cosine",
+        cluster_map_representation: bool = False,
+        umap_n_components: int = 5,
+        umap_n_neighbors: int = 15,
+        hdbscan_min_samples: int = 10,
+        hdbscan_min_cluster_size: int = 20,
+        min_clusters_in_layer: int = 4,
+        contamination: float = 0.05,
+        contamination_multiplier: float = 1.5,
+        max_contamination: float = 0.25,
+        cluster_distance_threshold: float = 0.025,
+        adjust_label_locations: bool = True,
+        label_adjust_spring_constant: float = 0.1,
+        label_adjust_spring_constant_multiplier: float = 1.5,
+        label_adjust_edge_weight: float = 1.0,
+        items_per_label: int = 3,
+        pynnd_n_neighbors: int = 40,
+        pynnd_query_size: int = 10,
+        exclude_keyword_reuse: bool = True,
+        label_formatter: Callable[[List[Any]], Any] = string_label_formatter,
+        random_state: Optional[int] = None,
     ):
         if adjust_label_locations and not HAS_NETWORKX:
             warn("NetworkX is required for label adjustments; try pip install networkx")
@@ -557,30 +986,123 @@ class JointVectorLabelLayers(object):
 
 
 class MetadataLabelLayers(object):
+    """Generate multiple layers of labelling for a map based on a dataframe of metadata associated to points. Multiple
+    layers of clusters are generated, with higher level layers having larger more general clusters. Each cluster is
+    then labelled by training a one versus the rest classifier to discern the cluster in terms of the associated
+    metadata. The feature importances can then be used to label a cluster with the most discerning features.
+
+    Parameters
+    ----------
+     source_vectors: Array of shape (n_samples, n_features)
+         The original high dimensional vector representation of the data
+
+     map_representation: Array of shape (n_samples, n_map_features)
+         The map representation of the data
+
+    metadata_dataframe: DataFrame
+        A dataframe of metadata associated to the points of data / map representation. Each row of the dataframe should
+        correspond to a point in the dataset (assumed to be in the same order as the points). We will attempt to handle
+        relatively diverse datatypes within the dataframe as well as possible.
+
+    vector_metric: str (optional, default = "cosine")
+        The metric to use on the source vector space.
+
+    cluster_map_representation: bool (optional, default = False)
+        Whether to directly cluster the map representation, or use UMAP to generate a representation for clustering
+        using ``umap_n_components`` many dimensions.
+
+    umap_n_components:
+        The number of dimensions to use UMAP to reduce to if ``cluster_map_representation`` is ``False``.
+
+    umap_n_neighbors: int (optional, default = 15)
+        The number of neighbors to use for UMAP  if ``cluster_map_representation`` is ``False``.
+
+    hdbscan_min_samples: int (optional, default = 10)
+        The ``min_samples`` value to use with HDBSCAN for clustering.
+
+    hdbscan_min_cluster_size: int (optional, default = 20)
+        The ``min_cluster_size`` value to use with HDBSCAN for clustering.
+
+    min_clusters: int (optional, default = 4)
+        The number of clusters to have at the highest layer; layers with fewer than this number of clusters will
+        be discarded
+
+    contamination: float (optional, default = 0.05)
+        The base contamination score used for outlier detection of fine grained clusters. Larger values will
+        prune out more outliers
+
+    contamination_multiplier: float (optional, default = 1.5)
+        The value to multiply the contamination score by as we increase the layers -- thus applying
+        higher contamination and removing more outliers from higher layers. Larger values will prune
+        more aggressively
+
+    max_contamination: float (optional, default = 0.25)
+        The maximum contamination value to use in outlier pruning -- once the multiplier increases
+        contamination beyond this value the contamination used will simply be capped at this value.
+
+    cluster_distance_threshold: float (optional, default = 0.025)
+        Cluster centroid representatives from a higher layer that are within this distance of an already selected
+        cluster centroid in a lower layer will be ignored (so we don't repeat clusters)
+
+    adjust_label_locations: bool (optional, default = True)
+        Whether to attempt to adjust label locations to avoid overlaps with lower layers.
+
+    label_adjust_spring_constant: float (optional, default = 0.1)
+        The "optimal" distance from the source position; larger values will allow the adjusted cluster to move farther
+
+    label_adjust_spring_constant_multiplier: float (optional, default = 1.5)
+         We can increase the spring constant for higher level layers; to do this we multiply by the
+         ``spring_constant_multiplier`` as we go up a layer. Smaller values (closer to 1.0) will ensure locations
+         do no stray too far; this is particularly desireable in the case where there are many layers.
+
+    label_adjust_edge_weight: float (optional, default = 1.0)
+        How strong the springs pull
+
+    items_per_label: int (optional, default = 3)
+        The number of items to use for each cluster label
+
+    label_formatter: Function (optional, default = string_label_formatter)
+        A function used for format a list of label items into a usable label (usually a single string).
+
+    random_state: int or None (optional, default = None)
+        A random state parameter which can be used to ensure fixed results for reproducibility.
+
+     Attributes
+     ----------
+    labels: List of list of lists of label items
+        A list of layers; each layer is a list of labels; each label is a list of label ``items_per_label`` many items
+
+    location_layers: List of Arrays of shape (n_cluster_in_layer, n_map_features)
+        A list of layers; each layer is an array of locations in the map representation to place the labels of that layer
+
+    labels_for_display: List of list of labels
+        A list of layers; each layer is a list of labels; each label is formatted for display use by ``label_formatter``
+    """
+
     def __init__(
         self,
         source_vectors: npt.ArrayLike,
         map_representation: npt.ArrayLike,
         metadata_dataframe: pd.DataFrame,
         *,
-        vector_metric="cosine",
-        cluster_map_representation=False,
-        umap_n_components=5,
-        umap_n_neighbors=15,
-        hdbscan_min_samples=10,
-        hdbscan_min_cluster_size=20,
-        min_clusters_in_layer=4,
-        contamination=0.05,
-        cluster_distance_threshold=0.025,
-        contamination_multiplier=1.5,
-        max_contamination=0.25,
-        adjust_label_locations=True,
-        label_adjust_spring_constant=0.1,
-        label_adjust_spring_constant_multiplier=1.5,
-        label_adjust_edge_weight=1.0,
-        items_per_label=3,
-        label_formatter=string_label_formatter,
-        random_state=None,
+        vector_metric: str = "cosine",
+        cluster_map_representation: bool = False,
+        umap_n_components: int = 5,
+        umap_n_neighbors: int = 15,
+        hdbscan_min_samples: int = 10,
+        hdbscan_min_cluster_size: int = 20,
+        min_clusters_in_layer: int = 4,
+        contamination: float = 0.05,
+        contamination_multiplier: float = 1.5,
+        max_contamination: float = 0.25,
+        cluster_distance_threshold: float = 0.025,
+        adjust_label_locations: bool = True,
+        label_adjust_spring_constant: float = 0.1,
+        label_adjust_spring_constant_multiplier: float = 1.5,
+        label_adjust_edge_weight: float = 1.0,
+        items_per_label: int = 3,
+        label_formatter: Callable[[List[Any]], Any] = string_label_formatter,
+        random_state: Optional[int] = None,
     ):
         if adjust_label_locations and not HAS_NETWORKX:
             warn("NetworkX is required for label adjustments; try pip install networkx")
@@ -626,7 +1148,9 @@ class MetadataLabelLayers(object):
             )
 
         self.labels = text_labels_from_source_metadata(
-            self.pointset_layers, metadata_dataframe, items_per_label=items_per_label,
+            self.pointset_layers,
+            metadata_dataframe,
+            items_per_label=items_per_label,
         )
         self.label_formatter = label_formatter
 
@@ -639,31 +1163,136 @@ class MetadataLabelLayers(object):
 
 
 class SampleLabelLayers(object):
+    """Generate text labels for layers of clusters from data where each source vector has an associated label
+    representation (usually text, usually a word). Multiple layers of clusters are generated, with higher level
+    layers having larger more general clusters. Each cluster is then labelled by sampling labels from the points in
+    the cluster. Various sampling strategies are available. The cheapest approach is ``"random"``. More advanced
+    approaches are available via the apricot-select library which provides submodular-selection. Here we support
+    ``"saturated_coverage"`` which is fast; ``"sum_redundancy"`` and ``"graph_cut"`` which are more expensive,
+    but do a better coverage job; and ``"facility_location"`` which does the best job of ensuring diversity and
+    coverage in the selection, but can be quite expensive computationally. ``"facility_selection"`` is definitely the
+    best option if ``items_per_label`` is very large however.
+
+    Parameters
+    ----------
+     source_vectors: Array of shape (n_samples, n_features)
+         The original high dimensional vector representation of the data
+
+     map_representation: Array of shape (n_samples, n_map_features)
+         The map representation of the data
+
+    per_sample_labels: Array of shape (n_samples,)
+        An array of label items for each source vector.
+
+    vector_metric: str (optional, default = "cosine")
+        The metric to use on the source vector space.
+
+    cluster_map_representation: bool (optional, default = False)
+        Whether to directly cluster the map representation, or use UMAP to generate a representation for clustering
+        using ``umap_n_components`` many dimensions.
+
+    sample_selection_method: str (optional, default = "facility_selection")
+        The selection method to use for sampling from a cluster. Should be one of
+            * ``"facility_selection"``
+            * ``"graph_cut"``
+            * ``"sum_redundancy"``
+            * ``"saturated_coverage"``
+            * ``"random"``
+
+    umap_n_components:
+        The number of dimensions to use UMAP to reduce to if ``cluster_map_representation`` is ``False``.
+
+    umap_n_neighbors: int (optional, default = 15)
+        The number of neighbors to use for UMAP  if ``cluster_map_representation`` is ``False``.
+
+    hdbscan_min_samples: int (optional, default = 10)
+        The ``min_samples`` value to use with HDBSCAN for clustering.
+
+    hdbscan_min_cluster_size: int (optional, default = 20)
+        The ``min_cluster_size`` value to use with HDBSCAN for clustering.
+
+    min_clusters: int (optional, default = 4)
+        The number of clusters to have at the highest layer; layers with fewer than this number of clusters will
+        be discarded
+
+    contamination: float (optional, default = 0.05)
+        The base contamination score used for outlier detection of fine grained clusters. Larger values will
+        prune out more outliers
+
+    contamination_multiplier: float (optional, default = 1.5)
+        The value to multiply the contamination score by as we increase the layers -- thus applying
+        higher contamination and removing more outliers from higher layers. Larger values will prune
+        more aggressively
+
+    max_contamination: float (optional, default = 0.25)
+        The maximum contamination value to use in outlier pruning -- once the multiplier increases
+        contamination beyond this value the contamination used will simply be capped at this value.
+
+    cluster_distance_threshold: float (optional, default = 0.025)
+        Cluster centroid representatives from a higher layer that are within this distance of an already selected
+        cluster centroid in a lower layer will be ignored (so we don't repeat clusters)
+
+    adjust_label_locations: bool (optional, default = True)
+        Whether to attempt to adjust label locations to avoid overlaps with lower layers.
+
+    label_adjust_spring_constant: float (optional, default = 0.1)
+        The "optimal" distance from the source position; larger values will allow the adjusted cluster to move farther
+
+    label_adjust_spring_constant_multiplier: float (optional, default = 1.5)
+        We can increase the spring constant for higher level layers; to do this we multiply by the
+        ``spring_constant_multiplier`` as we go up a layer. Smaller values (closer to 1.0) will ensure locations
+        do no stray too far; this is particularly desireable in the case where there are many layers.
+
+    label_adjust_edge_weight: float (optional, default = 1.0)
+        How strong the springs pull
+
+    items_per_label: int (optional, default = 3)
+        The number of items to use for each cluster label
+
+    label_formatter: Function (optional, default = string_label_formatter)
+        A function used for format a list of label items into a usable label (usually a single string).
+
+    random_state: int or None (optional, default = None)
+        A random state parameter which can be used to ensure fixed results for reproducibility.
+
+     Attributes
+     ----------
+    labels: List of list of lists of label items
+        A list of layers; each layer is a list of labels; each label is a list of label ``items_per_label`` many items
+
+    location_layers: List of Arrays of shape (n_cluster_in_layer, n_map_features)
+        A list of layers; each layer is an array of locations in the map representation to place the labels of that layer
+
+    labels_for_display: List of list of labels
+        A list of layers; each layer is a list of labels; each label is formatted for display use by ``label_formatter``
+
+    """
+
     def __init__(
         self,
         source_vectors: npt.ArrayLike,
         map_representation: npt.ArrayLike,
         per_sample_labels: npt.ArrayLike,
         *,
-        vector_metric="cosine",
-        cluster_map_representation=False,
-        sample_selection_method="facility_location",
-        umap_n_components=5,
-        umap_n_neighbors=15,
-        hdbscan_min_samples=10,
-        hdbscan_min_cluster_size=20,
-        min_clusters_in_layer=4,
-        contamination=0.05,
-        cluster_distance_threshold=0.025,
-        contamination_multiplier=1.5,
-        max_contamination=0.25,
-        adjust_label_locations=True,
-        label_adjust_spring_constant=0.1,
-        label_adjust_spring_constant_multiplier=1.5,
-        label_adjust_edge_weight=1.0,
-        items_per_label=3,
-        label_formatter=string_label_formatter,
-        random_state=None,
+        vector_metric: str = "cosine",
+        cluster_map_representation: bool = False,
+        sample_selection_method: str = "facility_location",
+        umap_n_components: int = 5,
+        umap_n_neighbors: int = 15,
+        hdbscan_min_samples: int = 10,
+        hdbscan_min_cluster_size: int = 20,
+        min_clusters_in_layer: int = 4,
+        contamination: float = 0.05,
+        contamination_multiplier: float = 1.5,
+        max_contamination: float = 0.25,
+        cluster_distance_threshold: float = 0.025,
+        adjust_label_locations: bool = True,
+        label_adjust_spring_constant: float = 0.1,
+        label_adjust_spring_constant_multiplier: float = 1.5,
+        label_adjust_edge_weight: float = 1.0,
+        items_per_label: int = 3,
+        label_formatter: Callable[[List[Any]], Any] = string_label_formatter,
+        random_state: Optional[int] = None,
     ):
         self.per_sample_labels = per_sample_labels
 
