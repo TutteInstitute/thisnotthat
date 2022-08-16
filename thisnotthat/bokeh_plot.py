@@ -25,7 +25,7 @@ def add_text_layer(
     text_size: float,
     layer_type: str = "middle",
     *,
-    angle: int = 0,
+    angle: float = 0,
     text_color: str = "#444444",
     text_font: Dict[str, str] = {"value": "helvetica"},
     text_font_style: str = "normal",
@@ -35,6 +35,55 @@ def add_text_layer(
     min_text_size: float = 2.0,
     text_transition_width: float = 16.0,
 ) -> None:
+    """Add a textual label layer to a bokeh plot figure.
+
+    Parameters
+    ----------
+    plot_figure: Figure
+        The bokeh plot figure to add textual labels to
+
+    text_dataframe: DatFrame
+        A dataframe containing columns for "x", "y", and "text" giving the locations and text content of labels.
+
+    text_size: float
+        The size of text in pt to use for this label layer
+
+    layer_type: str (optional, default = "middle")
+        The "kind" of layer -- should be one of:
+            * "bottom"
+            * "middle"
+            * "top"
+        This controls how transparency works -- "bottom" layers never disappear upon zooming in, and "top" layers
+        never disappear on zooming out.
+
+    angle: float (optional, default = 0.0)
+        The angle of rotation of the text in this layer.
+
+    text_color: str (optional, default = "#444444")
+        The colour of the text in this layer.
+
+    text_font: dict (optional, default = {"value":"helvetica"}
+        Text font information as passed to bokeh's ``Text`` marker type.
+
+    text_font_style: str (optional, default = "normal")
+        The font style as passed to bokeh; options include "bold", "italic" and others.
+
+    text_line_height: float (optional, default = 0.9)
+        The line height of text. Decreasing this will compact lines closer together (potentially resulting in overlap.
+
+    text_alpha: float (optional, default = 1.0)
+        The default alpha level of the text in this layer.
+
+    max_text_size: float (optional, default = 64.0)
+        The maximum apparent size of text to use before transitioning to another layer.
+
+    min_text_size: float (optional, default = 2.0)
+        The minimum apparent size of text to use before transitioning to another layer.
+
+    text_transition_width: float (optional, default = 16.0)
+        The range of apparent point sizes over which to perform a transparency based fade when transitioning to
+        another layer.
+    """
     label_data_source = bokeh.models.ColumnDataSource(text_dataframe)
     labels = bokeh.models.Text(
         text_font_size=str(text_size) + "pt",
@@ -88,6 +137,121 @@ def add_text_layer(
 
 
 class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
+    """A Scatterplot pane for visualizing a map representation of data using Bokeh as the plot backend. The bokeh 
+    backend provides a lot of versatility and interactivity options, including lasso-selection, in plot legends
+    that update, and more. This plot makes use of bokeh's webgl backend, and can scale well into the tens of
+    thousands of points, but performance can be slower for larger datasets at which point the dek.gl backend may 
+    become preferable.
+
+    Parameters
+    ----------
+    data: Array of shape (n_samples, 2)
+        The data of the map representation to be plotted, formatted as a numpy array of shape (n_samples, 2).
+        
+    labels: Iterable of str of length n_samples or None (optional, default = None)
+        If text class labels for data points is available it can be passed here, and used for colouring points,
+        as well as potentially interacting with label editor tools. If ``None`` the data will be treated as "unlabelled"
+        for the purpose of class labelling, and can then be added to via the label editor.
+        
+    hover_text: Iterable of str of length n_samples or None (optional, default = None)
+        If a text item for each sample to use when hovering over points is available it can be passed here. If 
+        ``None`` then the ``labels`` will be used for any hover text.
+        
+    marker_size: float, Iterable of float of length n_samples, or None (optional, default = None)
+        Individual markers can be sized by passing a vector of sizes. If a single float value is passed then all
+        markers will be sized at the given float value. If ``None`` a default marker size of 0.1 will be used.
+        
+    label_color_mapping: dict or None (optional, default = None)
+        If ``labels`` are provided this color_mapping will be used -- it should be a dictionary keyed by the class
+        labels, with values giving hexstring colour specifications for the desired colour of the class label. If
+        ``None`` a colormapping will be generated automatically based on the labels and palette.
+
+    palette: Sequence of str (optional, default = Turbo256 palette)
+        The palette to use for colouring markers. It should be a sequence of hexstring colour specifications. Note
+        that for class labelling the order of colours is modified, so smooth colour palettes can be used. Even if
+        a ``label_color_mapping`` is provided, this palette will be used for generating new colours if new labels
+        are created using the label editor.
+
+    width: int (optional, default = 600)
+        Width of the plot figure. Note that this includes space for the legend if ``show_legend`` is ``True``,
+        and includes space for the legend outside the plot if that is selected.
+
+    height: int (optional, default = 600)
+        Height of the plot figure.
+
+    max_point_size: float or None (optional, default = None)
+        The largest apparent size of points in the scatterplot; further zooming will leave points fixed at this size.
+        This is useful when you want points clearly visible when zoomed out, but want to avoid excessive overlaps of
+        points when zooming in.
+
+    min_point_size: float or None (optional, default = None)
+        The smallest apparent size of points in the scatterplot; further zooming out will leave points fixed at this
+        size. This can be useful if you want points to remain visible when zoomed out where they otherwise would not
+        because of scaling issues.
+
+    marker_scale_factor: float or None (optional, default = None)
+        If setting marker size via the ``marker_size`` param or via the plot control pane this can control the overall
+        scale or size of the markers. Set this to what you want the "average" marker size to be.
+
+    fill_alpha: float (optional, default = 0.75)
+        The alpha value to use for the fill on points in the scatterplot.
+
+    line_color: str (optional, default = "#FFFFFF")
+        The line colour to use for the outline of points in the scatterplot.
+
+    line_width: float (optional, default = 0.25)
+        The line width to use for the outline of points in the scatterplot.
+
+    hover_fill_color: str (optional, default = "#FF0000")
+        The colour of points being hovered over in the scatterplot -- use this for highlighting points with hover.
+
+    hover_line_color: str (optional, default = "#000000")
+        The line colour of points being hovered over in the scatterplot.
+
+    hover_line_width: float (optional, default = 2)
+        The line width of points being hovered over in the scatterplot.
+
+    tooltip_template: str (optional, default = "<div>@hover_text</div>"
+        The template used to define the hover tooltip in the scatterplot. See custom tooltips in the bokeh documentation
+        for more details on this.
+
+    selection_fill_alpha: float (optional, default = 1.0)
+        The alpha value to use for selected points in the scatterplot.
+
+    nonselection_fill_alpha: float (optional, default = 0.1)
+        The alpha value to use for points that are not in an active selection in the scatterplot.
+
+    nonselection_fill_color: str (optional, default = "gray")
+        The colour to use to fill points that are not in an active selection in the scatterplot.
+
+    background_fill_color: str (optional, default = "#FFFFFF")
+        The colour to use for the background of the scatterplot.
+
+    border_fill_color: str (optional, default = "whitesmoke")
+        The colour to use for the background of the non-plot region of the bokeh figure.
+
+    toolbar_location: str (optional, default = "above")
+        The toolbar location in the bokeh figure. See the bokeh documentation for more details on options.
+
+    tools: str (optional, default = "pan,wheel_zoom,lasso_select,save,reset,help")
+        The tools to place in the toolbar in the bokeh figure. See the bokeh documentation for more details on options.
+
+    title: str or None (optional, default = None)
+        The title, if any, to put on the figure.
+
+    title_location: str (optional, default = "above")
+        The location of the title, if any. See the bokeh documentation for more details on options.
+
+    show_legend: bool (optional, default = True)
+        Whether to show a bokeh legend associated to the plot.
+
+    legend_location: str (optional, default = "outside")
+        Where to locate the legend, if a legend is being shown. The standard bokeh legend location options are
+        available, and also the option "outside", to locate the legend to the right of the plot.
+
+    name: str (optional, default = "Plot")
+        The panel name of the plot pane. See panel documentation for more details.
+    """
 
     labels = param.Series(doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
@@ -234,21 +398,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 label_width=150,
             )
             self.plot.add_layout(
-                self._legend,
-                "right" if legend_location == "outside" else "center",
+                self._legend, "right" if legend_location == "outside" else "center",
             )
 
             self._color_by_legend_source = bokeh.models.ColumnDataSource(
-                {
-                    "x": np.zeros(8),
-                    "y": np.zeros(8),
-                    "color_by": np.linspace(0, 1, 8),
-                }
+                {"x": np.zeros(8), "y": np.zeros(8), "color_by": np.linspace(0, 1, 8),}
             )
             self._color_by_renderer = self.plot.square(
-                source=self._color_by_legend_source,
-                line_width=0,
-                visible=False,
+                source=self._color_by_legend_source, line_width=0, visible=False,
             )
             self._color_by_legend = bokeh.models.Legend(
                 items=[
@@ -433,9 +590,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._color_by_legend_source.data["color_by"] = [
                     np.round(x, decimals=2)
                     for x in np.linspace(
-                        self.color_by_vector.max(),
-                        self.color_by_vector.min(),
-                        8,
+                        self.color_by_vector.max(), self.color_by_vector.min(), 8,
                     )
                 ]
                 self._color_by_renderer.glyph.fill_color = colormap
