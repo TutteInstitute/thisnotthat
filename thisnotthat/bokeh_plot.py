@@ -251,6 +251,20 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     name: str (optional, default = "Plot")
         The panel name of the plot pane. See panel documentation for more details.
+
+    Attributes
+    ----------
+
+    plot: Figure
+        The actual bokeh figure -- custom adjustments to the plot can be made via this attribute.
+
+    pane: Pane
+        The panel "Pane" object containing the plot. You can use this attribute to see the plot
+        directly in ajupyter notebook.
+
+    dataframe: DataFrame
+        The dataframe associated with this plot, including label information that may have been
+        edited via the label editor.
     """
 
     labels = param.Series(doc="Labels")
@@ -659,7 +673,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self,
         cluster_labelling: TextLayers,
         *,
-        angle: int = 0,
+        angle: float = 0,
         text_size_scale: int = 12,
         text_layer_scale_factor: float = 2.0,
         text_color: str = "#444444",
@@ -671,6 +685,50 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         min_text_size: float = 2.0,
         text_transition_width: float = 16.0,
     ):
+        """Given a cluster labelling generated via one of the methods in the ``map_cluster_labelling``
+        module, add the labelling information to this plot in a manner that allows lower level, more detailed,
+        labels to be revealed upon zooming in, with transitions between the layers, and appropriate sizing
+        of labels at different levels.
+
+        Parameters
+        ----------
+        cluster_labelling: TextLayers
+            A cluster labelling in multiple layers produced by a method from ``map_cluster_labelling``.
+
+        angle: float (optional, default = 0.0)
+            The angle of rotation of the text in this layer.
+
+        text_size_scale: float (optional, default = 12)
+            A base scale for the text.
+
+        text_layer_scale_factor: flaot (optional, default = 2.0)
+            The multiplier to scale text sizes by when going up a layer.
+
+        text_color: str (optional, default = "#444444")
+            The colour of the text in this layer.
+
+        text_font: dict (optional, default = {"value":"helvetica"}
+            Text font information as passed to bokeh's ``Text`` marker type.
+
+        text_font_style: str (optional, default = "normal")
+            The font style as passed to bokeh; options include "bold", "italic" and others.
+
+        text_line_height: float (optional, default = 0.9)
+            The line height of text. Decreasing this will compact lines closer together (potentially resulting in overlap.
+
+        text_alpha: float (optional, default = 1.0)
+            The default alpha level of the text in this layer.
+
+        max_text_size: float (optional, default = 64.0)
+            The maximum apparent size of text to use before transitioning to another layer.
+
+        min_text_size: float (optional, default = 2.0)
+            The minimum apparent size of text to use before transitioning to another layer.
+
+        text_transition_width: float (optional, default = 16.0)
+            The range of apparent point sizes over which to perform a transparency based fade when transitioning to
+            another layer.
+        """
         for i, (label_locations, label_strings) in enumerate(
             zip(cluster_labelling.location_layers, cluster_labelling.labels_for_display)
         ):
