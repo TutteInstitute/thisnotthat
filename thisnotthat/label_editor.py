@@ -13,15 +13,17 @@ from typing import *
 class LegendPane(pn.reactive.Reactive):
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
-    color_palette = param.List([], item_type=str, doc="Color palette")
-    color_factors = param.List([], item_type=str, doc="Color palette")
+    label_color_palette = param.List([], item_type=str, doc="Color palette")
+    label_color_factors = param.List([], item_type=str, doc="Color palette")
+    selected = param.List([], item_type=int, doc="Indices of selected samples")
 
     def __init__(
         self,
         labels: npt.ArrayLike,
-        factors: List[str],
-        palette: Optional[Sequence[str]] = None,
         *,
+        factors: Optional[List[str]] = None,
+        palette: Optional[Sequence[str]] = None,
+        selectable: bool = False,
         color_picker_width: int = 50,
         color_picker_height: int = 50,
         color_picker_margin: Sequence[int] = [1, 5],
@@ -33,29 +35,34 @@ class LegendPane(pn.reactive.Reactive):
         name: str = "Editable Legend",
     ) -> None:
         super().__init__(name=name)
-        self.label_set = set(np.unique(labels))
-        self.color_factors = factors
-        self.color_palette = (
+        label_series = pd.Series(labels).copy()  # reset_index(drop=True)
+        self.label_set = set(label_series.unique())
+        if factors is not None:
+            self.label_color_factors = factors
+        else:
+            self.label_color_factors = list(self.label_set)
+        self.label_color_palette = (
             palette
             if palette is not None
             else [Turbo256[x] for x in _palette_index(256)]
         )
-        self.labels = pd.Series(labels)
-        self.label_set = set(self.labels)
+        self.labels = label_series
+        self.selectable = selectable
         self.color_picker_width = color_picker_width
         self.color_picker_height = color_picker_height
         self.color_picker_margin = color_picker_margin
-        self.label_width = (label_width,)
-        self.label_height = (label_height,)
-        self.label_max_width = (label_max_width,)
+        self.label_width = label_width
+        self.label_height = label_height
+        self.label_max_width = label_max_width
         self.label_min_width = label_min_width
-        self.label_margin = (label_margin,)
+        self.label_margin = label_margin
         self.pane = pn.Column()
         self._rebuild_pane()
 
     def _color_callback(self, event: param.parameterized.Event) -> None:
-        self.color_palette = [
-            event.new if color == event.old else color for color in self.color_palette
+        self.label_color_palette = [
+            event.new if color == event.old else color
+            for color in self.label_color_palette
         ]
 
     def _label_callback(self, event: param.parameterized.Event) -> None:
@@ -63,22 +70,62 @@ class LegendPane(pn.reactive.Reactive):
             label: event.new if label == event.old else label
             for label in self.labels.unique()
         }
-        self.color_factors = [
+        self.label_color_factors = [
             label_mapping[factor] if factor in label_mapping else factor
-            for factor in self.color_factors
+            for factor in self.label_color_factors
         ]
         new_labels = self.labels.map(label_mapping)
         self.labels = new_labels
         self.label_set = set(self.labels.unique())
 
+    def _toggle_select(self, event) -> None:
+        button = event.obj
+        toggle_state = bool(button.clicks % 2)
+        if toggle_state:
+            button.name = "✓"
+            button.button_type = "success"
+            indices_to_select = np.where(self.labels == button.label_id)[0]
+            new_selection = (
+                np.union1d(self.selected, indices_to_select).astype(int).tolist()
+            )
+            self._internal_selection = True
+            self.selected = new_selection
+            self._internal_selection = False
+        else:
+            button.name = ""
+            button.button_type = "default"
+            indices_to_deselect = np.where(self.labels == button.label_id)[0]
+            new_selection = (
+                np.setdiff1d(self.selected, indices_to_deselect).astype(int).tolist()
+            )
+            self._internal_selection = True
+            self.selected = new_selection
+            self._internal_selection = False
+
+    @param.depends("selected", watch=True)
+    def _update_selected(self):
+        if self.selectable and not self._internal_selection:
+            selected_set = set(self.selected)
+            for legend_item in self.pane:
+                selection_button = legend_item[2]
+                indices_to_test = set(
+                    np.where(self.labels == selection_button.label_id)[0]
+                )
+                if indices_to_test <= selected_set:
+                    # Ensure toggle is selected
+                    selection_button.clicks = 1
+                else:
+                    # Ensure toggle is unselected
+                    selection_button.clicks = 0
+
     def _rebuild_pane(self) -> None:
         self.label_set = set(self.labels.unique())
         legend_labels = set([])
         legend_items = []
-        for idx, label in enumerate(self.color_factors):
+        for idx, label in enumerate(self.label_color_factors):
             if label in self.label_set and label not in legend_labels:
                 legend_labels.add(label)
-                color = self.color_palette[idx]
+                color = self.label_color_palette[idx]
                 legend_item = pn.Row(
                     pn.widgets.ColorPicker(
                         value=color,
@@ -94,6 +141,13 @@ class LegendPane(pn.reactive.Reactive):
                         max_width=self.label_max_width,
                         min_width=self.label_min_width,
                     ),
+                    pn.widgets.Button(
+                        name="",
+                        button_type="default",
+                        width=self.label_height,
+                        height=self.label_height,
+                        margin=[0, 2],
+                    ),
                 )
                 legend_items.append(legend_item)
                 legend_item[0].param.watch(
@@ -102,6 +156,11 @@ class LegendPane(pn.reactive.Reactive):
                 legend_item[1].param.watch(
                     self._label_callback, "value", onlychanged=True
                 )
+                if self.selectable:
+                    legend_item[2].label_id = label
+                    legend_item[2].on_click(self._toggle_select)
+                else:
+                    legend_item[2].visible = False
         self.pane.clear()
         self.pane.extend(legend_items)
 
@@ -112,8 +171,8 @@ class LegendPane(pn.reactive.Reactive):
     @param.depends("labels", watch=True)
     def _update_labels(self) -> None:
         new_label_set = set(self.labels.unique())
-        self.color_factors = self.color_factors + list(
-            new_label_set - set(self.color_factors)
+        self.label_color_factors = self.label_color_factors + list(
+            new_label_set - set(self.label_color_factors)
         )
 
         if new_label_set != self.label_set:
@@ -123,7 +182,7 @@ class LegendPane(pn.reactive.Reactive):
 class NewLabelButton(pn.reactive.Reactive):
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
-    selected = param.List(default=[], doc="Indices of selected samples")
+    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
 
     def __init__(
         self,
@@ -131,73 +190,78 @@ class NewLabelButton(pn.reactive.Reactive):
         *,
         button_type: str = "success",
         button_text: str = "New Label",
+        width: Optional[int] = None,
         name: str = "New Label",
     ) -> None:
         super().__init__(name=name)
         self.label_count = 1
-        self.pane = pn.Column(
-            pn.widgets.Button(name=button_text, button_type=button_type)
+        self.pane = pn.widgets.Button(
+            name=button_text, button_type=button_type, width=width
         )
-        self.pane[0].on_click(self._on_click)
-        self.labels = pd.Series(labels)
+        self.pane.on_click(self._on_click)
+        self.pane.disabled = True
+        self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
 
     def _on_click(self, event: param.parameterized.Event) -> None:
         if len(self.selected) > 0:
             new_labels = self.labels
-            new_labels[self.selected] = f"new_label_{self.label_count}"
+            new_labels.iloc[self.selected] = f"new_label_{self.label_count}"
             self.labels = new_labels
             self.label_count += 1
 
-            if len(self.pane) > 1:
-                self.pane.pop(1)
+            self.selected = []
 
-        elif len(self.pane) < 2:
-            self.pane.append(pn.pane.Alert("No data selected!", alert_type="danger"))
+    @param.depends("selected", watch=True)
+    def _toggle_active(self):
+        if len(self.selected) > 0:
+            self.pane.disabled = False
+        else:
+            self.pane.disabled = True
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
 
 
 class LabelEditorPane(pn.reactive.Reactive):
-    @property
-    def labels(self) -> pd.Series:
-        return self.legend.labels
 
-    @labels.setter
-    def labels(self, new_labels: npt.ArrayLike) -> None:
-        self.legend.labels = pd.Series(new_labels)
-
-    @property
-    def selected(self) -> List[int]:
-        return self.new_label_button.selected
-
-    @selected.setter
-    def selected(self, selection: List[int]) -> None:
-        self.new_label_button.selected = selection
+    labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
+    label_color_palette = param.List([], item_type=str, doc="Color palette")
+    label_color_factors = param.List([], item_type=str, doc="Color palette")
+    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
 
     def __init__(
         self,
         labels: npt.ArrayLike,
-        color_factors: List[str],
-        color_palette: Optional[Sequence[str]] = None,
         *,
-        color_picker_width: int = 50,
-        color_picker_height: int = 50,
+        color_factors: Optional[List[str]] = None,
+        color_palette: Optional[Sequence[str]] = None,
+        selectable_legend: bool = False,
+        color_picker_width: int = 48,
+        color_picker_height: int = 36,
         color_picker_margin: Sequence[int] = [1, 5],
-        label_height: int = 50,
+        label_height: int = 36,
         label_width: int = 225,
         label_max_width: int = 225,
         label_min_width: int = 125,
         label_margin: Sequence[int] = [0, 0],
         newlabel_button_type: str = "success",
         newlabel_button_text: str = "New Label",
+        title: str = "#### Label Editor",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
         name: str = "Label Editor",
     ) -> None:
         super().__init__(name=name)
+        self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
+
+        if color_factors is None:
+            color_factors = list(set(labels))
+
         self.legend = LegendPane(
             labels,
-            color_factors,
-            color_palette,
+            factors=color_factors,
+            palette=color_palette,
+            selectable=selectable_legend,
             color_picker_width=color_picker_width,
             color_picker_height=color_picker_height,
             color_picker_margin=color_picker_margin,
@@ -208,6 +272,25 @@ class LabelEditorPane(pn.reactive.Reactive):
             label_margin=label_margin,
         )
         self.new_label_button = NewLabelButton(
-            labels, button_type=newlabel_button_type, button_text=newlabel_button_text,
+            labels,
+            button_type=newlabel_button_type,
+            button_text=newlabel_button_text,
+            width=label_width + color_picker_width,
         )
-        self.new_label.link(self.legend, bidirectional=True, labels="labels")
+        self.legend.link(
+            self,
+            labels="labels",
+            label_color_palette="label_color_palette",
+            label_color_factors="label_color_factors",
+            selected="selected",
+            bidirectional=True,
+        )
+        self.new_label_button.link(
+            self, labels="labels", selected="selected", bidirectional=True,
+        )
+        self.pane = pn.WidgetBox(
+            title, self.legend, self.new_label_button, width=width, height=height
+        )
+
+    def _get_model(self, *args, **kwds):
+        return self.pane._get_model(*args, **kwds)
