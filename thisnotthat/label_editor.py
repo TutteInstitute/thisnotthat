@@ -11,6 +11,61 @@ from typing import *
 
 
 class LegendPane(pn.reactive.Reactive):
+    """An interactive legend with editable label names, and a colour picker for legend item colours. By linking this
+    pane to a PlotPane with regard to ``labels``, ``label_color_palette`` and ``label_color_factors`` you can edit
+    the names of class labels, and alter the colours used in the palette for plotting class labels, while having those
+    changes reflected in the labels themselves. This allows for easy label editing via this legend pane.
+
+    The legend can also be made "selectable" with buttons for selecting items from the legend, with the ``selected``
+    param reflecting that (thus, if ``selected`` is linked to a PlotPane the legend selection will be displayed
+    in the plot)
+
+    Parameters
+    ----------
+    labels: Array of shape (n_samples,)
+        The class labels vector giving the class label of each sample.
+
+    factors: List of str or None (optional, default = [])
+        The different factors (distinct class names) to recognise in the legend and display. If ``None`` the factors
+        will be derived from the ``labels`` array.
+
+    palette: Sequence of str or None (optional, default = None)
+        The color palette to use; the order of colours will be matched to the order of factors to create an
+        initial mapping from factors to colours. If ``None`` a default palette will be used instead. Note that
+        having more colours than factors can be beneficial as new class labels, if created, will take colours
+        from the remaining unused colours in the palette.
+
+    selectable: bool (optional, default = False)
+        Whether to add selection toggle buttons to each legend item, allowing for selections to be made based
+        on class labels in the legend.
+
+    color_picker_width: int (optional, default = 50)
+        The width of the colour picker button used for selecting colours in the editable legend.
+
+    color_picker_height: int (optional, default = 50)
+        The height of the colour picker button used for selecting colours in the editable legend.
+
+    color_picker_margin: List of int (optional, default = [1, 5])
+        The margin of the colour picker button used for selecting colours in the editable legend.
+
+    label_height: int (optional, default = 50)
+        The height of the editable legend class name textboxes used for in the editable legend.
+
+    label_width: int (optional, default = 225)
+        The width of the editable legend class name textboxes used for in the editable legend.
+
+    label_max_width: int (optional, default = 225)
+        The maximum allowable  of the editable legend class name textboxes used for in the editable legend.
+
+    label_min_width: int (optional, default = 125)
+        The minimum allowable width  of the editable legend class name textboxes used for in the editable legend.
+
+    label_margin: List of int (optional, default = [0, 0]
+        The margin of the editable legend class name textboxes used for in the editable legend.
+
+    name: str (optional, default = "Editable Legend")
+        The panel name of the pane. See the panel documentation for more details.
+    """
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
@@ -180,6 +235,27 @@ class LegendPane(pn.reactive.Reactive):
 
 
 class NewLabelButton(pn.reactive.Reactive):
+    """A simple button for generating a new label for use with an editable legend. This simply wraps up a button
+    widget with default options set, and an understanding of selections and labels for connecting with plots and
+    editable legends.
+
+    Parameters
+    ----------
+    labels: Array of shape (n_samples,)
+        The class labels vector giving the class label of each sample.
+
+    button_type: str (optional, default = "success")
+        The panel button type used. See the panel documentation for more details.
+
+    button_text: str (optional, default = "New Label")
+        The text to display on the button.
+
+    width: int or None (optional, default = None)
+        The width of the button. If ``None`` then let the button size itself.
+
+    name: str (optional, default = "New Label")
+        The panel name of the pane. See panel documentation for more details.
+    """
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
@@ -223,6 +299,77 @@ class NewLabelButton(pn.reactive.Reactive):
 
 
 class LabelEditorPane(pn.reactive.Reactive):
+    """A pane for editing class labels, ideally intended to be linked with a PlotPane. The pane itself is composed of
+    an editable legend, and a "new label" button. With the editable legend you can edit the names of class labels,
+    and alter the colours used in the palette for plotting class labels, while having those changes reflected in the
+    labels themselves. The "new label" button is selection aware and can create a new class label based on the
+    current selection. The editable legend is then updated accordingly.
+
+    The legend can also be made "selectable" with buttons for selecting items from the legend, with the ``selected``
+    param reflecting that (thus, if ``selected`` is linked to a PlotPane the legend selection will be displayed
+    in the plot)
+
+    Parameters
+    ----------
+    labels: Array of shape (n_samples,)
+        The class labels vector giving the class label of each sample.
+
+    color_factors: List of str or None (optional, default = [])
+        The different factors (distinct class names) to recognise in the legend and display. If ``None`` the factors
+        will be derived from the ``labels`` array.
+
+    color_palette: Sequence of str or None (optional, default = None)
+        The color palette to use; the order of colours will be matched to the order of factors to create an
+        initial mapping from factors to colours. If ``None`` a default palette will be used instead. Note that
+        having more colours than factors can be beneficial as new class labels, if created, will take colours
+        from the remaining unused colours in the palette.
+
+    selectable_legend: bool (optional, default = False)
+        Whether to add selection toggle buttons to each legend item, allowing for selections to be made based
+        on class labels in the legend.
+
+    color_picker_width: int (optional, default = 50)
+        The width of the colour picker button used for selecting colours in the editable legend.
+
+    color_picker_height: int (optional, default = 50)
+        The height of the colour picker button used for selecting colours in the editable legend.
+
+    color_picker_margin: List of int (optional, default = [1, 5])
+        The margin of the colour picker button used for selecting colours in the editable legend.
+
+    label_height: int (optional, default = 50)
+        The height of the editable legend class name textboxes used for in the editable legend.
+
+    label_width: int (optional, default = 225)
+        The width of the editable legend class name textboxes used for in the editable legend.
+
+    label_max_width: int (optional, default = 225)
+        The maximum allowable  of the editable legend class name textboxes used for in the editable legend.
+
+    label_min_width: int (optional, default = 125)
+        The minimum allowable width  of the editable legend class name textboxes used for in the editable legend.
+
+    label_margin: List of int (optional, default = [0, 0]
+        The margin of the editable legend class name textboxes used for in the editable legend.
+
+    newlabel_button_type: str (optional, default = "success")
+        The panel button type used. See the panel documentation for more details.
+
+    newlabel_button_text: str (optional, default = "New Label")
+        The text to display on the button.
+
+    title: str (optional, default = "#### Label Editor")
+        A markdown title to be placed at the top of the pane.
+
+    width: int or None (optional, default = None)
+        The width of the pane, or, if ``None`` let the pane size itself.
+
+    height: int or None (optional, default = None)
+        The height of the pane, or, if ``None`` let the pane size itself.
+
+    name: str (optional, default = "Label Editor")
+        The panel name of the pane. See panel documentation for more details.
+    """
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     label_color_palette = param.List([], item_type=str, doc="Color palette")
@@ -286,7 +433,10 @@ class LabelEditorPane(pn.reactive.Reactive):
             bidirectional=True,
         )
         self.new_label_button.link(
-            self, labels="labels", selected="selected", bidirectional=True,
+            self,
+            labels="labels",
+            selected="selected",
+            bidirectional=True,
         )
         self.pane = pn.WidgetBox(
             title, self.legend, self.new_label_button, width=width, height=height
