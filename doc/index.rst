@@ -26,9 +26,14 @@ to build out features and make it easier to use.
    :maxdepth: 2
    :caption: Tutorials:
 
+   metadata_cluster_labels
+   joint_vector_cluster_labels
+
 .. toctree::
    :maxdepth: 2
    :caption: API:
+
+   api
 
 Indices and tables
 ==================
