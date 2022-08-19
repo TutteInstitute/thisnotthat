@@ -4,3 +4,7 @@ ipykernel
 nbsphinx
 panel
 bokeh
+scikit-learn
+umap-learn
+hdbscan
+apricot-select
