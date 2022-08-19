@@ -67,8 +67,7 @@ class SearchPane(pn.reactive.Reactive):
         self.query_button = pn.widgets.Button(name="Search", button_type="success")
         self.query_button.on_click(self._run_query)
         self.columns_to_search = pn.widgets.MultiChoice(
-            name="Columns to search (all if empty)",
-            options=self.data.columns.tolist(),
+            name="Columns to search (all if empty)", options=self.data.columns.tolist(),
         )
         self.query_style_selector.param.watch(self._query_style_change, "value")
         self.warning_area = pn.pane.Alert("", alert_type="light")
@@ -156,3 +155,18 @@ class SearchPane(pn.reactive.Reactive):
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(plot, selected="selected", bidirectional=True)

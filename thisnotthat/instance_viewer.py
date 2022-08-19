@@ -100,3 +100,18 @@ class InformationPane(pn.reactive.Reactive):
                 col: self.data[col].iloc[self.selected[-1]] for col in self.data.columns
             }
             self.markdown.object = self.markdown_template.format(**substitution_dict)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(plot, selected="selected", bidirectional=True)

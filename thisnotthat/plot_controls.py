@@ -227,3 +227,25 @@ class PlotControlPane(pn.reactive.Reactive):
     def _reapply_changes(self, event):
         self._apply_changes(None)
         self._apply_changes(None)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(
+            plot,
+            color_by_vector="color_by_vector",
+            color_by_palette="color_by_palette",
+            hover_text="hover_text",
+            marker_size="marker_size",
+            bidirectional=True,
+        )

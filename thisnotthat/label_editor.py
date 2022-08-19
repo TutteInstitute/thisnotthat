@@ -433,10 +433,7 @@ class LabelEditorPane(pn.reactive.Reactive):
             bidirectional=True,
         )
         self.new_label_button.link(
-            self,
-            labels="labels",
-            selected="selected",
-            bidirectional=True,
+            self, labels="labels", selected="selected", bidirectional=True,
         )
         self.pane = pn.WidgetBox(
             title, self.legend, self.new_label_button, width=width, height=height
@@ -444,3 +441,25 @@ class LabelEditorPane(pn.reactive.Reactive):
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(
+            plot,
+            labels="labels",
+            label_color_factors="label_color_factors",
+            label_color_palette="label_color_palette",
+            selected="selected",
+            bidirectional=True,
+        )

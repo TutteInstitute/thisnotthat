@@ -171,3 +171,18 @@ class DataPane(pn.reactive.Reactive):
             self.table.value = self.data.iloc[self.selected]
         else:
             self.table.value = self.data
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(plot, labels="labels", selected="selected", bidirectional=True)
