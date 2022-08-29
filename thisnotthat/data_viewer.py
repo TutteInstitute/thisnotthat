@@ -43,7 +43,7 @@ class DataPane(pn.reactive.Reactive):
         or the tabulator documentation for further details.
 
     header_align: str or dict (optional, default = "center")
-        A string specifying alignment of headers, or a dictionary specifying alignment on a per column basis.
+        A string specifying alignment of headers, or a dictionary specifying alignment on a per-column basis.
 
     hidden_columns: list of str (optional, default = [])
         The column names of columns to be hidden/suppressed.

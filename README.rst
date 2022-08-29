@@ -44,12 +44,19 @@ interactive web applications.
 Installing
 ----------
 
-This Not That is built on top of Panel and Bokeh, so you will need these installed.
+This Not That is built on top of Panel and Bokeh, so you will need these installed. In all you will need:
+
+* panel
+* bokeh
+* numpy >= 1.22
+* pandas
+* scikit-learn
+* matplotlib
+* umap-learn
+* hdbscan
 
 We also highly recommend installing:
 
-* umap-learn
-* hdbscan
 * networkx
 * apricot-select
 
