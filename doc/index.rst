@@ -22,6 +22,10 @@ to build out features and make it easier to use.
    :maxdepth: 2
    :caption: Quick Start:
 
+   installing
+   using_notebooks
+   deploying_apps
+
 .. toctree::
    :maxdepth: 2
    :caption: User Guide:
