@@ -124,5 +124,49 @@ information.
 Search and Data Views
 ---------------------
 
+To make exploration easier, and provide richer access to underlying data, it can be beneficial to have
+views of the source data that are linked to the plot, and the ability to search the data and see the
+results show up on the plot. TNT provides utilities to do this.
+
+Suppose we have some source data which we can format in a dataframe called ``source_data``. We can have a table view
+of the dataframe that is linked, via selections, to the plot. To add a table view under the plot
+we might use:
+
+.. code:: python3
+
+    data_view = tnt.DataPane(source_data)
+    data_view.link_to_plot(map_plot)
+    pn.Column(map_plot, data_view)
+
+If, instead we want to have a richer representation of individual selected points (perhaps your
+source data contains complex text for example), you can an information panel which can use a
+markdown template and fields from the dataframe. For example we might use something like:
+
+.. code:: python3
+
+    info_view = tnt.InformationPane(
+        source_data,
+        """# {title_text}
+
+    {body_text}
+        """
+    )
+    info_view.link_to_plot(map_plot)
+    pn.Row(map_plot, info_view)
+
+where ``title_text`` and ``body_text`` are column names in the ``source_data`` dataframe. The
+markdown can, of course, be more complicated, and format any number of fields from the dataframe.
+
+Finally it can be very useful to be able to search for data from the ``source_data`` representation
+and see that search reflected in the data map. For that we have the :py:class:`~thisnotthat.SearchPane`
+which enables this. A simple example might look like:
+
+.. code:: python3
+
+    search_pane = tnt.SearchPane(source_data)
+    search_pane.link_to_plot(map_plot)
+    pn.Row(map_plot, search_pane)
+
+
 .. _Panel installation instructions: https://panel.holoviz.org/getting_started/index.html#jupyterlab-and-classic-notebook
 .. _Params:
