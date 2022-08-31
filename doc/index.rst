@@ -30,6 +30,8 @@ to build out features and make it easier to use.
    :maxdepth: 2
    :caption: User Guide:
 
+   basic_concepts
+
 .. toctree::
    :maxdepth: 2
    :caption: Tutorials:
