@@ -86,17 +86,17 @@ way will not usually result in perfect labels, but it can get a lot of broad bru
 very quickly that can then be fine tuned with more careful labelling after the fact. Alternatively
 it can simply be used to tag clusters of points for later triage or more detailed inspection or
 labelling (or as irrelevant, or to be discarded). The key to getting this done is the
-:py:class:`~thisnotthat.LabelEditorPane` which supports editing an initial labelling, and
+:py:class:`~thisnotthat.LabelEditorWidget` which supports editing an initial labelling, and
 adding new labels based on the current selection in the plot.
 
-To create a :py:class:`~thisnotthat.LabelEditorPane` you need to pass it an initial set of labels --
+To create a :py:class:`~thisnotthat.LabelEditorWidget` you need to pass it an initial set of labels --
 a list of vector of strings, one for each point in the map. This can simply be a sequence of strings
 ``"unlabelled"`` or similar if you wish. You can even use the ``labels`` attribute of the ``PlotPane``
 if you wish. Thus assuming we have a plot pane as above we could use
 
 .. code:: python3
 
-    label_editor = tnt.LabelEditorPane(map_plot.labels)
+    label_editor = tnt.LabelEditorWidget(map_plot.labels)
 
 You can then display the plot and the label editor inline in the notebook with
 
@@ -106,7 +106,7 @@ You can then display the plot and the label editor inline in the notebook with
 
 Unfortunately this will note (yet) let you edit the plot labelling via the label editor -- we need
 to link up the param attributes from the plot and the label editor. The easiest way to do this is
-to use the :py:method:`~thisnotthat.LabelEditorPane.link_to_plot` method:
+to use the :py:method:`~thisnotthat.LabelEditorWidget.link_to_plot` method:
 
 .. code:: python3
 
@@ -158,12 +158,12 @@ where ``title_text`` and ``body_text`` are column names in the ``source_data`` d
 markdown can, of course, be more complicated, and format any number of fields from the dataframe.
 
 Finally it can be very useful to be able to search for data from the ``source_data`` representation
-and see that search reflected in the data map. For that we have the :py:class:`~thisnotthat.SearchPane`
+and see that search reflected in the data map. For that we have the :py:class:`~thisnotthat.SearchWidget`
 which enables this. A simple example might look like:
 
 .. code:: python3
 
-    search_pane = tnt.SearchPane(source_data)
+    search_pane = tnt.SearchWidget(source_data)
     search_pane.link_to_plot(map_plot)
     pn.Row(map_plot, search_pane)
 

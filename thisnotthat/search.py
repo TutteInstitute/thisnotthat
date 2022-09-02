@@ -7,7 +7,7 @@ import numpy.typing as npt
 from typing import *
 
 
-class SearchPane(pn.reactive.Reactive):
+class SearchWidget(pn.reactive.Reactive):
     """A search pane that can be used to search for samples in a dataframe and select matching samples. If linked with
     a PlotPane this allows for search results to be selected in the plot for efficient visual representations of
     searches.

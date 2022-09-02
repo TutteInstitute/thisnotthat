@@ -25,7 +25,7 @@ method on the layout. For example we might have:
     )
     data_view = tnt.DataPane(source_data)
     data_view.link_to_plot(map_plot)
-    search_pane = tnt.SearchPane(source_data)
+    search_pane = tnt.SearchWidget(source_data)
     search_pane.link_to_plot(map_plot)
     app = pn.Column(pn.Row(map_plot, search_pane), data_view)
     app.servable()

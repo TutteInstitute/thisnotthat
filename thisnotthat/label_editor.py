@@ -10,7 +10,7 @@ from .utils import _palette_index
 from typing import *
 
 
-class LegendPane(pn.reactive.Reactive):
+class LegendWidget(pn.reactive.Reactive):
     """An interactive legend with editable label names, and a colour picker for legend item colours. By linking this
     pane to a PlotPane with regard to ``labels``, ``label_color_palette`` and ``label_color_factors`` you can edit
     the names of class labels, and alter the colours used in the palette for plotting class labels, while having those
@@ -298,7 +298,7 @@ class NewLabelButton(pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwds)
 
 
-class LabelEditorPane(pn.reactive.Reactive):
+class LabelEditorWidget(pn.reactive.Reactive):
     """A pane for editing class labels, ideally intended to be linked with a PlotPane. The pane itself is composed of
     an editable legend, and a "new label" button. With the editable legend you can edit the names of class labels,
     and alter the colours used in the palette for plotting class labels, while having those changes reflected in the
@@ -404,7 +404,7 @@ class LabelEditorPane(pn.reactive.Reactive):
         if color_factors is None:
             color_factors = list(set(labels))
 
-        self.legend = LegendPane(
+        self.legend = LegendWidget(
             labels,
             factors=color_factors,
             palette=color_palette,

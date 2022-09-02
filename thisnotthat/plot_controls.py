@@ -9,7 +9,7 @@ import bisect
 from typing import *
 
 
-class PlotControlPane(pn.reactive.Reactive):
+class PlotControlWidget(pn.reactive.Reactive):
     """A Pane that provides access to control various properties of a PlotPane, including the point colour mapping,
     the palette used for colour mapping, the marker size, and the hover text, all based on a dataframe of data 
     associated to points in the plot.
@@ -23,7 +23,7 @@ class PlotControlPane(pn.reactive.Reactive):
     ----------
     raw_dataframe: DataFrame
         The dataframe of associated metadata. The dataframe should have one row for each point in the plot, in the
-        same order as the points in the plot. The ``PlotControlPane`` will use dtypes of columns and column names
+        same order as the points in the plot. The ``PlotControlWidget`` will use dtypes of columns and column names
         of this dataframe to populate a variety of selectors that can be linked to a plot.
 
     width: int or None (optional, default = None)

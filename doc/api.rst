@@ -23,16 +23,16 @@ Data Panes
 .. autoclass:: thisnotthat.data_viewer.DataPane
    :members:
 
-Search and Edit Panes
----------------------
+Search and Edit Widgets
+-----------------------
 
-.. autoclass:: thisnotthat.search.SearchPane
+.. autoclass:: thisnotthat.search.SearchWidget
    :members:
 
-.. autoclass:: thisnotthat.label_editor.LabelEditorPane
+.. autoclass:: thisnotthat.label_editor.LabelEditorWidget
    :members:
 
-.. autoclass:: thisnotthat.plot_controls.PlotControlPane
+.. autoclass:: thisnotthat.plot_controls.PlotControlWidget
    :members:
 
 
