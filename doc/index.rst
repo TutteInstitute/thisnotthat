@@ -31,6 +31,7 @@ to build out features and make it easier to use.
    :caption: User Guide:
 
    basic_concepts
+   building_panels
 
 .. toctree::
    :maxdepth: 2
