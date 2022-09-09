@@ -70,7 +70,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "hover_text": hover_text if hover_text is not None else labels,
                 "size": marker_size
                 if marker_size is not None
-                else np.full(data.shape[0], 0.1),
+                else np.full(len(data), 0.1),
             }
         )
 
@@ -136,7 +136,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         zoom = MAGIC_ZOOM_CONSTANT - np.log2(view_size)
         self._base_radius = view_size * self.brush_radius
         self._base_marker_size = (
-            marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
+            marker_size if marker_size is not None else np.full(len(data), 0.1)
         )
         self._base_hover_text = hover_text if hover_text is not None else labels
         self._base_hover_is_labels = hover_text is None

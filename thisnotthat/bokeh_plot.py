@@ -319,7 +319,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if labels is None:
             labels = ["unlabelled"] * len(data)
         if type(marker_size) in (int, float):
-            marker_size = np.full(data.shape[0], marker_size, dtype=np.float64)
+            marker_size = np.full(len(data), marker_size, dtype=np.float64)
 
         self.data_source = bokeh.models.ColumnDataSource(
             {
@@ -332,7 +332,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 else np.full(len(data), 0.1),
                 "apparent_size": marker_size
                 if marker_size is not None
-                else np.full(data.shape[0], 0.1),
+                else np.full(len(data), 0.1),
                 "color_by": np.zeros(len(data), dtype=np.int8),
             }
         )
