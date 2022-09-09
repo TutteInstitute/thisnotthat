@@ -329,17 +329,17 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "hover_text": hover_text if hover_text is not None else labels,
                 "size": marker_size
                 if marker_size is not None
-                else np.full(data.shape[0], 0.1),
+                else np.full(len(data), 0.1),
                 "apparent_size": marker_size
                 if marker_size is not None
                 else np.full(data.shape[0], 0.1),
-                "color_by": np.zeros(data.shape[0], dtype=np.int8),
+                "color_by": np.zeros(len(data), dtype=np.int8),
             }
         )
         self.data_source.selected.on_change("indices", self._update_selected)
 
         self._base_marker_size = pd.Series(
-            marker_size if marker_size is not None else np.full(data.shape[0], 0.1)
+            marker_size if marker_size is not None else np.full(len(data), 0.1)
         )
         if marker_scale_factor is None:
             self._base_marker_scale = np.mean(self._base_marker_size)
