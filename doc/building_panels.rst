@@ -20,8 +20,8 @@ functionality and performance. Choosing the right PlotPane type for your task wi
 go a long way toward making your Panel effective. Currently TNT supports the following
 PlotPane types:
 
-* :py:class:`~thisnotthat.BokehPlotPane`
-* :py:class:`~thisnotthat.DeckglPlotPane`
+* :py:class:`~BokehPlotPane`
+* :py:class:`~DeckglPlotPane`
 
 and we hope that more can be added in the future. The API documentation for each PlotPane
 type will provide the most details on the capabilities of the PlotPanes, but here is a useful
