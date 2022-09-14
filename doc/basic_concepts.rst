@@ -106,3 +106,6 @@ in Panel, and you can even make use of `templates`_ for more polished apps.
 .. _linking docs: https://panel.holoviz.org/user_guide/Links.html
 .. _layout options: https://panel.holoviz.org/reference/index.html#layouts
 .. _templates: https://panel.holoviz.org/user_guide/Templates.html
+.. _Row: https://panel.holoviz.org/reference/layouts/Row.html
+.. _Column: https://panel.holoviz.org/reference/layouts/Column.html
+.. _GridSpec: https://panel.holoviz.org/reference/layouts/GridSpec.html

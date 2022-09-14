@@ -8,3 +8,5 @@ scikit-learn
 umap-learn
 hdbscan
 apricot-select
+numpydoc
+git+https://github.com/lmcinnes/param_docs

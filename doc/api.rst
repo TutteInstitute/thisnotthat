@@ -1,39 +1,41 @@
 TNT API Guide
 =============
 
-TNT Provides a number of different Pane classes that can be combined and
+TNT Provides a number of different Pane adn Widget classes that can be combined and
 linked in various ways. The core Panes are the Plot Panes, with various
-associated other panes.
+associated other panes and widgets.
+
+.. currentmodule:: thisnotthat
 
 Plot Panes
 ----------
 
-.. autoclass:: thisnotthat.bokeh_plot.BokehPlotPane
-   :members:
+.. autoclass:: BokehPlotPane
+   :members: add_cluster_labels
 
-.. autoclass:: thisnotthat.deck_plot.DeckglPlotPane
-   :members:
+.. autoclass:: DeckglPlotPane
+   :members: add_cluster_labels
 
 Data Panes
 ----------
 
-.. autoclass:: thisnotthat.instance_viewer.InformationPane
-   :members:
+.. autoclass:: InformationPane
+   :members: link_to_plot
 
-.. autoclass:: thisnotthat.data_viewer.DataPane
-   :members:
+.. autoclass:: DataPane
+   :members: link_to_plot
 
 Search and Edit Widgets
 -----------------------
 
-.. autoclass:: thisnotthat.search.SearchWidget
-   :members:
+.. autoclass:: SearchWidget
+   :members: link_to_plot
 
-.. autoclass:: thisnotthat.label_editor.LabelEditorWidget
-   :members:
+.. autoclass:: LabelEditorWidget
+   :members: link_to_plot
 
-.. autoclass:: thisnotthat.plot_controls.PlotControlWidget
-   :members:
+.. autoclass:: PlotControlWidget
+   :members: link_to_plot
 
 
 Finally TNT provides tools for annotating plots with cluster labels.
@@ -44,3 +46,5 @@ Cluster Labelling Methods
 
 .. automodule:: thisnotthat.map_cluster_labelling
    :members:
+
+
