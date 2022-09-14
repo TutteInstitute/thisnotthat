@@ -32,6 +32,9 @@ to build out features and make it easier to use.
 
    basic_concepts
    building_panels
+   data_pane
+   info_pane
+   search_widget
 
 .. toctree::
    :maxdepth: 2
