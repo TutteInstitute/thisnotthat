@@ -34,7 +34,7 @@ master_doc = "index"
 
 
 def setup(app):
-    app.connect("autodoc-process-docstring", param_format_basic, priority=-100)
+    app.connect("autodoc-process-docstring", param_format_basic, priority=-200)
 
 
 # -- General configuration ---------------------------------------------------

@@ -1,9 +1,9 @@
 TNT API Guide
 =============
 
-TNT Provides a number of different Pane classes that can be combined and
+TNT Provides a number of different Pane adn Widget classes that can be combined and
 linked in various ways. The core Panes are the Plot Panes, with various
-associated other panes.
+associated other panes and widgets.
 
 .. currentmodule:: thisnotthat
 
