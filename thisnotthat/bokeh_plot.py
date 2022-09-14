@@ -460,7 +460,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             }
             source.change.emit();
             """
-                % (max_point_size, max_point_size, min_point_size, min_point_size),
+                % (max_point_size, max_point_size, min_point_size, min_point_size),  # type: ignore
             )
             self.plot.x_range.js_on_change("start", circle_resize_callback)
 
