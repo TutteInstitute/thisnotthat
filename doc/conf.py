@@ -16,6 +16,10 @@ import sys
 sys.path.insert(0, os.path.abspath(".."))
 sys.path.insert(0, os.path.abspath("."))
 
+import param_docs
+from param_docs.paramdoc import param_format_basic, print_lines
+import param
+import numpydoc
 
 # -- Project information -----------------------------------------------------
 
@@ -29,7 +33,12 @@ release = "0.2"
 master_doc = "index"
 
 
+def setup(app):
+    app.connect("autodoc-process-docstring", param_format_basic, priority=-100)
+
+
 # -- General configuration ---------------------------------------------------
+autodoc_member_order = "bysource"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -39,7 +48,12 @@ extensions = [
     "sphinx.ext.intersphinx",
     "nbsphinx",
     "sphinx.ext.mathjax",
+    "numpydoc",
 ]
+
+# this is needed for some reason...
+# see https://github.com/numpy/numpydoc/issues/69
+numpydoc_show_class_members = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
