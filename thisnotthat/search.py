@@ -7,7 +7,33 @@ import numpy.typing as npt
 from typing import *
 
 
-class SearchPane(pn.reactive.Reactive):
+class SearchWidget(pn.reactive.Reactive):
+    """A search pane that can be used to search for samples in a dataframe and select matching samples. If linked with
+    a PlotPane this allows for search results to be selected in the plot for efficient visual representations of
+    searches.
+
+    The basic search pane provides three search modes: via string matching (potentially in a restricted set of
+    columns in the dataframe), via regular expressions (again, potentially of selected columsn only) or by applying
+    a query against the dataframe using the pandas ``query`` syntax.
+
+    Parameters
+    ----------
+    raw_dataframe: DataFrame
+        The dataframe to associate with data in a map representation in a PlotPane. The dataframe should have one row
+        per sample in the map representation, and be in the same order as the data in the map representation.
+
+    title: str (optional, default = "#### Search")
+        A markdown title to be placed at the top of the pane.
+
+    width: int or None (optional, default = None)
+        The width of the pane, or, if ``None`` let the pane size itself.
+
+    height: int or None (optional, default = None)
+        The height of the pane, or, if ``None`` let the pane size itself.
+
+    name: str (optional, default = "Label Editor")
+        The panel name of the pane. See panel documentation for more details.
+    """
 
     selected = param.List(default=[], doc="Indices of selected samples")
     data = param.DataFrame(doc="Source data")
@@ -129,3 +155,18 @@ class SearchPane(pn.reactive.Reactive):
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(plot, selected="selected", bidirectional=True)

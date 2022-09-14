@@ -9,7 +9,35 @@ import bisect
 from typing import *
 
 
-class PlotControlPane(pn.reactive.Reactive):
+class PlotControlWidget(pn.reactive.Reactive):
+    """A Pane that provides access to control various properties of a PlotPane, including the point colour mapping,
+    the palette used for colour mapping, the marker size, and the hover text, all based on a dataframe of data 
+    associated to points in the plot.
+    
+    This is particularly useful when data has a vector representation, which has been converted to map representation
+    and plotted, but also has a potentially large amount of metadata associated to each sample. This metadata can be 
+    formatted in a dataframe, and used to quickly recolour the plot, or resize markers, based on different features
+    of the metadata to gain an understanding of how the different metadata features are reflected in the map.
+
+    Parameters
+    ----------
+    raw_dataframe: DataFrame
+        The dataframe of associated metadata. The dataframe should have one row for each point in the plot, in the
+        same order as the points in the plot. The ``PlotControlWidget`` will use dtypes of columns and column names
+        of this dataframe to populate a variety of selectors that can be linked to a plot.
+
+    width: int or None (optional, default = None)
+        The width of the pane. If ``None`` the pane will size itself based on its contents.
+
+    height: int or None (optional, default = None)
+        The height of the pane. If ``None`` the pane will size itself based on its contents.
+
+    title: str (optional, default = "#### Plot Controls")
+        A title (in markdown) to place at the top of the pane.
+
+    name: str (optional, default = "Plot Controls")
+        The panel name of the pane. See panel documentation for more details.
+    """
 
     color_by_vector = param.Series(doc="Color by")
     color_by_palette = param.List([], item_type=str, doc="Color by palette")
@@ -195,7 +223,29 @@ class PlotControlPane(pn.reactive.Reactive):
 
         self.apply_changes.disabled = True
 
-    # I have no idea why, but thjis fixes issues with marker size changes in plots. Don't ask
+    # I have no idea why, but this fixes issues with marker size changes in plots. Don't ask
     def _reapply_changes(self, event):
         self._apply_changes(None)
         self._apply_changes(None)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(
+            plot,
+            color_by_vector="color_by_vector",
+            color_by_palette="color_by_palette",
+            hover_text="hover_text",
+            marker_size="marker_size",
+            bidirectional=True,
+        )

@@ -9,6 +9,74 @@ from typing import *
 
 
 class DataPane(pn.reactive.Reactive):
+    """A dataframe viewer that can be linked to a PlotPane based on selections and labels. The pane is essentially a 
+    wrapper around the panel tabulator widget to make selection handling back and forth between the table and a 
+    PlotPane easy, as well as providing built in support for working with labels. It also provides built in
+    tolling for downloading a selected dataset for further triage.
+    
+    This pane is best used as an accompaniment to a PlotPane, allowing a user to easily go from selections of interesting
+    regions in data map representation back to the source data, or other associated metadata.
+
+    Parameters
+    ----------
+    raw_dataframe: DataFrame
+        The dataframe to associate with data in a map representation in a PlotPane. The dataframe should have one row
+        per sample in the map representation, and be in the same order as the data in the map representation.
+
+    labels: Array of shape (n_samples,) or None (optional, default None)
+        If there are class labels associated to the data, they can be passed in here; they will be appended as a new
+        column to the dataframe, and exposed as a param of the pane -- so labels edited with the label editor will
+        automatically get updated in the data view.
+
+    width: int (optional, default = 600)
+        The width of the data pane.
+
+    height: int (optional, default = 600)
+        The height of the data pane.
+
+    tabulator_configuration: dict (optional, default = {})
+        A dictionary of tabulator configuration. See panel's tabulator pane documentation, or the tabulator
+        documentation for further details.
+
+    formatters: dict (optional, default = {})
+        A dictionary of how tabulator should format data in each column. See panel's tabulator pane documentation,
+        or the tabulator documentation for further details.
+
+    header_align: str or dict (optional, default = "center")
+        A string specifying alignment of headers, or a dictionary specifying alignment on a per-column basis.
+
+    hidden_columns: list of str (optional, default = [])
+        The column names of columns to be hidden/suppressed.
+
+    layout: str (optional, default = "fit_data_table")
+        Layout handling for the tabulator table. See panel's tabulator pane documentation,  or the tabulator
+        documentation for further details.
+
+    frozen_columns: list of str (optional, default = [])
+        The column names of columns to keep frozen (always visible).
+
+    page_size: int (optional, default = 20)
+        The data table is broken up into pages; this is the number of rows to appear in each page.
+
+    row_height: int (optional, default = 30)
+        The height of rows in the data table.
+
+    show_index: bool (optional, default = True)
+        Show the dataframe row index in the table.
+
+    sorters: list of dicts (optional, default = [])
+        How to handle sorting in the table. See panel's tabulator pane documentation,  or the tabulator
+        documentation for further details.
+
+    theme: str (optional, default = "materialize")
+        The tabulator theme to use for the table. See the tabulator documentation for more details.
+
+    widths: dict (optional, default = {})
+        A dictionary giving the widths of each column (keyed by column name).
+
+    name: dtr (optional, default = "Data Table")
+        The panel name for the pane. See the panel documentation for more details.
+    """
 
     labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
     selected = param.List(default=[], doc="Indices of selected samples")
@@ -39,7 +107,10 @@ class DataPane(pn.reactive.Reactive):
         if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
             self.data = raw_dataframe.copy()
         else:
-            self.data = raw_dataframe.reset_index()
+            self.data = raw_dataframe.reset_index().rename(
+                columns={"index": "original_index"}
+            )
+        self.data.index.name = "row_num"
 
         self._base_selection: List[int] = []
         self.table = pn.widgets.Tabulator(
@@ -103,3 +174,18 @@ class DataPane(pn.reactive.Reactive):
             self.table.value = self.data.iloc[self.selected]
         else:
             self.table.value = self.data
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(plot, labels="labels", selected="selected", bidirectional=True)

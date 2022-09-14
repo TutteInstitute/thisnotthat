@@ -1,15 +1,14 @@
 name: thisnotthat
 dependencies:
   - python>=3.7
-  - ipykernel
-  - ipywidgets
-  - numpy
+  - panel
+  - bokeh
+  - numpy>=1.22
+  - pandas
+  - matplotlib
+  - umap-learn
+  - hdbscan
   - setuptools
-  - conda-forge::bqplot
-  - flake8
-  - mypy
-  - pytest
-  - scipy
   - pip
   - pip:
       - -e .
