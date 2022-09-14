@@ -107,7 +107,10 @@ class DataPane(pn.reactive.Reactive):
         if np.all(raw_dataframe.index.array == np.arange(len(raw_dataframe))):
             self.data = raw_dataframe.copy()
         else:
-            self.data = raw_dataframe.reset_index()
+            self.data = raw_dataframe.reset_index().rename(
+                columns={"index": "original_index"}
+            )
+        self.data.index.name = "row_num"
 
         self._base_selection: List[int] = []
         self.table = pn.widgets.Tabulator(
