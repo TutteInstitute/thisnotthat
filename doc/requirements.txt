@@ -9,4 +9,5 @@ umap-learn
 hdbscan
 apricot-select
 numpydoc
+pandas
 git+https://github.com/lmcinnes/param_docs
