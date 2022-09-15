@@ -4,6 +4,9 @@ ipykernel
 nbsphinx
 panel
 bokeh
+numpy>=1.22
+param
+matplotlib
 scikit-learn
 umap-learn
 hdbscan
