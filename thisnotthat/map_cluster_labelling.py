@@ -1211,6 +1211,11 @@ class SampleLabelLayers(object):
             * ``"saturated_coverage"``
             * ``"random"``
 
+    sample_weights: Array of shape (n_samples,)
+        An array of weights to apply to each sample. Higher weight samples may be more likely to be selected. This is
+        only supported for some selection methods (random selection does support it). Check the apricot-select
+        documentation for more details.
+
     umap_n_components:
         The number of dimensions to use UMAP to reduce to if ``cluster_map_representation`` is ``False``.
 
@@ -1289,6 +1294,7 @@ class SampleLabelLayers(object):
         vector_metric: str = "cosine",
         cluster_map_representation: bool = False,
         sample_selection_method: str = "facility_location",
+        sample_weights: Optional[npt.ArrayLike] = None,
         umap_n_components: int = 5,
         umap_n_neighbors: int = 15,
         hdbscan_min_samples: int = 10,
@@ -1363,6 +1369,7 @@ class SampleLabelLayers(object):
             sample_selection_method=sample_selection_method,
             items_per_label=items_per_label,
             vector_metric=vector_metric,
+            sample_weights=sample_weights,
             random_state=random_state,
         )
         self.label_formatter = label_formatter
