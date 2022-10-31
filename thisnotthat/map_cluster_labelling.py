@@ -1369,7 +1369,7 @@ class SampleLabelLayers(object):
             sample_selection_method=sample_selection_method,
             items_per_label=items_per_label,
             vector_metric=vector_metric,
-            sample_weights=sample_weights,
+            sample_weights=np.asarray(sample_weights),
             random_state=random_state,
         )
         self.label_formatter = label_formatter
