@@ -792,7 +792,7 @@ def text_labels_from_per_sample_labels(
             vector_selection, label_selection = selector.fit_transform(
                 source_vectors[cluster_with_exclusion],
                 labels_per_sample[cluster_with_exclusion],
-                sample_weights=sample_weights,
+                sample_weights=sample_weights[cluster_with_exclusion],
             )
             indices = np.where(np.isin(labels_per_sample, label_selection))[0]
             excluded_indices.update(indices)
