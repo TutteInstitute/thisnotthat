@@ -90,10 +90,11 @@ class PlotControlWidget(pn.reactive.Reactive):
             self._options_changed, "value", onlychanged=True
         )
         self.color_by_scale_selector = pn.Row(
-            pn.widgets.StaticText(value="Scale type", align="center", margin=[5, 5]),
+            pn.widgets.StaticText(value="Scale type", align="center", margin=[5, 0]),
             pn.widgets.ToggleGroup(
                 name="Color by scale", options=["Linear", "Log", "Sqrt"], behavior="radio", value="Linear"
             ),
+            margin=[0, 10],
             visible=scale_type_selector
         )
         self.hover_text_column = pn.widgets.Select(
@@ -112,10 +113,11 @@ class PlotControlWidget(pn.reactive.Reactive):
             self._options_changed, "value", onlychanged=True
         )
         self.marker_size_scale_selector = pn.Row(
-            pn.widgets.StaticText(value="Scale type", align="center", margin=[5, 5]),
+            pn.widgets.StaticText(value="Scale type", align="center", margin=[5, 0]),
             pn.widgets.ToggleGroup(
                 name="Marker size scale", options=["Linear", "Log", "Sqrt"], behavior="radio", value="Linear"
             ),
+            margin=[0, 10],
             visible=scale_type_selector
         )
         self.apply_changes = pn.widgets.Button(
