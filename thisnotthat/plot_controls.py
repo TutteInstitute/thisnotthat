@@ -138,7 +138,7 @@ class PlotControlWidget(pn.reactive.Reactive):
             pn.layout.Divider(margin=[0, 10, 0, 10], height=2),
             self.marker_size_column,
             self.marker_size_scale_selector,
-            pn.layout.Divider(margin=[0, 10, 0 10], height=2),
+            pn.layout.Divider(margin=[0, 10, 0, 10], height=2),
             self.hover_text_column,
             pn.layout.Divider(margin=[0, 10, 0, 10], height=2),
             self.apply_changes,
