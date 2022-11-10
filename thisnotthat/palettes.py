@@ -18,7 +18,6 @@ from typing import *
 from numpy import linspace
 from string import capwords
 from .utils import _palette_index
-from sklearn.utils import check_random_state
 
 _ALT_NAMES = {}
 for full_name in colorcet.aliases:
@@ -31,11 +30,14 @@ all_palettes = set(
     + list(bokeh.palettes.all_palettes.keys())
 )
 
-suggested_palettes = (
+suggested_categorical_palettes = (
     "glasbey_category10",
     "tab10",
     "Set1",
-    "spectral",
+    "glasbey",
+)
+
+suggested_continuous_palettes = (
     "viridis",
     "magma",
     "gouldian",
@@ -43,6 +45,7 @@ suggested_palettes = (
     "mako",
     "rocket",
     "haline",
+    "spectral",
 )
 
 
