@@ -455,6 +455,9 @@ class LabelEditorWidget(pn.reactive.Reactive):
         link:
             The link object.
         """
+        self.labels = plot.labels
+        self.label_color_factors = plot.label_color_factors
+        self.label_color_palette = plot.label_color_palette
         return self.link(
             plot,
             labels="labels",
