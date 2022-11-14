@@ -458,6 +458,7 @@ class LabelEditorWidget(pn.reactive.Reactive):
         self.labels = plot.labels
         self.label_color_factors = plot.label_color_factors
         self.label_color_palette = plot.label_color_palette
+        self.legend._rebuild_pane()
         return self.link(
             plot,
             labels="labels",
