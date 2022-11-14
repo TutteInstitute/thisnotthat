@@ -180,7 +180,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     palette_shuffle: bool (optional, default = False)
         Whether to shuffle the palette. If using a continuous palette for categorical labels this should be set
-        to ``True`` to try to provide as much distinguishability between colouts as possible.
+        to ``True`` to try to provide as much distinguishability between colours as possible.
 
     width: int (optional, default = 600)
         Width of the plot figure. Note that this includes space for the legend if ``show_legend`` is ``True``,

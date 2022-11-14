@@ -3,8 +3,9 @@ import param
 import pandas as pd
 import numpy as np
 import numpy.typing as npt
-from bokeh.palettes import Turbo256
+from glasbey import extend_palette
 
+from .palettes import get_palette
 from .utils import _palette_index
 
 from typing import *
@@ -29,11 +30,21 @@ class LegendWidget(pn.reactive.Reactive):
         The different factors (distinct class names) to recognise in the legend and display. If ``None`` the factors
         will be derived from the ``labels`` array.
 
-    palette: Sequence of str or None (optional, default = None)
-        The color palette to use; the order of colours will be matched to the order of factors to create an
-        initial mapping from factors to colours. If ``None`` a default palette will be used instead. Note that
-        having more colours than factors can be beneficial as new class labels, if created, will take colours
-        from the remaining unused colours in the palette.
+    palette: str or Sequence of str or None (optional, default = None)
+        The color palette to use; the order of colours will be matched to the order of factors to create an initial
+        mapping from factors to colours. You may use named palette from ``tnt.palettes.all_palettes``, or a sequence
+        of hexstring colour specifications. If ``None`` a default palette will be used instead. Note that having more
+        colours than factors can be beneficial as new class labels, if created, will take colours from the remaining
+        unused colours in the palette.
+
+    palette_length: int or None (optional, default = None)
+        The length of the palette to use if palette is a named palette; this is particularly relevant for continuous
+        palettes. If ``None`` then the length will be determined from labels, or if no labels are provided a default
+        length of 256 will be used.
+
+    palette_shuffle: bool (optional, default = False)
+        Whether to shuffle the palette. If using a continuous palette for categorical labels this should be set
+        to ``True`` to try to provide as much distinguishability between colours as possible.
 
     selectable: bool (optional, default = False)
         Whether to add selection toggle buttons to each legend item, allowing for selections to be made based
@@ -77,7 +88,9 @@ class LegendWidget(pn.reactive.Reactive):
         labels: npt.ArrayLike,
         *,
         factors: Optional[List[str]] = None,
-        palette: Optional[Sequence[str]] = None,
+        palette: Optional[Union[str, Sequence[str]]] = None,
+        palette_length: Optional[int] = None,
+        palette_shuffle: bool = False,
         selectable: bool = False,
         color_picker_width: int = 50,
         color_picker_height: int = 50,
@@ -96,11 +109,24 @@ class LegendWidget(pn.reactive.Reactive):
             self.label_color_factors = factors
         else:
             self.label_color_factors = list(self.label_set)
-        self.label_color_palette = (
-            palette
-            if palette is not None
-            else [Turbo256[x] for x in _palette_index(256)]
-        )
+
+        if palette_length is None:
+            palette_length = 256
+
+        if palette is None:
+            self.label_color_palette = get_palette("glasbey_category10", length=palette_length, scrambled=palette_shuffle)
+        elif type(palette) is str:
+            self.label_color_palette = get_palette(palette, length=palette_length, scrambled=palette_shuffle)
+        else:
+            if palette_length > len(palette):
+                self.label_color_palette = extend_palette(palette, palette_length=palette_length)
+            else:
+                self.label_color_palette = palette[:palette_length]
+
+            if palette_shuffle:
+                self.label_color_palette = [self.label_color_palette[x] for x in _palette_index(len(self.label_color_palette))]
+
+
         self.labels = label_series
         self.selectable = selectable
         self.color_picker_width = color_picker_width
