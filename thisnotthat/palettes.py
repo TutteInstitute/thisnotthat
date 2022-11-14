@@ -56,12 +56,12 @@ def get_palette(name: str, length: Optional[int] = None, extend: bool = True, sc
 
     if name in colorcet.all_original_names():
         if length is None:
-            palette = getattr(colorcet, name)
+            palette = [rgb2hex(c) for c in getattr(colorcet, name)]
         elif "glasbey" in name:
-            palette = getattr(colorcet, name)[:length]
+            palette = [rgb2hex(c) for c in getattr(colorcet, name)[:length]]
         else:
             palette = getattr(colorcet, name)
-            palette = [palette[int(x)] for x in linspace(0, 255, length)]
+            palette = [rgb2hex(palette[int(x)]) for x in linspace(0, 255, length)]
 
     elif (
         name in matplotlib.cm._cmap_registry
@@ -95,7 +95,7 @@ def get_palette(name: str, length: Optional[int] = None, extend: bool = True, sc
             ]
 
         if len(palette) < length and extend:
-            palette = glasbey.extend_palette(palette, palette_size=length)
+            palette = glasbey.extend_palette(palette, palette_size=length, as_hex=True)
 
     elif (
         name in bokeh.palettes.all_palettes
