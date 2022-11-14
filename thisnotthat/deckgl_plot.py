@@ -4,11 +4,13 @@ import bokeh.palettes
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+import glasbey
 
 from matplotlib.colors import to_rgb
 from sklearn.neighbors import NearestNeighbors
 
 from .utils import _palette_index
+from .palettes import get_palette
 
 from typing import *
 
@@ -42,7 +44,9 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         marker_size: Optional[Iterable[float]] = None,
         *,
         label_color_mapping: Optional[Dict[str, str]] = None,
-        palette: Sequence[str] = bokeh.palettes.Turbo256,
+        palette: Union[str, Sequence[str]] = "glasbey_category10",
+        palette_length: Optional[int] = None,
+        palette_shuffle: bool = False,
         width: int = 600,
         height: int = 600,
         selection_brush_radius=0.1,
@@ -86,11 +90,17 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             for label, color in label_color_mapping.items():
                 base_color_factors.append(label)
                 base_color_palette.append(color)
-            base_color_palette = base_color_palette + [
-                palette[x] for x in _palette_index(len(palette))
-            ]
+            if palette_length is not None:
+                self.color_mapping.palette = glasbey.extend_palette(base_color_palette, palette_size=palette_length)
+            else:
+                self.color_mapping.palette = glasbey.extend_palette(base_color_palette, palette_size=256)
         else:
-            base_color_palette = [palette[x] for x in _palette_index(256)]
+            if palette_length is None:
+                if len(set(labels)) == 1 and labels[0] == "unlabelled":
+                    palette_length = None
+                else:
+                    palette_length = len(set(labels))
+            base_color_palette = get_palette(palette, length=palette_length, scrambled=palette_shuffle)
             base_color_factors = list(set(labels))
 
         self.color_mapping = {

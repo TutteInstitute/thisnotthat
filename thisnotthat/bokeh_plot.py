@@ -360,7 +360,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self._base_hover_text = hover_text if hover_text is not None else labels
         self._base_hover_is_labels = hover_text is None
-        self._base_palette = list(palette)
+        if type(palette) is str:
+            if palette_length is None:
+                if len(set(labels)) == 1 and labels[0] == "unlabelled":
+                    palette_length = None
+                else:
+                    palette_length = len(set(labels))
+            self._base_palette = get_palette(palette, length=palette_length, scrambled=palette_shuffle)
+        else:
+            self._base_palette = list(palette)
 
         if label_color_mapping is not None:
             factors = []
@@ -377,18 +385,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             else:
                 self.color_mapping.palette = glasbey.extend_palette(colors, palette_size=256)
         else:
-            if type(palette) is str:
-                if palette_length is None:
-                    if len(set(labels)) == 1 and labels[0] == "unlabelled":
-                        palette_length = None
-                    else:
-                        palette_length = len(set(labels))
-                color_palette = get_palette(palette, length=palette_length, scrambled=palette_shuffle)
-            else:
-                color_palette = palette
-
             self._label_colormap = bokeh.transform.factor_cmap(
-                "label", palette=color_palette, factors=list(set(labels))
+                "label", palette=self._base_palette, factors=list(set(labels))
             )
             self.color_mapping = self._label_colormap["transform"]
             # self.color_mapping.palette = [
