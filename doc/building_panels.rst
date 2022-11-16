@@ -20,8 +20,8 @@ functionality and performance. Choosing the right PlotPane type for your task wi
 go a long way toward making your Panel effective. Currently TNT supports the following
 PlotPane types:
 
-* :py:class:`~BokehPlotPane`
-* :py:class:`~DeckglPlotPane`
+* :py:class:`~thisnotthat.BokehPlotPane`
+* :py:class:`~thisnotthat.DeckglPlotPane`
 
 and we hope that more can be added in the future. The API documentation for each PlotPane
 type will provide the most details on the capabilities of the PlotPanes, but here is a useful
@@ -113,15 +113,15 @@ good simple templates for an entire app or dashboard if that is what is desired.
 When putting together a layout of TNT components some suggestions include:
 
 * The ``SearchWidget``, ``PlotControlWidget`` and ``LabelEditorWidget`` often work well on the
-right hand side of a PlotPane. If you have all three using ``Tabs`` or ``Accordion`` to pack
-them together can be useful.
+   right hand side of a PlotPane. If you have all three using ``Tabs`` or ``Accordion`` to pack
+   them together can be useful.
 * The ``DataPane`` is often best placed below the PlotPane, since it is often quite wide.
 * Most TNT Panes and Widgets support specifying a size with ``width`` and ``height`` and it
-  can be beneficial to help ensure the various components line up nicely.
+   can be beneficial to help ensure the various components line up nicely.
 * The ``BokehPlotPane`` supports using a legend which, by default, is outside the plot to the
-  right. If you are planning to add other components beside the PlotPane it can be best to
-  either disable the legend (``show_legend=False``), or specify a location for the legend
-  other than ``"outside"`` (e.g. ``legend_location="top_right"``).
+   right. If you are planning to add other components beside the PlotPane it can be best to
+   either disable the legend (``show_legend=False``), or specify a location for the legend
+   other than ``"outside"`` (e.g. ``legend_location="top_right"``).
 
 Extending with Panel
 --------------------

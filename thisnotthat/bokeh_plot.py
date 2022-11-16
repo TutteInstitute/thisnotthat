@@ -7,8 +7,10 @@ import bokeh.palettes
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+import glasbey
 
 from .utils import _palette_index
+from .palettes import get_palette
 
 from typing import *
 
@@ -166,11 +168,19 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         labels, with values giving hexstring colour specifications for the desired colour of the class label. If
         ``None`` a colormapping will be generated automatically based on the labels and palette.
 
-    palette: Sequence of str (optional, default = Turbo256 palette)
-        The palette to use for colouring markers. It should be a sequence of hexstring colour specifications. Note
-        that for class labelling the order of colours is modified, so smooth colour palettes can be used. Even if
-        a ``label_color_mapping`` is provided, this palette will be used for generating new colours if new labels
-        are created using the label editor.
+    palette: str or Sequence of str (optional, default = "glasbey_category10")
+        The palette to use for colouring markers. A named palette from ``tnt.palettes.all_palettes``, or a sequence
+        of hexstring colour specifications. Even if a ``label_color_mapping`` is provided, this palette will be
+        used for generating new colours if new labels are created using the label editor.
+
+    palette_length: int or None (optional, default = None)
+        The length of the palette to use if palette is a named palette; this is particularly relevant for continuous
+        palettes. If ``None`` then the length will be determined from labels, or if no labels are provided a default
+        length of 12 will be used.
+
+    palette_shuffle: bool (optional, default = False)
+        Whether to shuffle the palette. If using a continuous palette for categorical labels this should be set
+        to ``True`` to try to provide as much distinguishability between colours as possible.
 
     width: int (optional, default = 600)
         Width of the plot figure. Note that this includes space for the legend if ``show_legend`` is ``True``,
@@ -289,7 +299,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         marker_size: Optional[Iterable[float]] = None,
         *,
         label_color_mapping: Optional[Dict[str, str]] = None,
-        palette: Sequence[str] = bokeh.palettes.Turbo256,
+        palette: Union[str, Sequence[str]] = "glasbey_category10",
+        palette_length: Optional[int] = None,
+        palette_shuffle: bool = False,
         width: int = 600,
         height: int = 600,
         max_point_size: Optional[float] = None,
@@ -348,7 +360,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
         self._base_hover_text = hover_text if hover_text is not None else labels
         self._base_hover_is_labels = hover_text is None
-        self._base_palette = list(palette)
+        if type(palette) is str:
+            if palette_length is None:
+                if len(set(labels)) == 1 and labels[0] == "unlabelled":
+                    palette_length = None
+                else:
+                    palette_length = len(set(labels))
+            self._base_palette = get_palette(palette, length=palette_length, scrambled=palette_shuffle)
+        else:
+            self._base_palette = list(palette)
 
         if label_color_mapping is not None:
             factors = []
@@ -360,17 +380,18 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "label", palette=colors, factors=factors
             )
             self.color_mapping = self._label_colormap["transform"]
-            self.color_mapping.palette = self.color_mapping.palette + [
-                palette[x] for x in _palette_index(len(palette))
-            ]
+            if palette_length is not None:
+                self.color_mapping.palette = glasbey.extend_palette(colors, palette_size=palette_length)
+            else:
+                self.color_mapping.palette = glasbey.extend_palette(colors, palette_size=256)
         else:
             self._label_colormap = bokeh.transform.factor_cmap(
-                "label", palette=palette, factors=list(set(labels))
+                "label", palette=self._base_palette, factors=list(set(labels))
             )
             self.color_mapping = self._label_colormap["transform"]
-            self.color_mapping.palette = [
-                self.color_mapping.palette[x] for x in _palette_index(len(palette))
-            ]
+            # self.color_mapping.palette = [
+            #     self.color_mapping.palette[x] for x in _palette_index(len(palette))
+            # ]
 
         self.plot = bokeh.plotting.figure(
             width=width,

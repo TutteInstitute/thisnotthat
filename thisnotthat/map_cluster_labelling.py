@@ -680,10 +680,15 @@ class RandomSampleSelection(object):
         self.n_samples = n_samples
         self.random_state = random_state
 
-    def fit_transform(self, X, y=None, **fit_params):
+    def fit_transform(self, X, y=None, sample_weights=None, **fit_params):
         state = check_random_state(self.random_state)
+        if sample_weights is not None:
+            weights = np.asarray(sample_weights) / np.sum(sample_weights)
+        else:
+            weights = None
+
         indices = state.choice(
-            np.arange(X.shape[0]), size=self.n_samples, replace=False
+            np.arange(X.shape[0]), size=self.n_samples, replace=False, p=weights
         )
         X_result = X[indices]
         if y is not None:
@@ -705,6 +710,7 @@ def text_labels_from_per_sample_labels(
     sample_selection_method: str = "facility_location",
     items_per_label: int = 3,
     vector_metric: str = "cosine",
+    sample_weights: npt.ArrayLike,
     random_state: Optional[int] = None,
 ) -> List[List[List[Any]]]:
     """Generate text labels for layers of clusters where each source vector has an associated label representation
@@ -741,6 +747,11 @@ def text_labels_from_per_sample_labels(
     vector_metric: str (optional, default = "cosine")
         The distance metric used in the ``source_vectors`` vector space.
 
+    sample_weights: Array of shape (n_samples,)
+        An array of weights to apply to each sample. Higher weight samples may be more likely to be selected. This is
+        only supported for some selection methods (random selection does support it). Check the apricot-select
+        documentation for more details.
+
     random_state: int or None (optional, default = None)
         A random state seed to use in random selection.
 
@@ -752,7 +763,7 @@ def text_labels_from_per_sample_labels(
     if HAS_APRICOT and sample_selection_method != "random":
         if sample_selection_method == "facility_location":
             selector = apricot.FacilityLocationSelection(
-                items_per_label, metric=vector_metric
+                items_per_label, metric=vector_metric, n_neighbors=100,
             )
         elif sample_selection_method == "graph_cut":
             selector = apricot.GraphCutSelection(items_per_label, metric=vector_metric)
@@ -781,6 +792,7 @@ def text_labels_from_per_sample_labels(
             vector_selection, label_selection = selector.fit_transform(
                 source_vectors[cluster_with_exclusion],
                 labels_per_sample[cluster_with_exclusion],
+                sample_weights=sample_weights[cluster_with_exclusion],
             )
             indices = np.where(np.isin(labels_per_sample, label_selection))[0]
             excluded_indices.update(indices)
@@ -1199,6 +1211,11 @@ class SampleLabelLayers(object):
             * ``"saturated_coverage"``
             * ``"random"``
 
+    sample_weights: Array of shape (n_samples,)
+        An array of weights to apply to each sample. Higher weight samples may be more likely to be selected. This is
+        only supported for some selection methods (random selection does support it). Check the apricot-select
+        documentation for more details.
+
     umap_n_components:
         The number of dimensions to use UMAP to reduce to if ``cluster_map_representation`` is ``False``.
 
@@ -1277,6 +1294,7 @@ class SampleLabelLayers(object):
         vector_metric: str = "cosine",
         cluster_map_representation: bool = False,
         sample_selection_method: str = "facility_location",
+        sample_weights: Optional[npt.ArrayLike] = None,
         umap_n_components: int = 5,
         umap_n_neighbors: int = 15,
         hdbscan_min_samples: int = 10,
@@ -1351,6 +1369,7 @@ class SampleLabelLayers(object):
             sample_selection_method=sample_selection_method,
             items_per_label=items_per_label,
             vector_metric=vector_metric,
+            sample_weights=np.asarray(sample_weights),
             random_state=random_state,
         )
         self.label_formatter = label_formatter

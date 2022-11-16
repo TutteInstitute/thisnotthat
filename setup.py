@@ -15,5 +15,8 @@ setup(
         "numpy>=1.22",
         "umap-learn",
         "hdbscan",
+        "colorcet",
+        "cmocean",
+        "glasbey",
     ],
 )

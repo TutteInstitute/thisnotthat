@@ -26,6 +26,10 @@ class PlotControlWidget(pn.reactive.Reactive):
         same order as the points in the plot. The ``PlotControlWidget`` will use dtypes of columns and column names
         of this dataframe to populate a variety of selectors that can be linked to a plot.
 
+    scale_type_selector: bool
+        Whether to include the ability to select scale types (Linear, Log, or Sqrt) for the numeric
+        color-by and marker-size scales.
+
     width: int or None (optional, default = None)
         The width of the pane. If ``None`` the pane will size itself based on its contents.
 
@@ -43,11 +47,14 @@ class PlotControlWidget(pn.reactive.Reactive):
     color_by_palette = param.List([], item_type=str, doc="Color by palette")
     marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
+    # color_by_scale = param.ObjectSelector(default="Linear", objects=["Linear", "Log", "Sqrt"], doc="Color-by scale type")
+    # marker_size_scale = param.ObjectSelector(default="Linear", objects=["Linear", "Log", "Sqrt"], doc="Marker-size scale type")
 
     def __init__(
         self,
         raw_dataframe: pd.DataFrame,
         *,
+        scale_type_selector: bool = False,
         width: Optional[int] = None,
         height: Optional[int] = None,
         title: str = "#### Plot Controls",
@@ -82,6 +89,14 @@ class PlotControlWidget(pn.reactive.Reactive):
         self.color_by_column.param.watch(
             self._options_changed, "value", onlychanged=True
         )
+        self.color_by_scale_selector = pn.Row(
+            pn.widgets.StaticText(value="Scale type", align=("end", "center"), margin=[5, 0, 5, 5]),
+            pn.widgets.ToggleGroup(
+                name="Color by scale", options=["Linear", "Log", "Sqrt"], behavior="radio", value="Linear"
+            ),
+            margin=[0, 10],
+            visible=scale_type_selector
+        )
         self.hover_text_column = pn.widgets.Select(
             name="Hover text column",
             options=["Default"] + list(self.dataframe.columns),
@@ -97,17 +112,37 @@ class PlotControlWidget(pn.reactive.Reactive):
         self.marker_size_column.param.watch(
             self._options_changed, "value", onlychanged=True
         )
+        self.marker_size_scale_selector = pn.Row(
+            pn.widgets.StaticText(value="Scale type", align=("end", "center"), margin=[5, 0, 5, 5]),
+            pn.widgets.ToggleGroup(
+                name="Marker size scale", options=["Linear", "Log", "Sqrt"], behavior="radio", value="Linear"
+            ),
+            margin=[0, 5,  0, 10],
+            visible=scale_type_selector
+        )
         self.apply_changes = pn.widgets.Button(
             name="Apply Changes", button_type="success", disabled=True,
         )
         self.apply_changes.on_click(self._reapply_changes)
+        self.bad_scaling_alert = pn.pane.Alert(
+            "### Bad scale\nColumn with Log or Sqrt scale contains negative values; Using a linear scale",
+            alert_type="danger",
+            visible=False,
+        )
         self.pane = pn.WidgetBox(
             title,
+            pn.layout.Divider(margin=[0, 10, 10, 10], height=5),
             self.palette_selector,
             self.color_by_column,
+            self.color_by_scale_selector,
+            pn.layout.Divider(margin=[0, 10, 10, 10], height=5),
             self.marker_size_column,
+            self.marker_size_scale_selector,
+            pn.layout.Divider(margin=[0, 10, 10, 10], height=5),
             self.hover_text_column,
+            pn.layout.Divider(margin=[0, 10, 10, 10], height=5),
             self.apply_changes,
+            self.bad_scaling_alert,
             width=width,
             height=height,
         )
@@ -117,6 +152,7 @@ class PlotControlWidget(pn.reactive.Reactive):
 
     def _options_changed(self, event) -> None:
         self.apply_changes.disabled = False
+        self.bad_scaling_alert.visible = False
 
     def _change_palette(self):
         if pd.api.types.is_numeric_dtype(self.color_by_vector):
@@ -202,7 +238,24 @@ class PlotControlWidget(pn.reactive.Reactive):
         if self.color_by_column.value == "Default":
             self.color_by_vector = pd.Series([])
         else:
-            self.color_by_vector = self.dataframe[self.color_by_column.value]
+            values = self.dataframe[self.color_by_column.value]
+            if pd.api.types.is_numeric_dtype(values):
+                if self.color_by_scale_selector.value == "Log":
+                    if np.any(values <= 0):
+                        self.bad_scaling_alert.visible = True
+                        self.color_by_vector = values.to_list()
+                    else:
+                        self.color_by_vector = np.log(values).to_list()
+                elif self.color_by_scale_selector.value == "Sqrt":
+                    if np.any(values < 0):
+                        self.bad_scaling_alert.visible = True
+                        self.color_by_vector = values.to_list()
+                    else:
+                        self.color_by_vector = np.sqrt(values).to_list()
+                else:
+                    self.color_by_vector = values
+            else:
+                self.color_by_vector = values
 
         if self.palette_selector.value == "Default palette":
             self.color_by_palette = []
@@ -219,7 +272,22 @@ class PlotControlWidget(pn.reactive.Reactive):
         if self.marker_size_column.value == "Default":
             self.marker_size = []
         else:
-            self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
+            if self.marker_size_scale_selector.value == "Log":
+                values = self.dataframe[self.marker_size_column.value]
+                if np.any(values <= 0):
+                    self.bad_scaling_alert.visible = True
+                    self.marker_size = values.to_list()
+                else:
+                    self.marker_size = np.log(values).to_list()
+            elif self.marker_size_scale_selector.value == "Sqrt":
+                values = self.dataframe[self.marker_size_column.value]
+                if np.any(values < 0):
+                    self.bad_scaling_alert.visible = True
+                    self.marker_size = values.to_list()
+                else:
+                    self.marker_size = np.sqrt(values).to_list()
+            else: # Linear scale
+                self.marker_size = self.dataframe[self.marker_size_column.value].to_list()
 
         self.apply_changes.disabled = True
 
