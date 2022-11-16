@@ -32,6 +32,7 @@ to build out features and make it easier to use.
 
    basic_concepts
    building_panels
+   simple_data_pane
    data_pane
    info_pane
    search_widget
