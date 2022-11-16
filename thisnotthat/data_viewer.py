@@ -127,6 +127,10 @@ class SimpleDataPane(pn.reactive.Reactive):
         """
         return self.link(plot, labels="labels", selected="selected", bidirectional=True)
 
+    @property
+    def selected_dataframe(self):
+        return self.table.object
+
 
 class DataPane(pn.reactive.Reactive):
     """A dataframe viewer that can be linked to a PlotPane based on selections and labels. The pane is essentially a
@@ -309,3 +313,7 @@ class DataPane(pn.reactive.Reactive):
             The link object.
         """
         return self.link(plot, labels="labels", selected="selected", bidirectional=True)
+
+    @property
+    def selected_dataframe(self):
+        return self.table.value
