@@ -23,7 +23,7 @@ class SimpleSearchWidget(pn.reactive.Reactive):
         super().__init__(name=name)
         self.search_datasource = ColumnDataSource(raw_dataframe)
 
-        self.search_box = pn.TextInput(
+        self.search_box = pn.widgets.TextInput(
             align=("start", "center"), sizing_mode=sizing_mode
         )
         self.pane = pn.WidgetBox(
