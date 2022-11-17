@@ -60,7 +60,7 @@ class SimpleSearchWidget(pn.reactive.Reactive):
         // If there is no match for any column for a given row, change the alpha value
         var string_match = false;
         var selected_indices = [];
-        for (var i = 0; i < data.x.length; i++) {
+        for (var i = 0; i < plot_source.data.x.length; i++) {
             string_match = false
             for (const column in data) {
                 if (String(data[column][i]).includes(text_search) ) {
