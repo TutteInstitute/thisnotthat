@@ -36,6 +36,7 @@ to build out features and make it easier to use.
    data_pane
    info_pane
    search_widget
+   label_editor_widget
 
 .. toctree::
    :maxdepth: 2
