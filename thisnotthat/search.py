@@ -5,81 +5,138 @@ import pandas as pd
 import numpy.typing as npt
 
 from bokeh.models import ColumnDataSource
+from .bokeh_plot import BokehPlotPane
 
 from typing import *
 
 
-class SimpleSearchWidget(pn.reactive.Reactive):
-    def __init__(
-        self,
-        *,
-        raw_dataframe: pd.DataFrame,
+# class SimpleSearchWidget(pn.reactive.Reactive):
+#     def __init__(
+#         self,
+#         *,
+#         raw_dataframe: pd.DataFrame,
+#         title: str = "##### Search",
+#         width: Optional[int] = None,
+#         height: Optional[int] = None,
+#         sizing_mode: str = "stretch_width",
+#         name: str = "Search",
+#     ):
+#         super().__init__(name=name)
+#         self.search_datasource = ColumnDataSource(raw_dataframe)
+#
+#         self.search_box = pn.widgets.TextInput(
+#             align=("start", "center"), sizing_mode=sizing_mode
+#         )
+#         self.pane = pn.WidgetBox(
+#             pn.pane.Markdown(title, align=("end", "center")),
+#             self.search_box,
+#             horizontal=True,
+#             sizing_mode=sizing_mode,
+#             width=width,
+#             height=height,
+#         )
+#
+#     def _get_model(self, *args, **kwds):
+#         return self.pane._get_model(*args, **kwds)
+#
+#     def link_to_plot(self, plot):
+#         """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+#
+#         Parameters
+#         ----------
+#         plot: PlotPane
+#             The plot pane to link to.
+#
+#         Returns
+#         -------
+#         link:
+#             The link object.
+#         """
+#         return self.search_box.jscallback(
+#             value="""
+# var data = data_source.data;
+# var text_search = text.value;
+#
+# // Loop over columns and values
+# // If there is no match for any column for a given row, change the alpha value
+# var string_match = false;
+# var selected_indices = [];
+# for (var i = 0; i < plot_source.data.x.length; i++) {
+#     string_match = false
+#     for (const column in data) {
+#         if (String(data[column][i]).includes(text_search) ) {
+#             string_match = true;
+#         }
+#     }
+#     if (string_match){
+#         selected_indices.push(i);
+#     }
+# }
+# plot_source.selected.indices = selected_indices;
+# plot_source.change.emit();
+# """,
+#             args={
+#                 "plot_source": plot.data_source,
+#                 "data_source": self.search_datasource,
+#                 "text": self.search_box,
+#             },
+#         )
+
+def SimpleSearchWidget(
+        plot: BokehPlotPane,
+        raw_dataframe: Optional[pd.DataFrame] = None,
         title: str = "##### Search",
         width: Optional[int] = None,
         height: Optional[int] = None,
         sizing_mode: str = "stretch_width",
         name: str = "Search",
-    ):
-        super().__init__(name=name)
-        self.search_datasource = ColumnDataSource(raw_dataframe)
+):
+    if raw_dataframe is not None:
+        search_datasource = ColumnDataSource(raw_dataframe)
+    else:
+        search_datasource = plot.data_source
+    search_box = pn.widgets.TextInput(
+        align=("start", "center"), sizing_mode=sizing_mode
+    )
+    result = pn.WidgetBox(
+        pn.pane.Markdown(title, align=("end", "center")),
+        search_box,
+        horizontal=True,
+        sizing_mode=sizing_mode,
+        width=width,
+        height=height,
+        name=name,
+    )
+    search_box.jscallback(
+        value="""
+var data = data_source.data;
+var text_search = search_box.value;
 
-        self.search_box = pn.widgets.TextInput(
-            align=("start", "center"), sizing_mode=sizing_mode
-        )
-        self.pane = pn.WidgetBox(
-            pn.pane.Markdown(title, align=("end", "center")),
-            self.search_box,
-            horizontal=True,
-            sizing_mode=sizing_mode,
-            width=width,
-            height=height,
-        )
-
-    def _get_model(self, *args, **kwds):
-        return self.pane._get_model(*args, **kwds)
-
-    def link_to_plot(self, plot):
-        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
-
-        Parameters
-        ----------
-        plot: PlotPane
-            The plot pane to link to.
-
-        Returns
-        -------
-        link:
-            The link object.
-        """
-        return self.search_box.jscallback(
-            value="""
-        var data = data_source.data;
-        var text_search = text.value;
-
-        // Loop over columns and values
-        // If there is no match for any column for a given row, change the alpha value
-        var string_match = false;
-        var selected_indices = [];
-        for (var i = 0; i < plot_source.data.x.length; i++) {
-            string_match = false
-            for (const column in data) {
-                if (String(data[column][i]).includes(text_search) ) {
-                    string_match = true;
-                }
-            }
-            if (string_match){
-                selected_indices.push(i);
-            }
+// Loop over columns and values
+// If there is no match for any column for a given row, change the alpha value
+var string_match = false;
+var selected_indices = [];
+for (var i = 0; i < plot_source.data.x.length; i++) {
+    string_match = false
+    for (const column in data) {
+        if (String(data[column][i]).includes(text_search) ) {
+            string_match = true;
         }
-        plot_source.selected.indices = selected_indices;
-        plot_source.change.emit();
-        """,
-            args={
-                "plot_source": plot.data_source,
-                "data_source": self.search_datasource,
-                "text": self.search_box,
-            },
-        )
+    }
+    if (string_match){
+        selected_indices.push(i);
+    }
+}
+plot_source.selected.indices = selected_indices;
+plot_source.change.emit();
+    """,
+        args={
+            "plot_source": plot.data_source,
+            "data_source": search_datasource,
+            "search_box": search_box,
+        },
+    )
+    return result
 
 
 class SearchWidget(pn.reactive.Reactive):
