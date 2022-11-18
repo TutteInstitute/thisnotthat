@@ -19,6 +19,40 @@ def SimpleSearchWidget(
         sizing_mode: str = "stretch_width",
         name: str = "Search",
 ):
+    """Construct a simple search widget attached to a specific ``BokehPlotPane``. This allows for basic search in a very
+    simple set-up. Notably the search is performed client-side in javascript, and so should work even without a
+    python kernel backend.
+
+    Parameters
+    ----------
+    plot: BokehPlotPane
+        The particular plot pane the search should be attached to.
+
+    raw_dataframe: dataframe or None (optional, default = None)
+        A dataframe to run search over. If set to None then the search will be run over the dataframe associated to the
+        plot. Each column of the dataframe will be searched with matches on any rows that contain the search string
+        as a substring.
+
+    title: str (optional, default = "#### Search")
+        A title for the associated search widget in markdown format.
+
+    width: int or None (optional, default = None)
+        The width of the pane, or, if ``None`` let the pane size itself.
+
+    height: int or None (optional, default = None)
+        The height of the pane, or, if ``None`` let the pane size itself.
+
+    sizing_mode: str (optional, default = "stretch_both")
+        The panel sizing mode of the data table.
+
+    name: str (optional, default = "Search")
+        The panel name of the pane. See panel documentation for more details.
+
+    Returns
+    -------
+    search_widget: pn.WidgetBox
+        A search widget that is linked to the specified ``BokehPlotPane``.
+    """
     if raw_dataframe is not None:
         search_datasource = ColumnDataSource(raw_dataframe)
     else:
@@ -91,7 +125,7 @@ class SearchWidget(pn.reactive.Reactive):
     height: int or None (optional, default = None)
         The height of the pane, or, if ``None`` let the pane size itself.
 
-    name: str (optional, default = "Label Editor")
+    name: str (optional, default = "Search")
         The panel name of the pane. See panel documentation for more details.
     """
 
