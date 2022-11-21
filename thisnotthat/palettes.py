@@ -1,4 +1,5 @@
 from matplotlib.colors import rgb2hex
+import matplotlib
 import matplotlib.cm
 import colorcet
 import glasbey
@@ -24,9 +25,16 @@ for full_name in colorcet.aliases:
     for alias in colorcet.aliases[full_name]:
         _ALT_NAMES[alias] = full_name
 
+# different versions of matplotlib handle things differently
+if hasattr(matplotlib.cm, "_cmap_registry"):
+    _mpl_colormaps = matplotlib.cm._cmap_registry
+else:
+    _mpl_colormaps = matplotlib.colormaps
+    _mpl_color_sequences = matplotlib.color_sequences
+
 all_palettes = set(
     colorcet.all_original_names()
-    + list(matplotlib.cm._cmap_registry.keys())
+    + list(_mpl_colormaps.keys())
     + list(bokeh.palettes.all_palettes.keys())
 )
 
@@ -48,7 +56,6 @@ suggested_continuous_palettes = (
     "spectral",
 )
 
-
 def get_palette(name: str, length: Optional[int] = None, extend: bool = True, scrambled: bool = False):
 
     if name in _ALT_NAMES:
@@ -64,21 +71,21 @@ def get_palette(name: str, length: Optional[int] = None, extend: bool = True, sc
             palette = [rgb2hex(palette[int(x)]) for x in linspace(0, 255, length)]
 
     elif (
-        name in matplotlib.cm._cmap_registry
-        or f"cmo.{name}" in matplotlib.cm._cmap_registry
-        or capwords(name) in matplotlib.cm._cmap_registry
+        name in _mpl_colormaps
+        or f"cmo.{name}" in _mpl_colormaps
+        or capwords(name) in _mpl_colormaps
     ):  # Matplotlib cmap
 
-        if f"cmo.{name}" in matplotlib.cm._cmap_registry:
+        if f"cmo.{name}" in _mpl_colormaps:
             name = f"cmo.{name}"
 
-        if capwords(name) in matplotlib.cm._cmap_registry:
+        if capwords(name) in _mpl_colormaps:
             name = capwords(name)
 
         if length is None:
-            mpl_palette = matplotlib.cm._cmap_registry[name]
-        elif len(getattr(matplotlib.cm._cmap_registry[name], "colors", [0] * 256)) < length:
-            mpl_palette = matplotlib.cm._cmap_registry[name]
+            mpl_palette = _mpl_colormaps[name]
+        elif len(getattr(_mpl_colormaps[name], "colors", [0] * 256)) < length:
+            mpl_palette = _mpl_colormaps[name]
         else:
             mpl_palette = matplotlib.cm._cmap_registry[name]._resample(length)
 
