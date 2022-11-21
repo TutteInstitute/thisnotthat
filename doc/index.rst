@@ -32,10 +32,11 @@ to build out features and make it easier to use.
 
    basic_concepts
    building_panels
-   simple_data_pane
    data_pane
+   simple_data_pane
    info_pane
    search_widget
+   simple_search_widget
    label_editor_widget
 
 .. toctree::
