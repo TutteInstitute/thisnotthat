@@ -54,6 +54,7 @@ This Not That is built on top of Panel and Bokeh, so you will need these install
 * matplotlib
 * umap-learn
 * hdbscan
+* glasbey
 
 We also highly recommend installing:
 
