@@ -26,6 +26,7 @@ In summary you will need:
 * matplotlib
 * hdbscan
 * cmocean
+* colorcet
 * glasbey
 
 
