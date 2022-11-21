@@ -1,8 +1,8 @@
 import itertools as it
 from .bokeh_plot import BokehPlotPane
 from .label_editor import LegendWidget, LabelEditorWidget
-from .data_viewer import DataPane
-from .search import SearchWidget
+from .data_viewer import DataPane, SimpleDataPane
+from .search import SearchWidget, SimpleSearchWidget
 from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
@@ -14,7 +14,9 @@ __all__ = [
     "LegendWidget",
     "LabelEditorWidget",
     "DataPane",
+    "SimpleDataPane",
     "SearchWidget",
+    "SimpleSearchWidget",
     "InformationPane",
     "PlotControlWidget",
     "JointVectorLabelLayers",

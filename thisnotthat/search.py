@@ -4,7 +4,141 @@ import numpy as np
 import pandas as pd
 import numpy.typing as npt
 
+from bokeh.models import ColumnDataSource
+from .bokeh_plot import BokehPlotPane
+
 from typing import *
+
+def SimpleSearchWidget(
+        plot: BokehPlotPane,
+        *,
+        raw_dataframe: Optional[pd.DataFrame] = None,
+        title: str = "##### Search",
+        placeholder_text: str = "Enter search string ...",
+        live_search: bool = True,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        sizing_mode: str = "stretch_width",
+        name: str = "Search",
+):
+    """Construct a simple search widget attached to a specific ``BokehPlotPane``. This allows for basic search in a very
+    simple set-up. Notably the search is performed client-side in javascript, and so should work even without a
+    python kernel backend.
+
+    Parameters
+    ----------
+    plot: BokehPlotPane
+        The particular plot pane the search should be attached to.
+
+    raw_dataframe: dataframe or None (optional, default = None)
+        A dataframe to run search over. If set to None then the search will be run over the dataframe associated to the
+        plot. Each column of the dataframe will be searched with matches on any rows that contain the search string
+        as a substring.
+
+    title: str (optional, default = "#### Search")
+        A title for the associated search widget in markdown format.
+
+    placeholder_text: str (optional, default = "Enter search string ...")
+        Text to place in the search input field when no search text is provided.
+
+    live_search: bool (optional, default = True)
+        If True then perform the search on every key-press; if False then perform search only when the enter key is
+        pressed.
+
+    width: int or None (optional, default = None)
+        The width of the pane, or, if ``None`` let the pane size itself.
+
+    height: int or None (optional, default = None)
+        The height of the pane, or, if ``None`` let the pane size itself.
+
+    sizing_mode: str (optional, default = "stretch_both")
+        The panel sizing mode of the data table.
+
+    name: str (optional, default = "Search")
+        The panel name of the pane. See panel documentation for more details.
+
+    Returns
+    -------
+    search_widget: pn.WidgetBox
+        A search widget that is linked to the specified ``BokehPlotPane``.
+    """
+    if raw_dataframe is not None:
+        search_datasource = ColumnDataSource(raw_dataframe)
+    else:
+        search_datasource = plot.data_source
+    search_box = pn.widgets.TextInput(
+        placeholder=placeholder_text, align=("start", "center"), sizing_mode=sizing_mode
+    )
+    result = pn.WidgetBox(
+        pn.pane.Markdown(title, align=("end", "center")),
+        search_box,
+        horizontal=True,
+        sizing_mode=sizing_mode,
+        width=width,
+        height=height,
+        name=name,
+    )
+    if live_search:
+        search_box.jscallback(
+            value_input="""
+var data = data_source.data;
+var text_search = search_box.value_input;
+
+// Loop over columns and values
+// If there is no match for any column for a given row, change the alpha value
+var string_match = false;
+var selected_indices = [];
+for (var i = 0; i < plot_source.data.x.length; i++) {
+    string_match = false
+    for (const column in data) {
+        if (String(data[column][i]).includes(text_search) ) {
+            string_match = true;
+        }
+    }
+    if (string_match){
+        selected_indices.push(i);
+    }
+}
+plot_source.selected.indices = selected_indices;
+plot_source.change.emit();
+        """,
+            args={
+                "plot_source": plot.data_source,
+                "data_source": search_datasource,
+                "search_box": search_box,
+            },
+        )
+    else:
+        search_box.jscallback(
+            value="""
+var data = data_source.data;
+var text_search = search_box.value;
+
+// Loop over columns and values
+// If there is no match for any column for a given row, change the alpha value
+var string_match = false;
+var selected_indices = [];
+for (var i = 0; i < plot_source.data.x.length; i++) {
+    string_match = false
+    for (const column in data) {
+        if (String(data[column][i]).includes(text_search) ) {
+            string_match = true;
+        }
+    }
+    if (string_match){
+        selected_indices.push(i);
+    }
+}
+plot_source.selected.indices = selected_indices;
+plot_source.change.emit();
+            """,
+            args={
+                "plot_source": plot.data_source,
+                "data_source": search_datasource,
+                "search_box": search_box,
+            },
+        )
+    return result
 
 
 class SearchWidget(pn.reactive.Reactive):
@@ -31,7 +165,7 @@ class SearchWidget(pn.reactive.Reactive):
     height: int or None (optional, default = None)
         The height of the pane, or, if ``None`` let the pane size itself.
 
-    name: str (optional, default = "Label Editor")
+    name: str (optional, default = "Search")
         The panel name of the pane. See panel documentation for more details.
     """
 
@@ -67,7 +201,8 @@ class SearchWidget(pn.reactive.Reactive):
         self.query_button = pn.widgets.Button(name="Search", button_type="success")
         self.query_button.on_click(self._run_query)
         self.columns_to_search = pn.widgets.MultiChoice(
-            name="Columns to search (all if empty)", options=self.data.columns.tolist(),
+            name="Columns to search (all if empty)",
+            options=self.data.columns.tolist(),
         )
         self.query_style_selector.param.watch(self._query_style_change, "value")
         self.warning_area = pn.pane.Alert("", alert_type="light")

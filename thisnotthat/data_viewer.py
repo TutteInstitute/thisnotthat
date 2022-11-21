@@ -85,9 +85,9 @@ class SimpleDataPane(pn.reactive.Reactive):
             height=height,
         )
         self.file_download = pn.widgets.FileDownload(
-            filename="data.csv", callback=self._get_csv, button_type="primary"
+            filename="data.csv", callback=self._get_csv, button_type="primary", sizing_mode="stretch_width"
         )
-        self.pane = pn.Column(self.table, self.file_download)
+        self.pane = pn.Column(self.table, self.file_download, sizing_mode=sizing_mode)
         if labels is not None:
             self.labels = pd.Series(labels).copy()
 
@@ -126,6 +126,10 @@ class SimpleDataPane(pn.reactive.Reactive):
             The link object.
         """
         return self.link(plot, labels="labels", selected="selected", bidirectional=True)
+
+    @property
+    def selected_dataframe(self):
+        return self.table.object
 
 
 class DataPane(pn.reactive.Reactive):
@@ -309,3 +313,7 @@ class DataPane(pn.reactive.Reactive):
             The link object.
         """
         return self.link(plot, labels="labels", selected="selected", bidirectional=True)
+
+    @property
+    def selected_dataframe(self):
+        return self.table.value

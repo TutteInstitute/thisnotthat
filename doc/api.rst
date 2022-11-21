@@ -25,11 +25,17 @@ Data Panes
 .. autoclass:: DataPane
    :members: link_to_plot
 
+.. autoclass:: SimpleDataPane
+   :members: link_to_plot
+
 Search and Edit Widgets
 -----------------------
 
 .. autoclass:: SearchWidget
    :members: link_to_plot
+
+.. autofucntion:: SimpleSearchWidget
+   :annotation:
 
 .. autoclass:: LabelEditorWidget
    :members: link_to_plot
