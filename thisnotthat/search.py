@@ -78,10 +78,11 @@ def SimpleSearchWidget(
         height=height,
         name=name,
     )
-    search_box.jscallback(
-        value="""
+    if live_search:
+        search_box.jscallback(
+            value_input="""
 var data = data_source.data;
-var text_search = search_box.%s;
+var text_search = search_box.value_input;
 
 // Loop over columns and values
 // If there is no match for any column for a given row, change the alpha value
@@ -100,13 +101,43 @@ for (var i = 0; i < plot_source.data.x.length; i++) {
 }
 plot_source.selected.indices = selected_indices;
 plot_source.change.emit();
-    """ % ("value_input" if live_search else "value"),
-        args={
-            "plot_source": plot.data_source,
-            "data_source": search_datasource,
-            "search_box": search_box,
-        },
-    )
+        """,
+            args={
+                "plot_source": plot.data_source,
+                "data_source": search_datasource,
+                "search_box": search_box,
+            },
+        )
+    else:
+        search_box.jscallback(
+            value="""
+var data = data_source.data;
+var text_search = search_box.value;
+
+// Loop over columns and values
+// If there is no match for any column for a given row, change the alpha value
+var string_match = false;
+var selected_indices = [];
+for (var i = 0; i < plot_source.data.x.length; i++) {
+    string_match = false
+    for (const column in data) {
+        if (String(data[column][i]).includes(text_search) ) {
+            string_match = true;
+        }
+    }
+    if (string_match){
+        selected_indices.push(i);
+    }
+}
+plot_source.selected.indices = selected_indices;
+plot_source.change.emit();
+            """,
+            args={
+                "plot_source": plot.data_source,
+                "data_source": search_datasource,
+                "search_box": search_box,
+            },
+        )
     return result
 
 
