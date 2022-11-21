@@ -14,6 +14,8 @@ def SimpleSearchWidget(
         *,
         raw_dataframe: Optional[pd.DataFrame] = None,
         title: str = "##### Search",
+        placeholder_text: str = "Enter search string ...",
+        live_search: bool = True,
         width: Optional[int] = None,
         height: Optional[int] = None,
         sizing_mode: str = "stretch_width",
@@ -35,6 +37,13 @@ def SimpleSearchWidget(
 
     title: str (optional, default = "#### Search")
         A title for the associated search widget in markdown format.
+
+    placeholder_text: str (optional, default = "Enter search string ...")
+        Text to place in the search input field when no search text is provided.
+
+    live_search: bool (optional, default = True)
+        If True then perform the search on every key-press; if False then perform search only when the enter key is
+        pressed.
 
     width: int or None (optional, default = None)
         The width of the pane, or, if ``None`` let the pane size itself.
@@ -58,7 +67,7 @@ def SimpleSearchWidget(
     else:
         search_datasource = plot.data_source
     search_box = pn.widgets.TextInput(
-        align=("start", "center"), sizing_mode=sizing_mode
+        placeholder=placeholder_text, align=("start", "center"), sizing_mode=sizing_mode
     )
     result = pn.WidgetBox(
         pn.pane.Markdown(title, align=("end", "center")),
@@ -72,7 +81,7 @@ def SimpleSearchWidget(
     search_box.jscallback(
         value="""
 var data = data_source.data;
-var text_search = search_box.value;
+var text_search = search_box.%s;
 
 // Loop over columns and values
 // If there is no match for any column for a given row, change the alpha value
@@ -91,7 +100,7 @@ for (var i = 0; i < plot_source.data.x.length; i++) {
 }
 plot_source.selected.indices = selected_indices;
 plot_source.change.emit();
-    """,
+    """ % ("value_input" if live_search else "value"),
         args={
             "plot_source": plot.data_source,
             "data_source": search_datasource,
