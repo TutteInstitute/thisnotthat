@@ -15,4 +15,5 @@ numpydoc
 pandas
 glasbey
 cmocean
+colorcet
 git+https://github.com/lmcinnes/param_docs
