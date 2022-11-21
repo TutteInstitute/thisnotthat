@@ -13,4 +13,5 @@ hdbscan
 apricot-select
 numpydoc
 pandas
+glasbey
 git+https://github.com/lmcinnes/param_docs
