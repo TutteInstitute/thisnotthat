@@ -9,6 +9,9 @@ dependencies:
   - umap-learn
   - hdbscan
   - setuptools
+  - glasbey
+  - colorcet
+  - cmocean
   - pip
   - pip:
       - -e .
