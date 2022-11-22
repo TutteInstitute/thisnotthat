@@ -29,6 +29,7 @@ def add_text_layer(
     *,
     angle: float = 0,
     text_color: str = "#444444",
+    text_outline_color: str = "#dddddd",
     text_font: Dict[str, str] = {"value": "helvetica"},
     text_font_style: str = "normal",
     text_line_height: float = 0.9,
@@ -87,17 +88,31 @@ def add_text_layer(
         another layer.
     """
     label_data_source = bokeh.models.ColumnDataSource(text_dataframe)
-    labels = bokeh.models.Text(
-        text_font_size=str(text_size) + "pt",
-        text_baseline="bottom",
-        text_align="center",
-        angle=angle,
-        text_color=text_color,
-        text_font=text_font,
-        text_font_style=text_font_style,
-        text_line_height=text_line_height,
-        text_alpha=text_alpha,
-    )
+    try:
+        labels = bokeh.models.Text(
+            text_font_size=str(text_size) + "pt",
+            text_baseline="bottom",
+            text_align="center",
+            angle=angle,
+            text_color=text_color,
+            text_outline_color=text_outline_color,
+            text_font=text_font,
+            text_font_style=text_font_style,
+            text_line_height=text_line_height,
+            text_alpha=text_alpha,
+        )
+    except AttributeError:
+        labels = bokeh.models.Text(
+            text_font_size=str(text_size) + "pt",
+            text_baseline="bottom",
+            text_align="center",
+            angle=angle,
+            text_color=text_color,
+            text_font=text_font,
+            text_font_style=text_font_style,
+            text_line_height=text_line_height,
+            text_alpha=text_alpha,
+        )
     upper_transition_val = max_text_size - text_transition_width
     lower_transition_val = min_text_size + text_transition_width
     text_resize_callback = bokeh.models.callbacks.CustomJS(
