@@ -22,7 +22,7 @@ class TextLayers(Protocol):
 
 
 def add_text_layer(
-    plot_figure: bokeh.plotting.Figure,
+    plot_figure,
     text_dataframe: pd.DataFrame,
     text_size: float,
     layer_type: str = "middle",
@@ -713,6 +713,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         text_size_scale: int = 12,
         text_layer_scale_factor: float = 2.0,
         text_color: str = "#444444",
+        text_outline_color: str = "#dddddd",
         text_font: Dict[str, str] = {"value": "helvetica"},
         text_font_style: str = "normal",
         text_line_height: float = 0.9,
@@ -790,6 +791,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 layer_type=layer_type,
                 angle=angle,
                 text_color=text_color,
+                text_outline_color=text_outline_color,
                 text_font=text_font,
                 text_font_style=text_font_style,
                 text_line_height=text_line_height,
