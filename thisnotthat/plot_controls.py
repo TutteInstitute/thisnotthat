@@ -97,6 +97,7 @@ class PlotControlWidget(pn.reactive.Reactive):
             margin=[0, 10],
             visible=scale_type_selector
         )
+        self.color_by_scale_selector[1].param.watch(self._options_changed, "value", onlychanged=True)
         self.hover_text_column = pn.widgets.Select(
             name="Hover text column",
             options=["Default"] + list(self.dataframe.columns),
@@ -120,6 +121,7 @@ class PlotControlWidget(pn.reactive.Reactive):
             margin=[0, 5,  0, 10],
             visible=scale_type_selector
         )
+        self.marker_size_scale_selector[1].param.watch(self._options_changed, "value", onlychanged=True)
         self.apply_changes = pn.widgets.Button(
             name="Apply Changes", button_type="success", disabled=True,
         )
