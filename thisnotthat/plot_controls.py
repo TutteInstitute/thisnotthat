@@ -240,13 +240,13 @@ class PlotControlWidget(pn.reactive.Reactive):
         else:
             values = self.dataframe[self.color_by_column.value]
             if pd.api.types.is_numeric_dtype(values):
-                if self.color_by_scale_selector.value == "Log":
+                if self.color_by_scale_selector[1].value == "Log":
                     if np.any(values <= 0):
                         self.bad_scaling_alert.visible = True
                         self.color_by_vector = values.to_list()
                     else:
                         self.color_by_vector = np.log(values).to_list()
-                elif self.color_by_scale_selector.value == "Sqrt":
+                elif self.color_by_scale_selector[1].value == "Sqrt":
                     if np.any(values < 0):
                         self.bad_scaling_alert.visible = True
                         self.color_by_vector = values.to_list()
@@ -272,14 +272,14 @@ class PlotControlWidget(pn.reactive.Reactive):
         if self.marker_size_column.value == "Default":
             self.marker_size = []
         else:
-            if self.marker_size_scale_selector.value == "Log":
+            if self.marker_size_scale_selector[1].value == "Log":
                 values = self.dataframe[self.marker_size_column.value]
                 if np.any(values <= 0):
                     self.bad_scaling_alert.visible = True
                     self.marker_size = values.to_list()
                 else:
                     self.marker_size = np.log(values).to_list()
-            elif self.marker_size_scale_selector.value == "Sqrt":
+            elif self.marker_size_scale_selector[1].value == "Sqrt":
                 values = self.dataframe[self.marker_size_column.value]
                 if np.any(values < 0):
                     self.bad_scaling_alert.visible = True
