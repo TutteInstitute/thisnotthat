@@ -97,6 +97,7 @@ class PlotControlWidget(pn.reactive.Reactive):
             margin=[0, 10],
             visible=scale_type_selector
         )
+        self.color_by_scale_selector[1].param.watch(self._options_changed, "value", onlychanged=True)
         self.hover_text_column = pn.widgets.Select(
             name="Hover text column",
             options=["Default"] + list(self.dataframe.columns),
@@ -120,6 +121,7 @@ class PlotControlWidget(pn.reactive.Reactive):
             margin=[0, 5,  0, 10],
             visible=scale_type_selector
         )
+        self.marker_size_scale_selector[1].param.watch(self._options_changed, "value", onlychanged=True)
         self.apply_changes = pn.widgets.Button(
             name="Apply Changes", button_type="success", disabled=True,
         )
@@ -240,18 +242,18 @@ class PlotControlWidget(pn.reactive.Reactive):
         else:
             values = self.dataframe[self.color_by_column.value]
             if pd.api.types.is_numeric_dtype(values):
-                if self.color_by_scale_selector.value == "Log":
+                if self.color_by_scale_selector[1].value == "Log":
                     if np.any(values <= 0):
                         self.bad_scaling_alert.visible = True
-                        self.color_by_vector = values.to_list()
+                        self.color_by_vector = values
                     else:
-                        self.color_by_vector = np.log(values).to_list()
-                elif self.color_by_scale_selector.value == "Sqrt":
+                        self.color_by_vector = pd.Series(np.log(values))
+                elif self.color_by_scale_selector[1].value == "Sqrt":
                     if np.any(values < 0):
                         self.bad_scaling_alert.visible = True
-                        self.color_by_vector = values.to_list()
+                        self.color_by_vector = values
                     else:
-                        self.color_by_vector = np.sqrt(values).to_list()
+                        self.color_by_vector = pd.Series(np.sqrt(values))
                 else:
                     self.color_by_vector = values
             else:
@@ -272,14 +274,14 @@ class PlotControlWidget(pn.reactive.Reactive):
         if self.marker_size_column.value == "Default":
             self.marker_size = []
         else:
-            if self.marker_size_scale_selector.value == "Log":
+            if self.marker_size_scale_selector[1].value == "Log":
                 values = self.dataframe[self.marker_size_column.value]
                 if np.any(values <= 0):
                     self.bad_scaling_alert.visible = True
                     self.marker_size = values.to_list()
                 else:
                     self.marker_size = np.log(values).to_list()
-            elif self.marker_size_scale_selector.value == "Sqrt":
+            elif self.marker_size_scale_selector[1].value == "Sqrt":
                 values = self.dataframe[self.marker_size_column.value]
                 if np.any(values < 0):
                     self.bad_scaling_alert.visible = True

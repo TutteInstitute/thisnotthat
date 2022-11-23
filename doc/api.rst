@@ -14,7 +14,7 @@ Plot Panes
    :members: add_cluster_labels
 
 .. autoclass:: DeckglPlotPane
-   :members: add_cluster_labels
+   :members:
 
 Data Panes
 ----------
@@ -34,7 +34,7 @@ Search and Edit Widgets
 .. autoclass:: SearchWidget
    :members: link_to_plot
 
-.. autofucntion:: SimpleSearchWidget
+.. autofunction:: SimpleSearchWidget
    :annotation:
 
 .. autoclass:: LabelEditorWidget
