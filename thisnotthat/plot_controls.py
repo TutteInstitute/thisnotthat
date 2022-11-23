@@ -245,15 +245,15 @@ class PlotControlWidget(pn.reactive.Reactive):
                 if self.color_by_scale_selector[1].value == "Log":
                     if np.any(values <= 0):
                         self.bad_scaling_alert.visible = True
-                        self.color_by_vector = values.to_list()
+                        self.color_by_vector = values
                     else:
-                        self.color_by_vector = np.log(values).to_list()
+                        self.color_by_vector = pd.Series(np.log(values))
                 elif self.color_by_scale_selector[1].value == "Sqrt":
                     if np.any(values < 0):
                         self.bad_scaling_alert.visible = True
-                        self.color_by_vector = values.to_list()
+                        self.color_by_vector = values
                     else:
-                        self.color_by_vector = np.sqrt(values).to_list()
+                        self.color_by_vector = pd.Series(np.sqrt(values))
                 else:
                     self.color_by_vector = values
             else:
