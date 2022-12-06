@@ -16,4 +16,5 @@ pandas
 glasbey
 cmocean
 colorcet
+vectorizers
 git+https://github.com/lmcinnes/param_docs

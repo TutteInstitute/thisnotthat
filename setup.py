@@ -18,5 +18,6 @@ setup(
         "colorcet",
         "cmocean",
         "glasbey",
+        "vectorizers",
     ],
 )

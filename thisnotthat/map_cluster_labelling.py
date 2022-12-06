@@ -12,6 +12,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import pairwise_distances
 from pynndescent import NNDescent
+from scipy.sparse import spmatrix
+from vectorizers.transformers import InformationWeightTransformer
 
 import numpy as np
 import numpy.typing as npt
@@ -803,6 +805,32 @@ def text_labels_from_per_sample_labels(
     return labels
 
 
+def text_labels_from_sparse_metadata(
+    pointset_layers: List[List[npt.NDArray]],
+    sparse_metadata: spmatrix,
+    feature_name_dictionary: Dict[int, str],
+    *,
+    items_per_label: int = 3,
+):
+    labels = []
+    positive_matrix = np.abs(sparse_metadata)
+    for layer in pointset_layers:
+        layer_labels = []
+        cluster_class_labels = np.full(positive_matrix.shape[0], -1, dtype=np.int64)
+        for i, pointset in enumerate(layer):
+            cluster_class_labels[pointset] = i
+
+        weighted_matrix = InformationWeightTransformer().fit_transform(positive_matrix, cluster_class_labels)
+        for pointset in layer:
+            cluster_scores = np.squeeze(np.array(weighted_matrix[pointset].sum(axis=0)))
+            top_indices = np.argsort(cluster_scores)[-items_per_label:]
+            layer_labels.append([feature_name_dictionary[idx] for idx in reversed(top_indices)])
+
+        labels.append(layer_labels)
+
+    return labels
+
+
 class JointVectorLabelLayers(object):
     """Generate multiple layers of labelling for a map based on the existence of a joint vector space representation
      of the source vector data for the map, and a separate set of label vectors that exist in the same vector space. To
@@ -1371,6 +1399,190 @@ class SampleLabelLayers(object):
             vector_metric=vector_metric,
             sample_weights=np.asarray(sample_weights),
             random_state=random_state,
+        )
+        self.label_formatter = label_formatter
+
+    @property
+    def labels_for_display(self):
+        return [
+            [self.label_formatter(label) for label in label_layer]
+            for label_layer in self.labels
+        ]
+
+
+class MetadataLabelLayers(object):
+    """Generate multiple layers of labelling for a map based on a dataframe of metadata associated to points. Multiple
+    layers of clusters are generated, with higher level layers having larger more general clusters. Each cluster is
+    then labelled by training a one versus the rest classifier to discern the cluster in terms of the associated
+    metadata. The feature importances can then be used to label a cluster with the most discerning features.
+
+    Parameters
+    ----------
+     source_vectors: Array of shape (n_samples, n_features)
+         The original high dimensional vector representation of the data
+
+     map_representation: Array of shape (n_samples, n_map_features)
+         The map representation of the data
+
+    sparse_metadata: spmatrix
+        A sparse matrix of metadata associated to the points of data / map representation. Usually this is associated
+        with metadata that has a high number of features, and any given sample only has non-zero values for a small
+        number of features. A prime example is a bag-of-words representation of a corpus of documents.
+
+    fetaure_name_dictionary: dict
+        A dictionary mapping column indices of the sparse matrix to feature names. For example, if the sparse matrix
+        were the output of sklearn's ``CountVectorizer`` the dict would be
+        ``{idx: word for word, idx in model.vocabulary_.items()}``.
+
+    vector_metric: str (optional, default = "cosine")
+        The metric to use on the source vector space.
+
+    cluster_map_representation: bool (optional, default = False)
+        Whether to directly cluster the map representation, or use UMAP to generate a representation for clustering
+        using ``umap_n_components`` many dimensions.
+
+    umap_n_components:
+        The number of dimensions to use UMAP to reduce to if ``cluster_map_representation`` is ``False``.
+
+    umap_n_neighbors: int (optional, default = 15)
+        The number of neighbors to use for UMAP  if ``cluster_map_representation`` is ``False``.
+
+    hdbscan_min_samples: int (optional, default = 10)
+        The ``min_samples`` value to use with HDBSCAN for clustering.
+
+    hdbscan_min_cluster_size: int (optional, default = 20)
+        The ``min_cluster_size`` value to use with HDBSCAN for clustering.
+
+    min_clusters: int (optional, default = 4)
+        The number of clusters to have at the highest layer; layers with fewer than this number of clusters will
+        be discarded
+
+    contamination: float (optional, default = 0.05)
+        The base contamination score used for outlier detection of fine grained clusters. Larger values will
+        prune out more outliers
+
+    contamination_multiplier: float (optional, default = 1.5)
+        The value to multiply the contamination score by as we increase the layers -- thus applying
+        higher contamination and removing more outliers from higher layers. Larger values will prune
+        more aggressively
+
+    max_contamination: float (optional, default = 0.25)
+        The maximum contamination value to use in outlier pruning -- once the multiplier increases
+        contamination beyond this value the contamination used will simply be capped at this value.
+
+    cluster_distance_threshold: float (optional, default = 0.025)
+        Cluster centroid representatives from a higher layer that are within this distance of an already selected
+        cluster centroid in a lower layer will be ignored (so we don't repeat clusters)
+
+    adjust_label_locations: bool (optional, default = True)
+        Whether to attempt to adjust label locations to avoid overlaps with lower layers.
+
+    label_adjust_spring_constant: float (optional, default = 0.1)
+        The "optimal" distance from the source position; larger values will allow the adjusted cluster to move farther
+
+    label_adjust_spring_constant_multiplier: float (optional, default = 1.5)
+         We can increase the spring constant for higher level layers; to do this we multiply by the
+         ``spring_constant_multiplier`` as we go up a layer. Smaller values (closer to 1.0) will ensure locations
+         do no stray too far; this is particularly desireable in the case where there are many layers.
+
+    label_adjust_edge_weight: float (optional, default = 1.0)
+        How strong the springs pull
+
+    items_per_label: int (optional, default = 3)
+        The number of items to use for each cluster label
+
+    label_formatter: Function (optional, default = string_label_formatter)
+        A function used for format a list of label items into a usable label (usually a single string).
+
+    random_state: int or None (optional, default = None)
+        A random state parameter which can be used to ensure fixed results for reproducibility.
+
+     Attributes
+     ----------
+    labels: List of list of lists of label items
+        A list of layers; each layer is a list of labels; each label is a list of label ``items_per_label`` many items
+
+    location_layers: List of Arrays of shape (n_cluster_in_layer, n_map_features)
+        A list of layers; each layer is an array of locations in the map representation to place the labels of that layer
+
+    labels_for_display: List of list of labels
+        A list of layers; each layer is a list of labels; each label is formatted for display use by ``label_formatter``
+    """
+
+    def __init__(
+        self,
+        source_vectors: npt.ArrayLike,
+        map_representation: npt.ArrayLike,
+        sparse_metadata: spmatrix,
+        feature_name_dictionary: Dict[int, str],
+        *,
+        vector_metric: str = "cosine",
+        cluster_map_representation: bool = False,
+        umap_n_components: int = 5,
+        umap_n_neighbors: int = 15,
+        hdbscan_min_samples: int = 10,
+        hdbscan_min_cluster_size: int = 20,
+        min_clusters_in_layer: int = 4,
+        contamination: float = 0.05,
+        contamination_multiplier: float = 1.5,
+        max_contamination: float = 0.25,
+        cluster_distance_threshold: float = 0.025,
+        adjust_label_locations: bool = True,
+        label_adjust_spring_constant: float = 0.1,
+        label_adjust_spring_constant_multiplier: float = 1.5,
+        label_adjust_edge_weight: float = 1.0,
+        items_per_label: int = 3,
+        label_formatter: Callable[[List[Any]], Any] = string_label_formatter,
+        random_state: Optional[int] = None,
+    ):
+        if adjust_label_locations and not HAS_NETWORKX:
+            warn("NetworkX is required for label adjustments; try pip install networkx")
+            adjust_label_locations = False
+
+        (
+            cluster_vectors,
+            cluster_locations,
+            hdbscan_tree,
+        ) = build_fine_grained_cluster_centers(
+            source_vectors,
+            map_representation,
+            cluster_map_representation=cluster_map_representation,
+            umap_metric=vector_metric,
+            umap_n_components=umap_n_components,
+            umap_n_neighbors=umap_n_neighbors,
+            hdbscan_min_samples=hdbscan_min_samples,
+            hdbscan_min_cluster_size=hdbscan_min_cluster_size,
+            random_state=random_state,
+        )
+        (
+            vector_layers,
+            self.location_layers,
+            self.pointset_layers,
+        ) = build_cluster_layers(
+            cluster_vectors,
+            cluster_locations,
+            min_clusters=min_clusters_in_layer,
+            contamination=contamination,
+            vector_metric=vector_metric,
+            cluster_distance_threshold=cluster_distance_threshold,
+            contamination_multiplier=contamination_multiplier,
+            max_contamination=max_contamination,
+            return_pointsets=True,
+            hdbscan_tree=hdbscan_tree,
+        )
+        if adjust_label_locations:
+            self.location_layers = text_locations(
+                self.location_layers,
+                spring_constant=label_adjust_spring_constant,
+                spring_constant_multiplier=label_adjust_spring_constant_multiplier,
+                edge_weight=label_adjust_edge_weight,
+            )
+
+        self.labels = text_labels_from_sparse_metadata(
+            self.pointset_layers,
+            sparse_metadata,
+            feature_name_dictionary,
+            items_per_label=items_per_label,
         )
         self.label_formatter = label_formatter
 
