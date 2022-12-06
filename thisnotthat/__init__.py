@@ -6,7 +6,12 @@ from .search import SearchWidget, SimpleSearchWidget
 from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
-from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers, SampleLabelLayers, SparseMetadataLabelLayers
+from .map_cluster_labelling import (
+    JointVectorLabelLayers,
+    MetadataLabelLayers,
+    SampleLabelLayers,
+    SparseMetadataLabelLayers,
+)
 
 __all__ = [
     "BokehPlotPane",

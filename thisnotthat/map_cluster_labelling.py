@@ -765,7 +765,9 @@ def text_labels_from_per_sample_labels(
     if HAS_APRICOT and sample_selection_method != "random":
         if sample_selection_method == "facility_location":
             selector = apricot.FacilityLocationSelection(
-                items_per_label, metric=vector_metric, n_neighbors=100,
+                items_per_label,
+                metric=vector_metric,
+                n_neighbors=100,
             )
         elif sample_selection_method == "graph_cut":
             selector = apricot.GraphCutSelection(items_per_label, metric=vector_metric)
@@ -820,11 +822,15 @@ def text_labels_from_sparse_metadata(
         for i, pointset in enumerate(layer):
             cluster_class_labels[pointset] = i
 
-        weighted_matrix = InformationWeightTransformer().fit_transform(positive_matrix, cluster_class_labels)
+        weighted_matrix = InformationWeightTransformer().fit_transform(
+            positive_matrix, cluster_class_labels
+        )
         for pointset in layer:
             cluster_scores = np.squeeze(np.array(weighted_matrix[pointset].sum(axis=0)))
             top_indices = np.argsort(cluster_scores)[-items_per_label:]
-            layer_labels.append([feature_name_dictionary[idx] for idx in reversed(top_indices)])
+            layer_labels.append(
+                [feature_name_dictionary[idx] for idx in reversed(top_indices)]
+            )
 
         labels.append(layer_labels)
 
