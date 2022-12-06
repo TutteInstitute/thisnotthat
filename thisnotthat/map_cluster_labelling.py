@@ -1410,7 +1410,7 @@ class SampleLabelLayers(object):
         ]
 
 
-class MetadataLabelLayers(object):
+class SparseMetadataLabelLayers(object):
     """Generate multiple layers of labelling for a map based on a dataframe of metadata associated to points. Multiple
     layers of clusters are generated, with higher level layers having larger more general clusters. Each cluster is
     then labelled by training a one versus the rest classifier to discern the cluster in terms of the associated
