@@ -47,6 +47,7 @@ to build out features and make it easier to use.
    metadata_cluster_labels
    joint_vector_cluster_labels
    sampling_cluster_labels
+   sparse_metadata_cluster_labels
 
 
 .. toctree::
