@@ -44,7 +44,7 @@ interactive web applications.
 Documentation
 -------------
 
-Get the latest on `Read The Docs <https://thisnotthat.readthedocs.io/en/latest/>`.
+Get the latest on `Read The Docs <https://thisnotthat.readthedocs.io/en/latest/>`_.
 
 ----------
 Installing
