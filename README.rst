@@ -61,6 +61,8 @@ This Not That is built on top of Panel and Bokeh, so you will need these install
 * umap-learn
 * hdbscan
 * glasbey
+* cmocean
+* vectorizers
 
 We also highly recommend installing:
 

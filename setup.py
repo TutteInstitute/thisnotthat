@@ -30,7 +30,8 @@ INSTALL_REQUIRES = [
     "panel",
     "param",
     "scikit-learn",
-    "umap-learn"
+    "umap-learn",
+    "vectorizers",
 ]
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',

@@ -10,3 +10,4 @@ hdbscan
 colorcet
 cmocean
 glasbey
+vectorizers
