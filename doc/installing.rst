@@ -28,7 +28,8 @@ In summary you will need:
 * cmocean
 * colorcet
 * glasbey
-
+* cmocean
+* vectorizers
 
 Recommended Extras
 ------------------
