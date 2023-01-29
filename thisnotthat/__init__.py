@@ -7,6 +7,7 @@ from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
 from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers
+from .summary import SummaryDataPane
 
 __all__ = [
     "BokehPlotPane",
@@ -21,4 +22,6 @@ __all__ = [
     "PlotControlWidget",
     "JointVectorLabelLayers",
     "MetadataLabelLayers",
+    "SummaryDataPane",
+    "summary"
 ]
