@@ -311,7 +311,7 @@ class SearchWidget(pn.reactive.Reactive):
 
 class KeywordSearchWidget(pn.reactive.Reactive):
     """A search pane that can be used for searching for keywords within longer text documents. The search uses sklearn's
-    CountVectorizer to encode the texts in a bad of words model and allow for faster searching over words in longer
+    CountVectorizer to encode the texts in a bag of words model and allow for faster searching over words in longer
     documents than can reasonably be managed with direct searches over text.
 
     Parameters
