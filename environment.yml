@@ -8,7 +8,6 @@ dependencies:
   - matplotlib
   - setuptools
   - colorcet
-  - cmocean
   - pip
   - pip:
       - -e .
