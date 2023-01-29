@@ -6,20 +6,22 @@ import numpy.typing as npt
 
 from bokeh.models import ColumnDataSource
 from .bokeh_plot import BokehPlotPane
+from sklearn.feature_extraction.text import CountVectorizer
 
 from typing import *
 
+
 def SimpleSearchWidget(
-        plot: BokehPlotPane,
-        *,
-        raw_dataframe: Optional[pd.DataFrame] = None,
-        title: str = "##### Search",
-        placeholder_text: str = "Enter search string ...",
-        live_search: bool = True,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        sizing_mode: str = "stretch_width",
-        name: str = "Search",
+    plot: BokehPlotPane,
+    *,
+    raw_dataframe: Optional[pd.DataFrame] = None,
+    title: str = "##### Search",
+    placeholder_text: str = "Enter search string ...",
+    live_search: bool = True,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
+    sizing_mode: str = "stretch_width",
+    name: str = "Search",
 ):
     """Construct a simple search widget attached to a specific ``BokehPlotPane``. This allows for basic search in a very
     simple set-up. Notably the search is performed client-side in javascript, and so should work even without a
@@ -52,7 +54,7 @@ def SimpleSearchWidget(
         The height of the pane, or, if ``None`` let the pane size itself.
 
     sizing_mode: str (optional, default = "stretch_both")
-        The panel sizing mode of the data table.
+        The panel sizing mode of the search widget.
 
     name: str (optional, default = "Search")
         The panel name of the pane. See panel documentation for more details.
@@ -287,6 +289,136 @@ class SearchWidget(pn.reactive.Reactive):
                 self.warning_area.alert_type = "danger"
                 self.warning_area.object = str(err)
                 self.warning_area.visible = True
+
+    def _get_model(self, *args, **kwds):
+        return self.pane._get_model(*args, **kwds)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(plot, selected="selected", bidirectional=True)
+
+
+class KeywordSearchWidget(pn.reactive.Reactive):
+    """A search pane that can be used for searching for keywords within longer text documents. The search uses sklearn's
+    CountVectorizer to encode the texts in a bag of words model and allow for faster searching over words in longer
+    documents than can reasonably be managed with direct searches over text.
+
+    Parameters
+    ----------
+    text_samples: Iterable of str
+        A list of text string to be searched over, with one text per sample in the data map.
+
+    title: str (optional, default = "#### Search")
+        A markdown title to be placed at the top of the pane.
+
+    placeholder_text: str (optional, default = "Enter keywords ...")
+        Text to place in the search input field when no search text is provided.
+
+    sizing_mode: str (optional, default = "stretch_both")
+        The panel sizing mode of the search widget.
+
+    min_occurrences: int (optional, default = 2)
+        The min number of occurrences of a word in the full set of texts for it to be included in the searchable
+        vocabulary.
+
+    token_pattern: str (optional, default = r"(?u)\b\w\w+\b")
+        The regular expression used to tokenize the text into words within the CountVectorizer. The default is the same
+        as the default option for sklearn's CountVectorizer.
+
+    width: int or None (optional, default = None)
+        The width of the pane, or, if ``None`` let the pane size itself.
+
+    height: int or None (optional, default = None)
+        The height of the pane, or, if ``None`` let the pane size itself.
+
+    name: str (optional, default = "Search")
+        The panel name of the pane. See panel documentation for more details.
+
+
+    """
+
+    selected = param.List(default=[], doc="Indices of selected samples")
+
+    def __init__(
+        self,
+        text_samples: Iterable[str],
+        *,
+        title: str = "#### Search",
+        placeholder_text: str = "Enter keywords ...",
+        sizing_mode: str = "stretch_width",
+        min_occurrences: int = 2,
+        token_pattern: str = r"(?u)\b\w\w+\b",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        name: str = "Search",
+    ) -> None:
+        super().__init__(name=name)
+
+        self._keyword_vectorizer = CountVectorizer(
+            min_df=min_occurrences,
+            token_pattern=token_pattern,
+        )
+        self._keyword_matrix = self._keyword_vectorizer.fit_transform(
+            text_samples
+        ).tocsc()
+        self._keyword_df = pd.DataFrame(
+            {
+                "keyword": self._keyword_vectorizer.vocabulary_.keys(),
+                "col_index": self._keyword_vectorizer.vocabulary_.values(),
+            }
+        )
+
+        self.search_box = pn.widgets.TextInput(
+            placeholder=placeholder_text,
+            align=("start", "center"),
+            sizing_mode=sizing_mode,
+        )
+        self.search_button = pn.widgets.Button(name="Search", button_type="success")
+        self.search_button.disabled = True
+        self.search_button.on_click(self._run_query)
+        self.search_box.param.watch(self._button_state, ["value_input"], onlychanged=True)
+
+        self.pane = pn.WidgetBox(
+            title,
+            pn.Row(self.search_box, self.search_button),
+            sizing_mode=sizing_mode,
+            width=width,
+            height=height,
+        )
+
+    def _button_state(self, *events):
+        self.search_button.disabled = False
+
+    def _run_query(self, event: param.parameterized.Event) -> None:
+        if len(self.search_box.value) == 0:
+            self.selected = []
+        else:
+            keywords = self.search_box.value.split()
+            matched_indices = set([])
+
+            for keyword in keywords:
+                col_indices = self._keyword_df.col_index[
+                    self._keyword_df.keyword.str.contains(keyword.lower())
+                ].values.tolist()
+                count_vector = np.squeeze(
+                    np.asarray(self._keyword_matrix[:, col_indices].sum(axis=1))
+                )
+                matched_indices.update([int(x) for x in np.nonzero(count_vector)[0]])
+
+            self.selected = list(matched_indices)
+
+        self.search_button.disabled = True
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)

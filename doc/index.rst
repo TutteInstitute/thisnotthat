@@ -37,6 +37,7 @@ to build out features and make it easier to use.
    info_pane
    search_widget
    simple_search_widget
+   keyword_search_widget
    label_editor_widget
    plot_control_widget
 
