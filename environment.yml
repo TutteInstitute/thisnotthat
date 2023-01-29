@@ -6,12 +6,12 @@ dependencies:
   - numpy>=1.22
   - pandas
   - matplotlib
-  - umap-learn
-  - hdbscan
   - setuptools
-  - glasbey
   - colorcet
   - cmocean
   - pip
   - pip:
       - -e .
+      - glasbey
+      - hdbscan
+      - umap-learn
