@@ -1,17 +1,16 @@
 name: thisnotthat
 dependencies:
-  - python>=3.7
+  - python>=3.9
   - panel
   - bokeh
   - numpy>=1.22
   - pandas
   - matplotlib
-  - umap-learn
-  - hdbscan
   - setuptools
-  - glasbey
   - colorcet
-  - cmocean
   - pip
   - pip:
       - -e .
+      - glasbey
+      - hdbscan
+      - umap-learn

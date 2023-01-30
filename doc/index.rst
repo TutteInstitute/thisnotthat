@@ -38,6 +38,7 @@ to build out features and make it easier to use.
    search_widget
    simple_search_widget
    vector_search_widget
+   keyword_search_widget
    label_editor_widget
    plot_control_widget
 
@@ -48,6 +49,7 @@ to build out features and make it easier to use.
    metadata_cluster_labels
    joint_vector_cluster_labels
    sampling_cluster_labels
+   sparse_metadata_cluster_labels
 
 
 .. toctree::

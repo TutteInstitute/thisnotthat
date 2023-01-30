@@ -40,6 +40,12 @@ This Not That for Data Map Apps
 Because This Not That is built on top of the `Panel library`_ it is trivial to deploy TNT based solutions as
 interactive web applications.
 
+-------------
+Documentation
+-------------
+
+Get the latest on `Read The Docs <https://thisnotthat.readthedocs.io/en/latest/>`_.
+
 ----------
 Installing
 ----------
@@ -55,6 +61,8 @@ This Not That is built on top of Panel and Bokeh, so you will need these install
 * umap-learn
 * hdbscan
 * glasbey
+* cmocean
+* vectorizers
 
 We also highly recommend installing:
 
