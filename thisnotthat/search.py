@@ -391,7 +391,9 @@ class KeywordSearchWidget(pn.reactive.Reactive):
         self.search_button = pn.widgets.Button(name="Search", button_type="success")
         self.search_button.disabled = True
         self.search_button.on_click(self._run_query)
-        self.search_box.param.watch(self._button_state, ["value_input"], onlychanged=True)
+        self.search_box.param.watch(
+            self._button_state, ["value_input"], onlychanged=True
+        )
 
         self.pane = pn.WidgetBox(
             title,
@@ -497,7 +499,8 @@ class VectorSearchWidget(pn.reactive.Reactive):
 
     name: str (optional, default = "Search")
         The panel name of the pane. See panel documentation for more details.
-        """
+    """
+
     selected = param.List(default=[], doc="Indices of selected samples")
 
     def __init__(
@@ -518,7 +521,9 @@ class VectorSearchWidget(pn.reactive.Reactive):
     ) -> None:
         super().__init__(name=name)
 
-        self._search_index = NNDescent(vectors_to_query, metric=vector_metric, n_neighbors=pynnd_n_neighbors)
+        self._search_index = NNDescent(
+            vectors_to_query, metric=vector_metric, n_neighbors=pynnd_n_neighbors
+        )
         self._search_index.prepare()
         self._embedder = embedder
         self._input_type = input_type
@@ -542,16 +547,20 @@ class VectorSearchWidget(pn.reactive.Reactive):
                 sizing_mode=sizing_mode,
                 multiple=False,
             )
-            self.search_box.param.watch(
-                self._button_state, ["value"], onlychanged=True
-            )
+            self.search_box.param.watch(self._button_state, ["value"], onlychanged=True)
         else:
-            raise ValueError(f"Invalid input type {input_type}. Should be one of 'text' or 'file'")
+            raise ValueError(
+                f"Invalid input type {input_type}. Should be one of 'text' or 'file'"
+            )
 
         self.n_results_slider = pn.widgets.DiscreteSlider(
-            name="Number of results", options=list(range(0, max_query_results, 10)), value=n_query_results
+            name="Number of results",
+            options=list(range(0, max_query_results, 10)),
+            value=n_query_results,
         )
-        self.n_results_slider.param.watch(self._button_state, ["value"], onlychanged=True)
+        self.n_results_slider.param.watch(
+            self._button_state, ["value"], onlychanged=True
+        )
 
         self.pane = pn.WidgetBox(
             title,
@@ -561,7 +570,6 @@ class VectorSearchWidget(pn.reactive.Reactive):
             width=width,
             height=height,
         )
-
 
     def _button_state(self, *events) -> None:
         self.search_button.disabled = False
@@ -581,13 +589,16 @@ class VectorSearchWidget(pn.reactive.Reactive):
                 query_vector = self._embedder(self.search_box.value)
 
         if query_vector.ndim == 1:
-            result_indices, result_dists = self._search_index.query([query_vector], k=self.n_results_slider.value)
+            result_indices, result_dists = self._search_index.query(
+                [query_vector], k=self.n_results_slider.value
+            )
         else:
-            result_indices, result_dists = self._search_index.query(query_vector, k=self.n_results_slider.value)
+            result_indices, result_dists = self._search_index.query(
+                query_vector, k=self.n_results_slider.value
+            )
 
         self.selected = [int(x) for x in result_indices[0]]
         self.search_button.disabled = True
-
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
