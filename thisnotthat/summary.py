@@ -5,12 +5,14 @@ import panel as pn
 import param
 
 
-class Summarizer(Protocol):
-
+class DataFrameSummarizer(Protocol):
+    """
+    See SummaryDataPane for details on setting up objects that follow this protocol.
+    """
     def summarize(self, selected: Sequence[int]) -> pd.DataFrame: ...
 
 
-NoSelection = Callable[[], pd.DataFrame]
+DataFrameNoSelection = Callable[[], pd.DataFrame]
 
 
 class SummaryDataPane(pn.reactive.Reactive):
@@ -70,8 +72,8 @@ class SummaryDataPane(pn.reactive.Reactive):
 
     def __init__(
         self,
-        summarizer: Summarizer,
-        no_selection: NoSelection = lambda: pd.DataFrame(
+        summarizer: DataFrameSummarizer,
+        no_selection: DataFrameNoSelection = lambda: pd.DataFrame(
             columns=["Nothing to summarize"]
         ),
         width: Optional[int] = None,
