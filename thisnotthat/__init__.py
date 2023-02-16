@@ -6,6 +6,8 @@ from .search import SearchWidget, SimpleSearchWidget, KeywordSearchWidget
 from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
+from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers
+from .summary import SummaryDataPane
 from .map_cluster_labelling import (
     JointVectorLabelLayers,
     MetadataLabelLayers,
@@ -27,6 +29,8 @@ __all__ = [
     "PlotControlWidget",
     "JointVectorLabelLayers",
     "MetadataLabelLayers",
+    "SummaryDataPane",
+    "summary"
     "SampleLabelLayers",
     "SparseMetadataLabelLayers",
 ]
