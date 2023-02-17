@@ -11,7 +11,7 @@ from sklearn.linear_model import LogisticRegression
 
 class DataFrameSummarizer(Protocol):
     """
-    See SummaryDataPane for details on setting up objects that follow this protocol.
+    See DataSummaryPane for details on setting up objects that follow this protocol.
     """
     def summarize(self, selected: Sequence[int]) -> pd.DataFrame: ...
 
@@ -19,7 +19,7 @@ class DataFrameSummarizer(Protocol):
 DataFrameNoSelection = Callable[[], pd.DataFrame]
 
 
-class SummaryDataPane(pn.reactive.Reactive):
+class DataSummaryPane(pn.reactive.Reactive):
     """
     A data pane that generates a summary of the selected points in the form of a
     data frame.
@@ -64,7 +64,7 @@ class SummaryDataPane(pn.reactive.Reactive):
             )
 
     plot = tnt.BokehPlotPane(data, show_legend=False)
-    summary = tnt.SummaryDataPane(CentroidSummarizer())
+    summary = tnt.DataSummaryPane(CentroidSummarizer())
     summary.link_to_plot(plot)
     display(pn.Row(plot, summary))
 
@@ -135,7 +135,7 @@ class SummaryDataPane(pn.reactive.Reactive):
 
 class SummarizerValueCounts:
     """
-    Summarizer for the SummaryDataPane that compiles a summary as the value counts
+    Summarizer for the DataSummaryPane that compiles a summary as the value counts
     of a data series indexed by the selection.
 
     Parameters
@@ -219,7 +219,7 @@ class PlotSummaryPane(pn.reactive.Reactive):
             return fig
 
     plot = tnt.BokehPlotPane(data, show_legend=False)
-    summary = tnt.SummaryDataPane(MeansSummarizer())
+    summary = tnt.DataSummaryPane(MeansSummarizer())
     summary.link_to_plot(plot)
     display(pn.Row(plot, summary))
 
