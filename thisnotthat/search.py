@@ -3,10 +3,14 @@ import param
 import numpy as np
 import pandas as pd
 import numpy.typing as npt
+import io
 
 from bokeh.models import ColumnDataSource
 from .bokeh_plot import BokehPlotPane
 from sklearn.feature_extraction.text import CountVectorizer
+
+from pynndescent import NNDescent
+from PIL import Image
 
 from typing import *
 
@@ -387,7 +391,9 @@ class KeywordSearchWidget(pn.reactive.Reactive):
         self.search_button = pn.widgets.Button(name="Search", button_type="success")
         self.search_button.disabled = True
         self.search_button.on_click(self._run_query)
-        self.search_box.param.watch(self._button_state, ["value_input"], onlychanged=True)
+        self.search_box.param.watch(
+            self._button_state, ["value_input"], onlychanged=True
+        )
 
         self.pane = pn.WidgetBox(
             title,
@@ -418,6 +424,180 @@ class KeywordSearchWidget(pn.reactive.Reactive):
 
             self.selected = list(matched_indices)
 
+        self.search_button.disabled = True
+
+    def _get_model(self, *args, **kwds):
+        return self.pane._get_model(*args, **kwds)
+
+    def link_to_plot(self, plot):
+        """Link this pane to a plot pane using a default set of params that can sensibly be linked.
+
+        Parameters
+        ----------
+        plot: PlotPane
+            The plot pane to link to.
+
+        Returns
+        -------
+        link:
+            The link object.
+        """
+        return self.link(plot, selected="selected", bidirectional=True)
+
+
+class VectorSearchWidget(pn.reactive.Reactive):
+    """A search pane that can be used for searching for vector databases of content given a means to convert search
+    queries into vector representations. The search uses pynndescent for fast vector searching. You must supply
+    both vectors (one for each sample in the plot, in the same order), and a function or callable to convert the
+    search input into vectors in the same space. Search input can either be text, or files. In file input is used
+    then the content passed to the embedder is either text (in the case of text files), a numpy array
+    (in the case of images), or a raw bytestring (in the case of other file types that aren't recognized). The embedder
+    callable needs to be able to appropriately handle the content of these forms.
+
+    Parameters
+    ----------
+
+    vectors_to_query: ArrayLike
+        An array of vectors to be searched over.
+
+    embedder: Callable
+        A Callable or function that can take the search input and return a vector representing the input that exists
+        in the same embedding space as ``vectors_to_query``.
+
+    title: str (optional, default = "#### Search")
+        A markdown title to be placed at the top of the pane.
+
+    vector_metric: str (optional, default = "cosine")
+        The metric to use for searching over the ``vectors_to_query``. Any metric supported by pynndescent is valid.
+
+    input_type: str (optional, default = "text")
+        Either "text" or "file" depending on how you wish to supply query data.
+
+    placeholder_text: str (optional, default = "Enter keywords ...")
+        Text to place in the search input field when no search text is provided.
+
+    n_query_results: int (optional, default = 20)
+        The default number of query results to return.
+
+    max_query_results: int (optional, default = 100)
+        The number of results returned can be set by a slides in the widget; this value determines the maximum value
+        of that slider.
+
+    pynnd_n_neighbors: int (optional, default = 60)
+        The ``n_neighbors`` value to use for pynndescent; larger values result in more accurate searches with longer
+        search times. The default value of 60 provides reasonable search times with good accuracy for cosine metrics.
+        A smaller value can be used for Euclidean metrics. Other metrics may require some tuning.
+
+    sizing_mode: str (optional, default = "stretch_both")
+        The panel sizing mode of the search widget.
+
+    width: int or None (optional, default = None)
+        The width of the pane, or, if ``None`` let the pane size itself.
+
+    height: int or None (optional, default = None)
+        The height of the pane, or, if ``None`` let the pane size itself.
+
+    name: str (optional, default = "Search")
+        The panel name of the pane. See panel documentation for more details.
+    """
+
+    selected = param.List(default=[], doc="Indices of selected samples")
+
+    def __init__(
+        self,
+        vectors_to_query: npt.ArrayLike,
+        embedder: Callable,
+        title: str = "#### Search",
+        vector_metric: str = "cosine",
+        input_type: Literal["text", "file"] = "text",
+        placeholder_text: str = "Enter search string ...",
+        n_query_results: int = 20,
+        max_query_results: int = 100,
+        pynnd_n_neighbors: int = 60,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        sizing_mode: str = "stretch_width",
+        name: str = "Search",
+    ) -> None:
+        super().__init__(name=name)
+
+        self._search_index = NNDescent(
+            vectors_to_query, metric=vector_metric, n_neighbors=pynnd_n_neighbors
+        )
+        self._search_index.prepare()
+        self._embedder = embedder
+        self._input_type = input_type
+
+        self.search_button = pn.widgets.Button(name="Search", button_type="success")
+        self.search_button.disabled = True
+        self.search_button.on_click(self._run_query)
+
+        if input_type == "text":
+            self.search_box = pn.widgets.TextInput(
+                placeholder=placeholder_text,
+                align=("start", "center"),
+                sizing_mode=sizing_mode,
+            )
+            self.search_box.param.watch(
+                self._button_state, ["value_input"], onlychanged=True
+            )
+        elif input_type == "file":
+            self.search_box = pn.widgets.FileInput(
+                align=("start", "center"),
+                sizing_mode=sizing_mode,
+                multiple=False,
+            )
+            self.search_box.param.watch(self._button_state, ["value"], onlychanged=True)
+        else:
+            raise ValueError(
+                f"Invalid input type {input_type}. Should be one of 'text' or 'file'"
+            )
+
+        self.n_results_slider = pn.widgets.DiscreteSlider(
+            name="Number of results",
+            options=list(range(0, max_query_results, 10)),
+            value=n_query_results,
+        )
+        self.n_results_slider.param.watch(
+            self._button_state, ["value"], onlychanged=True
+        )
+
+        self.pane = pn.WidgetBox(
+            title,
+            pn.Row(self.search_box, self.search_button),
+            self.n_results_slider,
+            sizing_mode=sizing_mode,
+            width=width,
+            height=height,
+        )
+
+    def _button_state(self, *events) -> None:
+        self.search_button.disabled = False
+
+    def _run_query(self, event: param.parameterized.Event) -> None:
+        if self._input_type == "text":
+            query_vector = self._embedder([self.search_box.value])
+        elif self._input_type == "file":
+            if self.search_box.mime_type.startswith("image"):
+                raw_img = io.BytesIO()
+                self.search_box.save(raw_img)
+                img = Image.open(raw_img)
+                query_vector = self._embedder(np.asarray(img))
+            elif self.search_box.mime_type.startswith("text"):
+                query_vector = self._embedder(self.search_box.value.decode())
+            else:
+                query_vector = self._embedder(self.search_box.value)
+
+        if query_vector.ndim == 1:
+            result_indices, result_dists = self._search_index.query(
+                [query_vector], k=self.n_results_slider.value
+            )
+        else:
+            result_indices, result_dists = self._search_index.query(
+                query_vector, k=self.n_results_slider.value
+            )
+
+        self.selected = [int(x) for x in result_indices[0]]
         self.search_button.disabled = True
 
     def _get_model(self, *args, **kwds):
