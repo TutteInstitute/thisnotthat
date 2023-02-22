@@ -96,7 +96,7 @@ you and get your code merged into the main branch.
 License
 -------
 
-The This Not That package is 2-clause BSD licensed.
+The This Not That package is 3-clause BSD licensed.
 
 
 .. _Panel library: https://panel.holoviz.org/
