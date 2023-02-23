@@ -12,7 +12,8 @@ from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
 from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers
-from .summary import DataSummaryPane
+from .summarizer_plot import PlotSummaryPane
+from .summarizer_dataframe import DataSummaryPane
 from .map_cluster_labelling import (
     JointVectorLabelLayers,
     MetadataLabelLayers,
@@ -36,7 +37,7 @@ __all__ = [
     "JointVectorLabelLayers",
     "MetadataLabelLayers",
     "DataSummaryPane",
-    "summary"
+    "PlotSummaryPane",
     "SampleLabelLayers",
     "SparseMetadataLabelLayers",
 ]

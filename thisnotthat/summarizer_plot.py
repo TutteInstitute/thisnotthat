@@ -1,5 +1,6 @@
 from typing import Callable, Optional, Protocol, Sequence
 
+import matplotlib.pyplot as plt
 from bokeh.layouts import LayoutDOM
 import bokeh.plotting as bpl
 import numpy as np
@@ -7,157 +8,8 @@ import pandas as pd
 import panel as pn
 import param
 from sklearn.linear_model import LogisticRegression
-
-
-class DataFrameSummarizer(Protocol):
-    """
-    See DataSummaryPane for details on setting up objects that follow this protocol.
-    """
-    def summarize(self, selected: Sequence[int]) -> pd.DataFrame: ...
-
-
-DataFrameNoSelection = Callable[[], pd.DataFrame]
-
-
-class DataSummaryPane(pn.reactive.Reactive):
-    """
-    A data pane that generates a summary of the selected points in the form of a
-    data frame.
-
-    summarizer
-        Any object with a ``summarize`` method that will generate and return a data
-        frame, given the list of indices of the selected points. This method will not
-        be called when no point is selected, so one may assume the list of indices not
-        to be empty. The ``thisnotthat.summary`` module contains a set of such
-        summarizer classes.
-
-    no_selection
-        Parameter-less function that returns the data frame to display when nothing
-        is selected.
-
-    width
-    height
-    sizing_mode
-        Geometry of the displayed frame. See Panel documentation.
-
-    name
-        Name of the pane.
-
-
-    Example: (in a Jupyter notebook)
-
-    import numpy as np
-    import pandas as pd
-
-    data = pd.DataFrame({
-        "x": [8, 3, 9, -2, 4],
-        "y": [7, 0, 11, -5, -3]
-    })
-
-    class CentroidSummarizer:
-
-        def summarize(self, selected):
-            return pd.DataFrame(
-                data=[np.mean(data.iloc[selected])],
-                columns=["x", "y"],
-                index=["Centroid"]
-            )
-
-    plot = tnt.BokehPlotPane(data, show_legend=False)
-    summary = tnt.DataSummaryPane(CentroidSummarizer())
-    summary.link_to_plot(plot)
-    display(pn.Row(plot, summary))
-
-    Now play with the lasso tool to select points, and see the data pane show the
-    centroid of the selection.
-    """
-
-    selected = param.List(default=[], doc="Indices of selected samples")
-
-    def __init__(
-        self,
-        summarizer: DataFrameSummarizer,
-        no_selection: DataFrameNoSelection = lambda: pd.DataFrame(
-            columns=["Nothing to summarize"]
-        ),
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        sizing_mode: str = "stretch_both",
-        name: str = "Summary"
-    ) -> None:
-        super().__init__(name=name)
-        self.summarizer = summarizer
-        self.no_selection = no_selection
-        self._base_selection = []
-        self.table = pn.pane.DataFrame(
-            self.no_selection(),
-            sizing_mode=sizing_mode,
-            width=width,
-            height=height
-        )
-        self.pane = pn.Column(self.table, sizing_mode=sizing_mode)
-
-    def _get_model(self, *args, **kwargs):
-        return self.pane._get_model(*args, **kwargs)
-
-    @param.depends("selected", watch=True)
-    def _update_selected(self) -> None:
-        self.table.object = (
-            self.summarizer.summarize(self.selected)
-            if self.selected
-            else self.no_selection()
-        )
-
-    def link_to_plot(self, plot):
-        """
-        Link this pane to the plot pane to summarize using a default set of params
-        that can sensibly be linked.
-
-        Parameters
-        ----------
-        plot: PlotPane
-            The plot pane to link to.
-
-        Returns
-        -------
-        link:
-            The link object.
-        """
-        return self.link(plot, selected="selected", bidirectional=True)
-
-    @property
-    def summary_dataframe(self):
-        """
-        The latest summary generated.
-        """
-        return self.table.object
-
-
-class SummarizerValueCounts:
-    """
-    Summarizer for the DataSummaryPane that compiles a summary as the value counts
-    of a data series indexed by the selection.
-
-    Parameters
-    ----------
-
-    data: pd.Series
-        The data corresponding to the plot points.
-    top_k: int
-        The number of values to keep out of the value counts.
-    """
-
-    def __init__(self, data: pd.Series, top_k: int = 20):
-        self.data = data
-        self.top_k = top_k
-
-    def summarize(self, selected: Sequence[int]) -> pd.DataFrame:
-        """
-        Generate the summary, given the indices of the selected points.
-        """
-        data_selected = self.data.iloc[selected]
-        return data_selected.value_counts().to_frame().head(self.top_k)
-
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, RobustScaler
+from sklearn.compose import make_column_transformer
 
 class PlotSummarizer(Protocol):
 
@@ -219,7 +71,7 @@ class PlotSummaryPane(pn.reactive.Reactive):
             return fig
 
     plot = tnt.BokehPlotPane(data, show_legend=False)
-    summary = tnt.DataSummaryPane(MeansSummarizer())
+    summary = tnt.PlotSummaryPane(MeansSummarizer())
     summary.link_to_plot(plot)
     display(pn.Row(plot, summary))
 
@@ -297,16 +149,56 @@ class PlotSummaryPane(pn.reactive.Reactive):
 
 
 class FeatureImportanceSummarizer:
+    """
+    Summarizer for the PlotSummaryPane that constructs a class balanced, L1 penalized,
+    logistic regression between the selected points and the remaining data.
+    Numeric variables have been centered and rescaled by their mean and variance to put them
+    on similar scales in order to make the coefficients more comparable.
+    Then it displays that feature importance in a bar plot.
+
+    All of the standard caveates with using the coefficients of a linear model as a feature
+    importance measure are included here.
+
+    It might be worth reading the sklearn documentation on the
+    Common pitfalls in the interpretation of coefficients of linear models
+    (https://scikit-learn.org/stable/auto_examples/inspection/plot_linear_model_coefficient_interpretation.html)
+
+    Parameters
+    ----------
+
+    data: pd.DataFrame
+        A dataframe corresponding to the plot points.  The numeric features will
+        be extracted from this dataframe for computing variable importance.
+    max_features: int <default: 15>
+        The maximum number of features to display the importance for.
+    tol_importance_relative: float <default: 0.01>
+        The minimum feature coefficient value in order to be considered important.
+    one_hot_categorical_features: bool <default: True>
+        Should the one hot encoding of the categorical features be included in our importance.
+    """
 
     def __init__(
         self,
         data: pd.DataFrame,
         max_features: int = 15,
-        tol_importance_relative: float = 0.01
+        tol_importance_relative: float = 0.01,
+        one_hot_categorical_features: bool = True,
     ) -> None:
-        self.data = data.select_dtypes(np.number)  # Indexed 0 to length.
+        categorical_columns = data.select_dtypes(include=['object']).columns.tolist()
+        numeric_columns = data.select_dtypes(include=['number']).columns.tolist()
+        if one_hot_categorical_features:
+            preprocessor = make_column_transformer(
+                (OneHotEncoder(drop="if_binary"), categorical_columns),
+                (RobustScaler(), numeric_columns),
+            )
+        else:
+            preprocessor = make_column_transformer(
+                (StandardScaler(), numeric_columns),
+            )
+        self.data = preprocessor.fit_transform(data) # Indexed 0 to length.
         self.max_features = max_features
         self.tol_importance_relative = tol_importance_relative
+        self._features = preprocessor.get_feature_names_out()
 
     def summarize(self, selected: Sequence[int]) -> LayoutDOM:
         classes = np.zeros((len(self.data),), dtype="int32")
@@ -316,7 +208,7 @@ class FeatureImportanceSummarizer:
             solver="liblinear",
             class_weight="balanced"
         ).fit(
-            self.data.to_numpy(),
+            self.data,
             classes
         )
         assert classifier.coef_.shape[0] == 1 or classifier.coef_.ndim == 1
@@ -328,11 +220,17 @@ class FeatureImportanceSummarizer:
             np.where(importance_relative > self.tol_importance_relative)
         ]
 
-        x = list(self.data.columns[index_importance[:len(importance_restricted)]])
-        fig = bpl.figure(x_range=x)
-        fig.vbar(
-            x=x,
-            top=importance[index_importance[:len(importance_restricted)]],
-            width=0.8
+        selected_columns = self._features[index_importance[:len(importance_restricted)]]
+
+        model_error = classifier.score(self.data, classes)
+        fig = bpl.figure(
+            y_range=selected_columns,
+            title=f"Logistic Regression with a Mean Squared Error={model_error:.4}"
         )
+        fig.hbar(
+            y=selected_columns,
+            right=importance[index_importance[:len(importance_restricted)]],
+            height=0.8
+        )
+        plt.xlabel("Coefficient values corrected by the feature's std dev")
         return fig
