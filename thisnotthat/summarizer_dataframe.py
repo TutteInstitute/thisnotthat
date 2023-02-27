@@ -6,11 +6,14 @@ import panel as pn
 import param
 from pynndescent import NNDescent
 
+
 class DataFrameSummarizer(Protocol):
     """
     See DataSummaryPane for details on setting up objects that follow this protocol.
     """
-    def summarize(self, selected: Sequence[int]) -> pd.DataFrame: ...
+
+    def summarize(self, selected: Sequence[int]) -> pd.DataFrame:
+        ...
 
 
 DataFrameNoSelection = Callable[[], pd.DataFrame]
@@ -80,17 +83,14 @@ class DataSummaryPane(pn.reactive.Reactive):
         width: Optional[int] = None,
         height: Optional[int] = None,
         sizing_mode: str = "stretch_both",
-        name: str = "Summary"
+        name: str = "Summary",
     ) -> None:
         super().__init__(name=name)
         self.summarizer = summarizer
         self.no_selection = no_selection
         self._base_selection = []
         self.table = pn.pane.DataFrame(
-            self.no_selection(),
-            sizing_mode=sizing_mode,
-            width=width,
-            height=height
+            self.no_selection(), sizing_mode=sizing_mode, width=width, height=height
         )
         self.pane = pn.Column(self.table, sizing_mode=sizing_mode)
 
@@ -156,6 +156,7 @@ class ValueCountsSummarizer:
         data_selected = self.data.iloc[selected]
         return data_selected.value_counts().to_frame().head(self.top_k)
 
+
 class CountSelectedSummarizer:
     """
     A simple summarizer to return a dataframe with a the count of the number
@@ -181,7 +182,7 @@ class CountSelectedSummarizer:
         else:
             count = len(selected)
 
-        return pd.DataFrame({'value': count}, index=['count'])
+        return pd.DataFrame({"value": count}, index=["count"])
 
 
 class JointLabelSummarizer:
@@ -213,14 +214,16 @@ class JointLabelSummarizer:
         The number of nearest neighbour labels from our label space to display.
     """
 
-    def __init__(self, vector_space, labels, label_space, vector_metric='cosine', n_neighbours=10):
+    def __init__(
+        self, vector_space, labels, label_space, vector_metric="cosine", n_neighbours=10
+    ):
         self.vector_space = vector_space
         self.labels = np.array(labels)
         self.label_space = label_space
         self.vector_metric = vector_metric
         self.n_neighbours = n_neighbours
         self._search_index = NNDescent(
-            self.label_space, metric=vector_metric, n_neighbors=2*self.n_neighbours
+            self.label_space, metric=vector_metric, n_neighbors=2 * self.n_neighbours
         )
         self._search_index.prepare()
 
@@ -228,11 +231,12 @@ class JointLabelSummarizer:
         """
         Generate the summary, given the indices of the selected points.
         """
-        #Compute the centroid of the selected points.
+        # Compute the centroid of the selected points.
         self._centroid = np.mean(self.vector_space[selected, :], axis=0)
-        #Query against the points in the label space
+        # Query against the points in the label space
         result_indices, result_dists = self._search_index.query(
             [self._centroid], k=self.n_neighbours
         )
-        return pd.DataFrame({'labels': self.labels[result_indices[0]], 'distances': result_dists[0]})
-
+        return pd.DataFrame(
+            {"labels": self.labels[result_indices[0]], "distances": result_dists[0]}
+        )

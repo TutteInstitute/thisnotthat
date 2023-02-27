@@ -18,10 +18,27 @@ summarizer_dataframe
 * JointLabelSummarizer
     * A summarizer that takes a high dimensional joint embedding of your points and some labels and uses the centroid of your selected points and it's distance to your labels to compute a summary.
 
+.. toctree::
+   :maxdepth: 1
+   :caption: summarizer dataframe examples:
+
+   datasummarypane_value_counts_summarizer
+   DataSummaryPane_JointLabelSummary
+
+
 summarizer_plot
 ---------------
 * FeatureImportanceSummarizer
     * A summarizer which computes an :math:`$l_1`-penalized logistic regression between the selected points and the remaining points and returns a bar plot of the top coefficient values.
+
+.. toctree::
+   :maxdepth: 1
+   :caption: summarizer plot examples:
+
+   plotsummarypane_feature_importance
+
+Custom Summarizers
+------------------
 
 Summarizers follow the following template example.  They are initialized with whatever information they require.
 Then they have a `summarize` function which takes a `selected` variable.  The selected variable is a base zero
@@ -41,10 +58,19 @@ function returns either a DataFrame or a plot and is passed to the corresponding
             return pd.DataFrame({'values':values}, index=indices)
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Summary Panes:
+   :maxdepth: 1
+   :caption: custom summarizer examples:
 
-    datasummarypane_value_counts_summarizer
-    datasummarypane_custom_summarizer
-    plotsummarypane_feature_importance
-    DataSummaryPane_JointLabelSummary
+   datasummarypane_custom_summarizer
+
+.. _Panel library: https://panel.holoviz.org/
+.. _numpy: https://numpy.org/
+.. _pandas: https://pandas.pydata.org/
+.. _umap-learn: https://umap-learn.readthedocs.io/
+.. _scikit-learn: https://scikit-learn.org/stable/
+.. _numba: https://numba.pydata.org/
+.. _pynndescent: https://pynndescent.readthedocs.io/en/latest/
+.. _matplotlib: https://matplotlib.org/
+.. _hdbscan: https://hdbscan.readthedocs.io/
+.. _apricot-select: https://apricot-select.readthedocs.io/
+.. _networkx: https://networkx.org/

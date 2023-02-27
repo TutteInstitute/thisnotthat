@@ -41,7 +41,7 @@ to build out features and make it easier to use.
    keyword_search_widget
    label_editor_widget
    plot_control_widget
-   summary_pane
+   summary_panes
 
 .. toctree::
    :maxdepth: 2
