@@ -6,10 +6,10 @@ thought of as wrappers around the core of a summary function.  There are current
 `PlotSummaryPane` and `DataSummaryPane`.
 
 These are differentiated by the type of Pane returned, either a plot or a pandas DataFrame.  Each of them constructed
-by being passed a summarizer object.  Summarizer objects can be found under the namespaces: `summarizer_dataframe` and
-`summarizer_plot`.
+by being passed a summarizer object.  Summarizer objects can be found under the namespaces: `summary` in the submodules
+`dataframe` and `plot`.
 
-summarizer_dataframe
+summary.dataframe
 --------------------
 * CountSelectedSummarizer
     * The simplest of all summarizers to simply return the number of points selected. Includes an optional weightparameter
@@ -26,7 +26,7 @@ summarizer_dataframe
    DataSummaryPane_JointLabelSummary
 
 
-summarizer_plot
+summary.plot
 ---------------
 * FeatureImportanceSummarizer
     * A summarizer which computes an :math:`$l_1`-penalized logistic regression between the selected points and the remaining points and returns a bar plot of the top coefficient values.
