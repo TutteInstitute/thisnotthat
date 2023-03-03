@@ -12,7 +12,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder, RobustScaler
 from sklearn.compose import make_column_transformer
 from pynndescent import NNDescent
 from wordcloud import WordCloud
-
+from ..image_utils import bokeh_image_from_pil
 
 class PlotSummarizer(Protocol):
     def summarize(self, selected: Sequence[int]) -> LayoutDOM:
@@ -218,7 +218,7 @@ class FeatureImportanceSummarizer:
         model_error = classifier.score(self.data, classes)
         fig = bpl.figure(
             y_range=selected_columns,
-            title=f"Logistic Regression with a Mean Squared Error={model_error:.4}",
+            title=f"Estimated Feature Importance\nModel trustworthiness ={model_error:.4}",
         )
         fig.hbar(
             y=selected_columns,
@@ -257,10 +257,12 @@ class JointWordCloudSummarizer:
         The metric to use for searching over the ``vectors_to_query``. Any metric supported by pynndescent is valid.
     n_neighbours: int (optional, default = 10)
         The number of nearest neighbour labels from our label space to display.
+    background_color : color value (default="black")
+        Background color for the word cloud image.  "white" is probably the most common alternate background_color value.
     """
 
     def __init__(
-        self, vector_space, labels, label_space, vector_metric="cosine", n_neighbours=10
+        self, vector_space, labels, label_space, vector_metric="cosine", n_neighbours=10, background_color='black',
     ):
         self.vector_space = vector_space
         self.labels = np.array(labels)
@@ -271,8 +273,9 @@ class JointWordCloudSummarizer:
             self.label_space, metric=vector_metric, n_neighbors=2 * self.n_neighbours
         )
         self._search_index.prepare()
+        self.background_color = background_color
 
-    def summarize(self, selected):
+    def summarize(self, selected: Sequence[int]) -> LayoutDOM:
         """
         Generate the summary, given the indices of the selected points.
         """
@@ -282,11 +285,12 @@ class JointWordCloudSummarizer:
         result_indices, result_dists = self._search_index.query(
             [self._centroid], k=self.n_neighbours
         )
-        word_dict = {
-            word: freq for word, freq in zip(result_indices[0], result_dists[0])
+        self._word_dict = {
+            word: freq for word, freq in zip(self.labels[result_indices[0]], result_dists[0])
         }
+        word_cloud = WordCloud(background_color=self.background_color).generate_from_frequencies(self._word_dict)
+        pil_image = word_cloud.to_image()
+        bokeh_image = bokeh_image_from_pil(pil_image)
         fig = bpl.figure(title=f"Word Cloud Summary of Labels")
-        plt.imshow(WordCloud(background_color="black")).generate_from_frequencies(
-            word_dict
-        )
+        fig.image_rgba([bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1])
         return fig

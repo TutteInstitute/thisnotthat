@@ -11,3 +11,4 @@ colorcet
 cmocean
 glasbey
 vectorizers
+wordcloud

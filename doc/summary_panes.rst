@@ -30,12 +30,15 @@ summary.plot
 ---------------
 * FeatureImportanceSummarizer
     * A summarizer which computes an :math:`$l_1`-penalized logistic regression between the selected points and the remaining points and returns a bar plot of the top coefficient values.
+* JointWordCloudSummarizer
+    * A summarizer that takes a high dimensional joint embedding of your points and some labels and uses the centroid of your selected points and it's distance to your labels to compute a summary, then returns a wordcloud for visualization.
 
 .. toctree::
    :maxdepth: 1
    :caption: summarizer plot examples:
 
    plotsummarypane_feature_importance
+   PlotSummaryPane_JointWordCloutSummary
 
 Custom Summarizers
 ------------------
