@@ -151,12 +151,14 @@ class FeatureImportanceSummarizer:
     Numeric variables have been centered and rescaled by their mean and variance to put them
     on similar scales in order to make the coefficients more comparable.
     Then it displays that feature importance in a bar plot.
+    The title is colour coded by model accuracy in order to give a rough approximation of
+    how much trust you should put in the model.
 
-    All of the standard caveates with using the coefficients of a linear model as a feature
-    importance measure are included here.
+    All of the standard caveats with using the coefficients of a linear model as a feature
+    importance measure should be included here.
 
     It might be worth reading the sklearn documentation on the
-    Common pitfalls in the interpretation of coefficients of linear models
+    common pitfalls in the interpretation of coefficients of linear models
     (https://scikit-learn.org/stable/auto_examples/inspection/plot_linear_model_coefficient_interpretation.html)
 
     Parameters
@@ -197,14 +199,16 @@ class FeatureImportanceSummarizer:
         self.tol_importance_relative = tol_importance_relative
         self._features = preprocessor.get_feature_names_out()
         self._classifier = None
+        self._classes = None
 
     def summarize(self, selected: Sequence[int]) -> LayoutDOM:
         classes = np.zeros((len(self.data),), dtype="int32")
-        classes[selected] = 1
+        classes[selected] = True
         classifier = LogisticRegression(
             penalty="l1", solver="liblinear", class_weight="balanced"
         ).fit(self.data, classes)
         self._classifier = classifier
+        self._classes = classes
         assert classifier.coef_.shape[0] == 1 or classifier.coef_.ndim == 1
         importance = np.squeeze(classifier.coef_)
         index_importance = np.argsort(-np.abs(importance))[: self.max_features]
@@ -218,11 +222,23 @@ class FeatureImportanceSummarizer:
             index_importance[: len(importance_restricted)]
         ]
 
-        model_error = classifier.score(self.data, classes)
+        model_acc = classifier.score(self.data, classes)
         fig = bpl.figure(
             y_range=selected_columns,
-            title=f"Estimated Feature Importance\nModel trustworthiness ={model_error:.4}",
         )
+        if model_acc > 0.9:
+            fig.title = f"Estimated Feature Importance\nTrustworthiness high ({model_acc:.4} mean accuracy)"
+            fig.title.text_color = "green"
+        elif model_acc > 0.8:
+            fig.title = f"Estimated Feature Importance\nTrustworthiness medium ({model_acc:.4} mean accuracy)"
+            fig.title.text_color = "yellow"
+        elif model_acc > 0.5:
+            fig.title = f"Estimated Feature Importance\nTrustworthiness low ({model_acc:.4} mean accuracy)"
+            fig.title.text_color = "orange"
+        else:
+            fig.title = f"Estimated Feature Importance\nTrustworthiness low ({model_acc:.4} mean accuracy)"
+            fig.title.text_color = "red"
+
         fig.hbar(
             y=selected_columns,
             right=importance[index_importance[: len(importance_restricted)]],
