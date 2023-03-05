@@ -191,10 +191,12 @@ class FeatureImportanceSummarizer:
             preprocessor = make_column_transformer(
                 (StandardScaler(), numeric_columns),
             )
-        self.data = preprocessor.fit_transform(data)  # Indexed 0 to length.
+        self._preprocessor = preprocessor
+        self.data = self._preprocessor.fit_transform(data)  # Indexed 0 to length.
         self.max_features = max_features
         self.tol_importance_relative = tol_importance_relative
         self._features = preprocessor.get_feature_names_out()
+        self._classifier = None
 
     def summarize(self, selected: Sequence[int]) -> LayoutDOM:
         classes = np.zeros((len(self.data),), dtype="int32")
@@ -202,6 +204,7 @@ class FeatureImportanceSummarizer:
         classifier = LogisticRegression(
             penalty="l1", solver="liblinear", class_weight="balanced"
         ).fit(self.data, classes)
+        self._classifier = classifier
         assert classifier.coef_.shape[0] == 1 or classifier.coef_.ndim == 1
         importance = np.squeeze(classifier.coef_)
         index_importance = np.argsort(-np.abs(importance))[: self.max_features]
