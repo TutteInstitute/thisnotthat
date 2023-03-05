@@ -14,6 +14,7 @@ from pynndescent import NNDescent
 from wordcloud import WordCloud
 from ..image_utils import bokeh_image_from_pil
 
+
 class PlotSummarizer(Protocol):
     def summarize(self, selected: Sequence[int]) -> LayoutDOM:
         ...
@@ -281,7 +282,13 @@ class JointWordCloudSummarizer:
     """
 
     def __init__(
-        self, vector_space, labels, label_space, vector_metric="cosine", n_neighbours=10, background_color='black',
+        self,
+        vector_space,
+        labels,
+        label_space,
+        vector_metric="cosine",
+        n_neighbours=10,
+        background_color="black",
     ):
         self.vector_space = vector_space
         self.labels = np.array(labels)
@@ -305,11 +312,16 @@ class JointWordCloudSummarizer:
             [self._centroid], k=self.n_neighbours
         )
         self._word_dict = {
-            word: freq for word, freq in zip(self.labels[result_indices[0]], result_dists[0])
+            word: freq
+            for word, freq in zip(self.labels[result_indices[0]], result_dists[0])
         }
-        word_cloud = WordCloud(background_color=self.background_color).generate_from_frequencies(self._word_dict)
+        word_cloud = WordCloud(
+            background_color=self.background_color
+        ).generate_from_frequencies(self._word_dict)
         pil_image = word_cloud.to_image()
         bokeh_image = bokeh_image_from_pil(pil_image)
         fig = bpl.figure(title=f"Word Cloud Summary of Labels")
-        fig.image_rgba([bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1])
+        fig.image_rgba(
+            [bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1]
+        )
         return fig
