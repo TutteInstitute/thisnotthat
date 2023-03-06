@@ -17,4 +17,5 @@ glasbey
 cmocean
 colorcet
 vectorizers
+sphinx_rtd_theme
 git+https://github.com/lmcinnes/param_docs

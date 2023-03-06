@@ -1,4 +1,3 @@
-import itertools as it
 from .bokeh_plot import BokehPlotPane
 from .label_editor import LegendWidget, LabelEditorWidget
 from .data_viewer import DataPane, SimpleDataPane
@@ -12,7 +11,8 @@ from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
 from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers
-from .summary import SummaryDataPane
+from thisnotthat.summary.plot import PlotSummaryPane
+from thisnotthat.summary.dataframe import DataSummaryPane
 from .map_cluster_labelling import (
     JointVectorLabelLayers,
     MetadataLabelLayers,
@@ -35,8 +35,8 @@ __all__ = [
     "PlotControlWidget",
     "JointVectorLabelLayers",
     "MetadataLabelLayers",
-    "SummaryDataPane",
-    "summary"
+    "DataSummaryPane",
+    "PlotSummaryPane",
     "SampleLabelLayers",
     "SparseMetadataLabelLayers",
 ]

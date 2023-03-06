@@ -28,6 +28,16 @@ Data Panes
 .. autoclass:: SimpleDataPane
    :members: link_to_plot
 
+Summary Panes
+-------------
+
+.. autoclass:: PlotSummaryPane
+   :members: link_to_plot
+
+.. autoclass:: DataSummaryPane
+   :members: link_to_plot
+
+
 Search and Edit Widgets
 -----------------------
 
