@@ -300,7 +300,7 @@ class JointWordCloudSummarizer:
         self.vector_metric = vector_metric
         self.n_neighbours = n_neighbours
         self._search_index = NNDescent(
-            self.label_space, metric=vector_metric, n_neighbors=2 * self.n_neighbours
+            self.label_space, metric=vector_metric, n_neighbors=60
         )
         self._search_index.prepare()
         self.background_color = background_color
@@ -313,7 +313,7 @@ class JointWordCloudSummarizer:
         self._centroid = np.mean(self.vector_space[selected, :], axis=0)
         # Query against the points in the label space
         result_indices, result_dists = self._search_index.query(
-            [self._centroid], k=self.n_neighbours
+            [self._centroid], k=self.n_neighbours,
         )
         self._word_dict = {
             word: freq
