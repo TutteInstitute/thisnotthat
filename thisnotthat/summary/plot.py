@@ -16,17 +16,17 @@ from ..image_utils import bokeh_image_from_pil
 
 
 class PlotSummarizer(Protocol):
-    def summarize(self, selected: Sequence[int]) -> LayoutDOM:
+    def summarize(self, selected: Sequence[int], width: int = 600, height: int = 600) -> LayoutDOM:
         ...
 
 
-def display_no_selection() -> LayoutDOM:
-    fig = bpl.figure()
+def display_no_selection(width=600, height=600) -> LayoutDOM:
+    fig = bpl.figure(width=width, height=height)
     fig.text([0], [0], ["Nothing to summarize."])
     return fig
 
 
-PlotNoSelection = Callable[[], LayoutDOM]
+PlotNoSelection = Callable[..., LayoutDOM]
 
 
 class PlotSummaryPane(pn.reactive.Reactive):
@@ -108,7 +108,7 @@ class PlotSummaryPane(pn.reactive.Reactive):
             **{name: param for name, param in [("sizing_mode", sizing_mode)] if param},
         }
         self.summary_plot = pn.pane.Bokeh(
-            self.no_selection(), sizing_mode=sizing_mode, width=width, height=height
+            self.no_selection(**self._geometry_figure), sizing_mode=sizing_mode, width=width, height=height
         )
         self.pane = pn.Column(self.summary_plot, sizing_mode=sizing_mode)
 
@@ -202,7 +202,7 @@ class FeatureImportanceSummarizer:
         self._classifier = None
         self._classes = None
 
-    def summarize(self, selected: Sequence[int]) -> LayoutDOM:
+    def summarize(self, selected: Sequence[int], width: int = 600, height: int = 600) -> LayoutDOM:
         classes = np.zeros((len(self.data),), dtype="int32")
         classes[selected] = True
         classifier = LogisticRegression(
@@ -226,6 +226,8 @@ class FeatureImportanceSummarizer:
         model_acc = classifier.score(self.data, classes)
         fig = bpl.figure(
             y_range=selected_columns,
+            width=width,
+            height=height,
         )
         if model_acc > 0.9:
             fig.title = f"Estimated Feature Importance\nTrustworthiness high ({model_acc:.4} mean accuracy)"
@@ -301,7 +303,7 @@ class JointWordCloudSummarizer:
         self._search_index.prepare()
         self.background_color = background_color
 
-    def summarize(self, selected: Sequence[int]) -> LayoutDOM:
+    def summarize(self, selected: Sequence[int], width: int = 600, height: int = 600) -> LayoutDOM:
         """
         Generate the summary, given the indices of the selected points.
         """
@@ -315,7 +317,7 @@ class JointWordCloudSummarizer:
             word: freq
             for word, freq in zip(self.labels[result_indices[0]], result_dists[0])
         }
-        fig = bpl.figure(title=f"Word Cloud Summary of Labels")
+        fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
             background_color=self.background_color,
             width=fig.width,
