@@ -317,13 +317,13 @@ class JointWordCloudSummarizer:
         )
         self._word_dict = {
             word: freq
-            for word, freq in zip(self.labels[result_indices[0]], result_dists[0])
+            for word, freq in zip(self.labels[result_indices[0]], np.exp(-result_dists[0]))
         }
         fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
             background_color=self.background_color,
-            width=fig.width,
-            height=fig.height,
+            width=int(fig.width * 1.5),
+            height=int(fig.height * 1.5),
         ).generate_from_frequencies(self._word_dict)
         pil_image = word_cloud.to_image()
         bokeh_image = bokeh_image_from_pil(pil_image)
