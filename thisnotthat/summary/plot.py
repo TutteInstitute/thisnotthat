@@ -124,9 +124,9 @@ class PlotSummaryPane(pn.reactive.Reactive):
         #     **self._geometry_pane
         # )
         self.summary_plot.object = (
-            self.summarizer.summarize(self.selected)
+            self.summarizer.summarize(self.selected, **self._geometry_figure)
             if self.selected
-            else self.no_selection()
+            else self.no_selection(**self._geometry_figure)
         )
 
     def link_to_plot(self, plot):
