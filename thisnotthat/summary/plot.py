@@ -22,6 +22,8 @@ class PlotSummarizer(Protocol):
 
 def display_no_selection(width=600, height=600) -> LayoutDOM:
     fig = bpl.figure(width=width, height=height)
+    fig.axis.visible = False
+    fig.grid.visible = False
     fig.text([0], [0], ["Nothing to summarize."])
     return fig
 
