@@ -326,11 +326,13 @@ class JointWordCloudSummarizer:
             height=fig.height // 2,
             scale=4.0,
         ).generate_from_frequencies(self._word_dict)
-        pil_image = word_cloud.to_image()
-        bokeh_image = bokeh_image_from_pil(pil_image)
-        fig.image_rgba(
-            [bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1]
-        )
+        for (word, count), font_size, position, orientation, color in word_cloud.layout_:
+            fig.text([position[0]], [position[1]], word, size=font_size, color=color)
+        # pil_image = word_cloud.to_image()
+        # bokeh_image = bokeh_image_from_pil(pil_image)
+        # fig.image_rgba(
+        #     [bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1]
+        # )
         fig.axis.visible = False
         fig.grid.visible = False
         return fig
