@@ -315,13 +315,17 @@ class JointWordCloudSummarizer:
             word: freq
             for word, freq in zip(self.labels[result_indices[0]], result_dists[0])
         }
+        fig = bpl.figure(title=f"Word Cloud Summary of Labels")
         word_cloud = WordCloud(
-            background_color=self.background_color
+            background_color=self.background_color,
+            width=fig.width,
+            height=fig.height,
         ).generate_from_frequencies(self._word_dict)
         pil_image = word_cloud.to_image()
         bokeh_image = bokeh_image_from_pil(pil_image)
-        fig = bpl.figure(title=f"Word Cloud Summary of Labels")
         fig.image_rgba(
             [bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1]
         )
+        fig.axis.visible = False
+        fig.grid.visible = False
         return fig
