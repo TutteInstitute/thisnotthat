@@ -321,13 +321,14 @@ class JointWordCloudSummarizer:
         }
         fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
+            fontpath="arial",
             background_color=self.background_color,
-            width=fig.width // 2,
-            height=fig.height // 2,
-            scale=4.0,
+            width=fig.width // 3,
+            height=fig.height // 3,
+            scale=3.0,
         ).generate_from_frequencies(self._word_dict)
         for (word, count), font_size, position, orientation, color in word_cloud.layout_:
-            fig.text([position[1]], [-position[0]], [word], text_font="DroidSansMono", text_font_size=f"{10 * font_size}px", text_color=color, angle=90 if orientation == "ROTATE_90" else 0, angle_units="deg")
+            fig.text([3 * position[1]], [-3 * position[0]], [word], text_font="arial", text_font_size=f"{2 * font_size}px", text_color=color, angle=90 if orientation == "ROTATE_90" else 0, angle_units="deg")
             print((word, count), font_size, position, orientation, color)
         # pil_image = word_cloud.to_image()
         # bokeh_image = bokeh_image_from_pil(pil_image)
