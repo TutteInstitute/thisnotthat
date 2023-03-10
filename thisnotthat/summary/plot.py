@@ -321,7 +321,7 @@ class JointWordCloudSummarizer:
         }
         fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
-            font_path="arial",
+            # font_path="arial",
             background_color=self.background_color,
             width=fig.width // 3,
             height=fig.height // 3,
