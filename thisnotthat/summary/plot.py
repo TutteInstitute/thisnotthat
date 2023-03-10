@@ -322,8 +322,9 @@ class JointWordCloudSummarizer:
         fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
             background_color=self.background_color,
-            width=int(fig.width * 1.5),
-            height=int(fig.height * 1.5),
+            width=fig.width // 2,
+            height=fig.height // 2,
+            scale=4.0,
         ).generate_from_frequencies(self._word_dict)
         pil_image = word_cloud.to_image()
         bokeh_image = bokeh_image_from_pil(pil_image)
