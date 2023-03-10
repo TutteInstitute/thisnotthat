@@ -327,14 +327,14 @@ class JointWordCloudSummarizer:
             height=fig.height // 3,
             scale=3.0,
         ).generate_from_frequencies(self._word_dict)
-        for (word, count), font_size, position, orientation, color in word_cloud.layout_:
-            fig.text(x=[0], y=[0], x_offset=3 * position[1], y_offset=-3 * position[0], text=[word], text_alpha=0.8, text_font={"value": "DroidSansMono"}, text_font_size=f"{font_size}px", text_color=color, angle=90 if orientation == "ROTATE_90" else 0, angle_units="deg")
-            print((word, count), font_size, position, orientation, color)
-        # pil_image = word_cloud.to_image()
-        # bokeh_image = bokeh_image_from_pil(pil_image)
-        # fig.image_rgba(
-        #     [bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1]
-        # )
+        # for (word, count), font_size, position, orientation, color in word_cloud.layout_:
+        #     fig.text(x=[0], y=[0], x_offset=3 * position[1], y_offset=-3 * position[0], text=[word], text_alpha=0.8, text_font={"value": "DroidSansMono"}, text_font_size=f"{font_size}px", text_color=color, angle=90 if orientation == "ROTATE_90" else 0, angle_units="deg")
+        #     print((word, count), font_size, position, orientation, color)
+        pil_image = word_cloud.to_image()
+        bokeh_image = bokeh_image_from_pil(pil_image)
+        fig.image_rgba(
+            [bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1]
+        )
         fig.axis.visible = False
         fig.grid.visible = False
         return fig
