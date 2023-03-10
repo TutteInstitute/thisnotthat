@@ -327,7 +327,7 @@ class JointWordCloudSummarizer:
             scale=4.0,
         ).generate_from_frequencies(self._word_dict)
         for (word, count), font_size, position, orientation, color in word_cloud.layout_:
-            fig.text([position[0]], [position[1]], word, size=font_size, color=color)
+            fig.text([position[0]], [position[1]], word, text_font_size=font_size, text_color=color, angle=90 if orientation == "ROTATE_90" else 0)
         # pil_image = word_cloud.to_image()
         # bokeh_image = bokeh_image_from_pil(pil_image)
         # fig.image_rgba(
