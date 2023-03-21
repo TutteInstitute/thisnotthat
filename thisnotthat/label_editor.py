@@ -259,6 +259,18 @@ class LegendWidget(pn.reactive.Reactive):
         if new_label_set != self.label_set:
             self._rebuild_pane()
 
+    def link_to_plot(self, plot):
+        self.labels = plot.labels
+        # self.label_color_factors = plot.label_color_factors
+        # self.label_color_palette = plot.label_color_palette
+        # self.legend._rebuild_pane()
+        return self.link(
+            plot,
+            labels="labels",
+            label_color_factors="label_color_factors",
+            label_color_palette="label_color_palette",
+            bidirectional=True,
+        )
 
 class NewLabelButton(pn.reactive.Reactive):
     """A simple button for generating a new label for use with an editable legend. This simply wraps up a button
