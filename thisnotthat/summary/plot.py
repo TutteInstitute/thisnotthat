@@ -1,3 +1,4 @@
+import time
 from typing import Callable, Optional, Protocol, Sequence
 
 import matplotlib.pyplot as plt
@@ -53,6 +54,11 @@ class PlotSummaryPane(pn.reactive.Reactive):
     sizing_mode
         Geometry of the displayed figure. See Panel documentation.
 
+    throttle: int
+        The number of milliseconds between checking for selection changes for updating. If the plot
+        construction process is long you can increase the throttle value to prevent multiple redraws
+        that take a long time to occur.
+
     name
         Name of the pane.
 
@@ -94,6 +100,7 @@ class PlotSummaryPane(pn.reactive.Reactive):
         width: Optional[int] = None,
         height: Optional[int] = None,
         sizing_mode: str = "stretch_both",
+        throttle: int = 200,
         name: str = "Summary",
     ) -> None:
         super().__init__(name=name)
@@ -105,6 +112,8 @@ class PlotSummaryPane(pn.reactive.Reactive):
             for name, param in [("width", width), ("height", height)]
             if param
         }
+        self.throttle = throttle
+        self._last_update = time.perf_counter() * 1000.0
         self._geometry_pane = {
             **self._geometry_figure,
             **{name: param for name, param in [("sizing_mode", sizing_mode)] if param},
@@ -123,11 +132,13 @@ class PlotSummaryPane(pn.reactive.Reactive):
         #     fig,
         #     **self._geometry_pane
         # )
-        self.summary_plot.object = (
-            self.summarizer.summarize(self.selected, **self._geometry_figure)
-            if self.selected
-            else self.no_selection(**self._geometry_figure)
-        )
+        if time.perf_counter() * 1000.0 - self._last_update > self.throttle:
+            self.summary_plot.object = (
+                self.summarizer.summarize(self.selected, **self._geometry_figure)
+                if self.selected
+                else self.no_selection(**self._geometry_figure)
+            )
+            self._last_update = time.perf_counter() * 1000.0
 
     def link_to_plot(self, plot):
         """
