@@ -243,6 +243,12 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     selection_fill_alpha: float (optional, default = 1.0)
         The alpha value to use for selected points in the scatterplot.
 
+    selection_line_color: str (optional, default = "black")
+        The line colour of selected points in the scatterplot.
+
+    selection_line_width: float (optional, default = 2.0)
+        The line width of selected points in the scatterplot.
+
     nonselection_fill_alpha: float (optional, default = 0.1)
         The alpha value to use for points that are not in an active selection in the scatterplot.
 
@@ -330,6 +336,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         hover_line_width: float = 2,
         tooltip_template: str = """<div>@hover_text</div>""",
         selection_fill_alpha: float = 1.0,
+        selection_line_color: str = "black",
+        selection_line_width: float = 2,
         nonselection_fill_alpha: float = 0.1,
         nonselection_fill_color: str = "gray",
         background_fill_color: str = "#ffffff",
@@ -419,6 +427,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             tools=tools,
             title=title,
             title_location=title_location,
+            sizing_mode=sizing_mode,
         )
         self.plot.toolbar.active_scroll = self.plot.select_one(
             bokeh.models.WheelZoomTool
@@ -435,6 +444,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             hover_line_color=hover_line_color,
             hover_line_width=hover_line_width,
             selection_fill_alpha=selection_fill_alpha,
+            selection_line_color=selection_line_color,
+            selection_line_width=selection_line_width,
             nonselection_fill_alpha=nonselection_fill_alpha,
             nonselection_fill_color=nonselection_fill_color,
         )
