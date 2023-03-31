@@ -140,7 +140,7 @@ class LegendWidget(pn.reactive.Reactive):
 
         self._internal_selection = False
 
-        self.pane = pn.Column()
+        self.pane = pn.Column(sizing_mode="stretch_height")
         self._rebuild_pane()
 
     def _color_callback(self, event: param.parameterized.Event) -> None:
