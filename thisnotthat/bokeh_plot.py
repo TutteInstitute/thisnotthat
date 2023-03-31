@@ -539,7 +539,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.plot.ygrid.grid_line_color = None
         self.plot.xaxis.bounds = (0, 0)
         self.plot.yaxis.bounds = (0, 0)
-        self.pane = pn.pane.Bokeh(self.plot)#, sizing_mode=sizing_mode)
+        self.pane = pn.pane.Bokeh(self.plot, sizing_mode=sizing_mode)
 
         self.show_legend = show_legend
         self.color_by_vector = pd.Series([], dtype=object)
