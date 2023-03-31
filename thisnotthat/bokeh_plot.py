@@ -336,7 +336,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         hover_line_width: float = 2,
         tooltip_template: str = """<div>@hover_text</div>""",
         selection_fill_alpha: float = 1.0,
-        selection_line_color: str = "black",
+        selection_line_color: str = "label",
         selection_line_width: float = 2,
         nonselection_fill_alpha: float = 0.1,
         nonselection_fill_color: str = "gray",
@@ -519,7 +519,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.plot.ygrid.grid_line_color = None
         self.plot.xaxis.bounds = (0, 0)
         self.plot.yaxis.bounds = (0, 0)
-        self.pane = pn.pane.Bokeh(self.plot, sizing_mode=sizing_mode)
+        self.pane = pn.pane.Bokeh(self.plot)#, sizing_mode=sizing_mode)
 
         self.show_legend = show_legend
         self.color_by_vector = pd.Series([], dtype=object)
