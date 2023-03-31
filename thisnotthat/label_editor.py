@@ -185,7 +185,7 @@ class LegendWidget(pn.reactive.Reactive):
 
     @param.depends("selected", watch=True)
     def _update_selected(self):
-        if self.selectable and not self._internal_selection:
+        if self.selectable:
             selected_set = set(self.selected)
             for legend_item in self.pane:
                 selection_button = legend_item[2]
