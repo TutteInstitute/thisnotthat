@@ -137,6 +137,9 @@ class LegendWidget(pn.reactive.Reactive):
         self.label_max_width = label_max_width
         self.label_min_width = label_min_width
         self.label_margin = label_margin
+
+        self._internal_selection = False
+
         self.pane = pn.Column()
         self._rebuild_pane()
 
@@ -185,7 +188,7 @@ class LegendWidget(pn.reactive.Reactive):
 
     @param.depends("selected", watch=True)
     def _update_selected(self):
-        if self.selectable:
+        if self.selectable and not self._internal_selection:
             selected_set = set(self.selected)
             for legend_item in self.pane:
                 selection_button = legend_item[2]
@@ -261,16 +264,22 @@ class LegendWidget(pn.reactive.Reactive):
 
     def link_to_plot(self, plot):
         self.labels = plot.labels
-        # self.label_color_factors = plot.label_color_factors
-        # self.label_color_palette = plot.label_color_palette
-        # self.legend._rebuild_pane()
-        return self.link(
-            plot,
-            labels="labels",
-            label_color_factors="label_color_factors",
-            label_color_palette="label_color_palette",
-            bidirectional=True,
-        )
+        if self.selectable:
+            return self.link(
+                plot,
+                labels="labels",
+                label_color_factors="label_color_factors",
+                label_color_palette="label_color_palette",
+                bidirectional=True,
+            )
+        else:
+            return self.link(
+                plot,
+                labels="labels",
+                label_color_factors="label_color_factors",
+                label_color_palette="label_color_palette",
+                bidirectional=True,
+            )
 
 class NewLabelButton(pn.reactive.Reactive):
     """A simple button for generating a new label for use with an editable legend. This simply wraps up a button
