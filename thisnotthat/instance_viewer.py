@@ -120,4 +120,4 @@ class InformationPane(pn.reactive.Reactive):
         link:
             The link object.
         """
-        return self.link(plot, selected="selected", bidirectional=True)
+        return self.link(plot, selected="selected", bidirectional=False)
