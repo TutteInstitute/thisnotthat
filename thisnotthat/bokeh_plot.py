@@ -246,14 +246,26 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     selection_line_color: str (optional, default = "black")
         The line colour of selected points in the scatterplot.
 
-    selection_line_width: float (optional, default = 2.0)
+    selection_line_width: float (optional, default = 0.5)
         The line width of selected points in the scatterplot.
+
+    selection_line_alpha: float (optional, default = 0.5)
+        The line alpha of selected points in the scatterplot.
 
     nonselection_fill_alpha: float (optional, default = 0.1)
         The alpha value to use for points that are not in an active selection in the scatterplot.
 
     nonselection_fill_color: str (optional, default = "gray")
         The colour to use to fill points that are not in an active selection in the scatterplot.
+
+    nonselection_line_color: str (optional, default = None)
+        The outline color to use for points that are not in an active selection in the scatterplot.
+
+    nonselection_line_width: float (optional, default = 0.0)
+        The outline line weight for points that are not in an active selection in the scatterplot.
+
+    nonselection_line_alpha: float (optional, default = 0.0)
+        The outline alpha for points that are not in an active selection in the scatterplot.
 
     background_fill_color: str (optional, default = "#FFFFFF")
         The colour to use for the background of the scatterplot.
@@ -337,9 +349,13 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         tooltip_template: str = """<div>@hover_text</div>""",
         selection_fill_alpha: float = 1.0,
         selection_line_color: str = "label",
-        selection_line_width: float = 2,
+        selection_line_width: float = 0.5,
+        selection_line_alpha: float = 0.5,
         nonselection_fill_alpha: float = 0.1,
         nonselection_fill_color: str = "gray",
+        nonselection_line_color: Optional[str] = None,
+        nonselection_line_width: float = 0.0,
+        nonselection_line_alpha: float = 0.0,
         background_fill_color: str = "#ffffff",
         border_fill_color: str = "whitesmoke",
         toolbar_location: str = "above",
@@ -446,8 +462,12 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             selection_fill_alpha=selection_fill_alpha,
             selection_line_color=selection_line_color,
             selection_line_width=selection_line_width,
+            selection_line_alpha=selection_line_alpha,
             nonselection_fill_alpha=nonselection_fill_alpha,
             nonselection_fill_color=nonselection_fill_color,
+            nonselection_line_color=nonselection_line_color,
+            nonselection_line_width=nonselection_line_width,
+            nonselection_line_alpha=nonselection_line_alpha,
         )
         if show_legend:
             self._legend = bokeh.models.Legend(
