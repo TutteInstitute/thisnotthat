@@ -155,7 +155,7 @@ class PlotSummaryPane(pn.reactive.Reactive):
         link:
             The link object.
         """
-        return self.link(plot, selected="selected", bidirectional=True)
+        return plot.link(self, selected="selected", bidirectional=False)
 
 
 class FeatureImportanceSummarizer:
