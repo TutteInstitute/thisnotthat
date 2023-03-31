@@ -1,6 +1,7 @@
 import panel as pn
 import param
 import pandas as pd
+import time
 
 from typing import *
 
@@ -24,7 +25,7 @@ class InformationPane(pn.reactive.Reactive):
 
     markdown_template: str
         A string in markdown providing formatting for a single row of data from the dataframe. Within the string
-        a substitution of the row value of of a column will be done where ``{column_name}`` appears in the string.
+        a substitution of the row value of a column will be done where ``{column_name}`` appears in the string.
 
     width: int (optional, default = 200)
         The width of the pane.
@@ -70,12 +71,15 @@ class InformationPane(pn.reactive.Reactive):
         extensions: List[str] = ["extra", "smarty", "codehilite"],
         style: dict = {},
         margin: List[int] = [5, 5],
+        throttle = 200,
         name: str = "Information",
     ):
         super().__init__(name=name)
         self.data = raw_dataframe
         self.markdown_template = markdown_template
         self.placeholder_text = placeholder_text
+        self.throttle = throttle
+        self._last_update = time.perf_counter() * 1000.0
         self.markdown = pn.pane.Markdown(
             self.placeholder_text,
             width=width - 20,
@@ -96,10 +100,12 @@ class InformationPane(pn.reactive.Reactive):
         if len(self.selected) == 0:
             self.markdown.object = self.placeholder_text
         else:
-            substitution_dict = {
-                col: self.data[col].iloc[self.selected[-1]] for col in self.data.columns
-            }
-            self.markdown.object = self.markdown_template.format(**substitution_dict)
+            if time.perf_counter() * 1000.0 - self._last_update > self.throttle:
+                substitution_dict = {
+                    col: self.data[col].iloc[self.selected[-1]] for col in self.data.columns
+                }
+                self.markdown.object = self.markdown_template.format(**substitution_dict)
+                self._last_update = time.perf_counter() * 1000.0
 
     def link_to_plot(self, plot):
         """Link this pane to a plot pane using a default set of params that can sensibly be linked.
