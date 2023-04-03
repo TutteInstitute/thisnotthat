@@ -265,6 +265,7 @@ class LegendWidget(pn.reactive.Reactive):
     def link_to_plot(self, plot):
         self.labels = plot.labels
         if self.selectable:
+            self.link(plot, selected="selected", bidirectional=False)
             return self.link(
                 plot,
                 labels="labels",
