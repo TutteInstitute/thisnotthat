@@ -71,6 +71,7 @@ class InformationPane(pn.reactive.Reactive):
         extensions: List[str] = ["extra", "smarty", "codehilite"],
         style: dict = {},
         margin: List[int] = [5, 5],
+        sizing_mode: str = "stretch_height",
         throttle = 200,
         name: str = "Information",
     ):
@@ -88,9 +89,10 @@ class InformationPane(pn.reactive.Reactive):
             dedent=dedent,
             disable_math=disable_math,
             extensions=extensions,
+            sizing_mode=sizing_mode,
             style=style,
         )
-        self.pane = pn.Column(self.markdown, width=width, height=height, scroll=True)
+        self.pane = pn.Column(self.markdown, width=width, height=height, sizing_mode=sizing_mode, scroll=True)
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
