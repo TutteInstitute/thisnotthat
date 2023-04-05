@@ -119,7 +119,7 @@ class LegendWidget(pn.reactive.Reactive):
             self.label_color_palette = get_palette(palette, length=palette_length, scrambled=palette_shuffle)
         else:
             if palette_length > len(palette):
-                self.label_color_palette = extend_palette(palette, palette_length=palette_length)
+                self.label_color_palette = extend_palette(palette, palette_size=palette_length)
             else:
                 self.label_color_palette = palette[:palette_length]
 
