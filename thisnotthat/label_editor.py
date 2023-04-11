@@ -466,26 +466,35 @@ class LabelEditorWidget(pn.reactive.Reactive):
             label_min_width=label_min_width,
             label_margin=label_margin,
         )
-        self.new_label_button = NewLabelButton(
-            labels,
-            button_type=newlabel_button_type,
-            button_text=newlabel_button_text,
-            width=label_width + color_picker_width,
+        self.new_label_count = 1
+        self.new_label_button = pn.widgets.Button(
+            name=newlabel_button_text, button_type=newlabel_button_type, width=width
         )
-        self.legend.link(
-            self,
-            labels="labels",
-            label_color_palette="label_color_palette",
-            label_color_factors="label_color_factors",
-            selected="selected",
-            bidirectional=True,
-        )
-        self.new_label_button.link(
-            self, labels="labels", selected="selected", bidirectional=True,
-        )
+        self.new_label_button.on_click(self._on_click)
+        self.new_label_button.disabled = True
         self.pane = pn.WidgetBox(
             title, self.legend, self.new_label_button, width=width, height=height
         )
+
+    def _on_click(self, event: param.parameterized.Event) -> None:
+        if len(self.selected) > 0:
+            new_labels = self.labels.copy()
+            new_labels.iloc[self.selected] = f"new_label_{self.label_count}"
+            self.labels = new_labels
+            self.label_count += 1
+
+            # self.legend.labels = new_labels
+            # self.legend._rebuild_pane()
+
+            self.selected = []
+
+
+    @param.depends("selected", watch=True)
+    def _toggle_active(self):
+        if len(self.selected) > 0:
+            self.new_label_button.disabled = False
+        else:
+            self.new_label_button.disabled = True
 
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
@@ -507,6 +516,7 @@ class LabelEditorWidget(pn.reactive.Reactive):
         self.label_color_factors = plot.label_color_factors
         self.label_color_palette = plot.label_color_palette
         self.legend._rebuild_pane()
+        self.legend.link_to_plot(plot)
         return self.link(
             plot,
             labels="labels",
