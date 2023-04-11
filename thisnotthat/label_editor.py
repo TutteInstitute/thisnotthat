@@ -479,9 +479,9 @@ class LabelEditorWidget(pn.reactive.Reactive):
     def _on_click(self, event: param.parameterized.Event) -> None:
         if len(self.selected) > 0:
             new_labels = self.labels.copy()
-            new_labels.iloc[self.selected] = f"new_label_{self.label_count}"
+            new_labels.iloc[self.selected] = f"new_label_{self.new_label_count}"
             self.labels = new_labels
-            self.label_count += 1
+            self.new_label_count += 1
 
             # self.legend.labels = new_labels
             # self.legend._rebuild_pane()
