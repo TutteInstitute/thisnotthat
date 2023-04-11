@@ -282,69 +282,6 @@ class LegendWidget(pn.reactive.Reactive):
                 bidirectional=True,
             )
 
-class NewLabelButton(pn.reactive.Reactive):
-    """A simple button for generating a new label for use with an editable legend. This simply wraps up a button
-    widget with default options set, and an understanding of selections and labels for connecting with plots and
-    editable legends.
-
-    Parameters
-    ----------
-    labels: Array of shape (n_samples,)
-        The class labels vector giving the class label of each sample.
-
-    button_type: str (optional, default = "success")
-        The panel button type used. See the panel documentation for more details.
-
-    button_text: str (optional, default = "New Label")
-        The text to display on the button.
-
-    width: int or None (optional, default = None)
-        The width of the button. If ``None`` then let the button size itself.
-
-    name: str (optional, default = "New Label")
-        The panel name of the pane. See panel documentation for more details.
-    """
-
-    labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
-    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
-
-    def __init__(
-        self,
-        labels: npt.ArrayLike,
-        *,
-        button_type: str = "success",
-        button_text: str = "New Label",
-        width: Optional[int] = None,
-        name: str = "New Label",
-    ) -> None:
-        super().__init__(name=name)
-        self.label_count = 1
-        self.pane = pn.widgets.Button(
-            name=button_text, button_type=button_type, width=width
-        )
-        self.pane.on_click(self._on_click)
-        self.pane.disabled = True
-        self.labels = pd.Series(labels).copy()  # .reset_index(drop=True)
-
-    def _on_click(self, event: param.parameterized.Event) -> None:
-        if len(self.selected) > 0:
-            new_labels = self.labels
-            new_labels.iloc[self.selected] = f"new_label_{self.label_count}"
-            self.labels = new_labels
-            self.label_count += 1
-
-            self.selected = []
-
-    @param.depends("selected", watch=True)
-    def _toggle_active(self):
-        if len(self.selected) > 0:
-            self.pane.disabled = False
-        else:
-            self.pane.disabled = True
-
-    def _get_model(self, *args, **kwds):
-        return self.pane._get_model(*args, **kwds)
-
 
 class LabelEditorWidget(pn.reactive.Reactive):
     """A pane for editing class labels, ideally intended to be linked with a PlotPane. The pane itself is composed of
