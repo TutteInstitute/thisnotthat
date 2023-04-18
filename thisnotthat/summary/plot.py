@@ -1,3 +1,4 @@
+import time
 from typing import Callable, Optional, Protocol, Sequence
 
 import matplotlib.pyplot as plt
@@ -16,17 +17,19 @@ from ..image_utils import bokeh_image_from_pil
 
 
 class PlotSummarizer(Protocol):
-    def summarize(self, selected: Sequence[int]) -> LayoutDOM:
+    def summarize(self, selected: Sequence[int], width: int = 600, height: int = 600) -> LayoutDOM:
         ...
 
 
-def display_no_selection() -> LayoutDOM:
-    fig = bpl.figure()
+def display_no_selection(width=600, height=600) -> LayoutDOM:
+    fig = bpl.figure(width=width, height=height)
+    fig.axis.visible = False
+    fig.grid.visible = False
     fig.text([0], [0], ["Nothing to summarize."])
     return fig
 
 
-PlotNoSelection = Callable[[], LayoutDOM]
+PlotNoSelection = Callable[..., LayoutDOM]
 
 
 class PlotSummaryPane(pn.reactive.Reactive):
@@ -50,6 +53,11 @@ class PlotSummaryPane(pn.reactive.Reactive):
     height
     sizing_mode
         Geometry of the displayed figure. See Panel documentation.
+
+    throttle: int
+        The number of milliseconds between checking for selection changes for updating. If the plot
+        construction process is long you can increase the throttle value to prevent multiple redraws
+        that take a long time to occur.
 
     name
         Name of the pane.
@@ -92,6 +100,7 @@ class PlotSummaryPane(pn.reactive.Reactive):
         width: Optional[int] = None,
         height: Optional[int] = None,
         sizing_mode: str = "stretch_both",
+        throttle: int = 200,
         name: str = "Summary",
     ) -> None:
         super().__init__(name=name)
@@ -103,12 +112,14 @@ class PlotSummaryPane(pn.reactive.Reactive):
             for name, param in [("width", width), ("height", height)]
             if param
         }
+        self.throttle = throttle
+        self._last_update = time.perf_counter() * 1000.0
         self._geometry_pane = {
             **self._geometry_figure,
             **{name: param for name, param in [("sizing_mode", sizing_mode)] if param},
         }
         self.summary_plot = pn.pane.Bokeh(
-            self.no_selection(), sizing_mode=sizing_mode, width=width, height=height
+            self.no_selection(**self._geometry_figure), sizing_mode=sizing_mode, width=width, height=height
         )
         self.pane = pn.Column(self.summary_plot, sizing_mode=sizing_mode)
 
@@ -121,11 +132,13 @@ class PlotSummaryPane(pn.reactive.Reactive):
         #     fig,
         #     **self._geometry_pane
         # )
-        self.summary_plot.object = (
-            self.summarizer.summarize(self.selected)
-            if self.selected
-            else self.no_selection()
-        )
+        if time.perf_counter() * 1000.0 - self._last_update > self.throttle:
+            self.summary_plot.object = (
+                self.summarizer.summarize(self.selected, **self._geometry_figure)
+                if self.selected
+                else self.no_selection(**self._geometry_figure)
+            )
+            self._last_update = time.perf_counter() * 1000.0
 
     def link_to_plot(self, plot):
         """
@@ -142,7 +155,7 @@ class PlotSummaryPane(pn.reactive.Reactive):
         link:
             The link object.
         """
-        return self.link(plot, selected="selected", bidirectional=True)
+        return plot.link(self, selected="selected", bidirectional=False)
 
 
 class FeatureImportanceSummarizer:
@@ -202,7 +215,7 @@ class FeatureImportanceSummarizer:
         self._classifier = None
         self._classes = None
 
-    def summarize(self, selected: Sequence[int]) -> LayoutDOM:
+    def summarize(self, selected: Sequence[int], width: int = 600, height: int = 600) -> LayoutDOM:
         classes = np.zeros((len(self.data),), dtype="int32")
         classes[selected] = True
         classifier = LogisticRegression(
@@ -226,6 +239,8 @@ class FeatureImportanceSummarizer:
         model_acc = classifier.score(self.data, classes)
         fig = bpl.figure(
             y_range=selected_columns,
+            width=width,
+            height=height,
         )
         if model_acc > 0.9:
             fig.title = f"Estimated Feature Importance\nTrustworthiness high ({model_acc:.4} mean accuracy)"
@@ -296,12 +311,12 @@ class JointWordCloudSummarizer:
         self.vector_metric = vector_metric
         self.n_neighbours = n_neighbours
         self._search_index = NNDescent(
-            self.label_space, metric=vector_metric, n_neighbors=2 * self.n_neighbours
+            self.label_space, metric=vector_metric, n_neighbors=60
         )
         self._search_index.prepare()
         self.background_color = background_color
 
-    def summarize(self, selected: Sequence[int]) -> LayoutDOM:
+    def summarize(self, selected: Sequence[int], width: int = 600, height: int = 600) -> LayoutDOM:
         """
         Generate the summary, given the indices of the selected points.
         """
@@ -309,19 +324,28 @@ class JointWordCloudSummarizer:
         self._centroid = np.mean(self.vector_space[selected, :], axis=0)
         # Query against the points in the label space
         result_indices, result_dists = self._search_index.query(
-            [self._centroid], k=self.n_neighbours
+            [self._centroid], k=self.n_neighbours,
         )
         self._word_dict = {
             word: freq
-            for word, freq in zip(self.labels[result_indices[0]], result_dists[0])
+            for word, freq in zip(self.labels[result_indices[0]], np.exp(-result_dists[0]))
         }
+        fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
-            background_color=self.background_color
+            # font_path="arial",
+            background_color=self.background_color,
+            width=fig.width // 3,
+            height=fig.height // 3,
+            scale=4.0,
         ).generate_from_frequencies(self._word_dict)
+        # for (word, count), font_size, position, orientation, color in word_cloud.layout_:
+        #     fig.text(x=[0], y=[0], x_offset=3 * position[1], y_offset=-3 * position[0], text=[word], text_alpha=0.8, text_font={"value": "DroidSansMono"}, text_font_size=f"{font_size}px", text_color=color, angle=90 if orientation == "ROTATE_90" else 0, angle_units="deg")
+        #     print((word, count), font_size, position, orientation, color)
         pil_image = word_cloud.to_image()
         bokeh_image = bokeh_image_from_pil(pil_image)
-        fig = bpl.figure(title=f"Word Cloud Summary of Labels")
         fig.image_rgba(
             [bokeh_image], x=0, y=0, dw=pil_image.size[0], dh=pil_image.size[1]
         )
+        fig.axis.visible = False
+        fig.grid.visible = False
         return fig

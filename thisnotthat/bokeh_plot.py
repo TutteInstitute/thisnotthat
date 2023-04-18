@@ -30,6 +30,9 @@ def add_text_layer(
     angle: float = 0,
     text_color: str = "#444444",
     text_outline_color: str = "#dddddd",
+    background_fill_color: str = "#eeeeee22",
+    padding: int = 0,
+    border_radius: int = 5,
     text_font: Dict[str, str] = {"value": "helvetica"},
     text_font_style: str = "normal",
     text_line_height: float = 0.9,
@@ -96,6 +99,9 @@ def add_text_layer(
             angle=angle,
             text_color=text_color,
             text_outline_color=text_outline_color,
+            background_fill_color=background_fill_color,
+            padding=padding,
+            border_radius=border_radius,
             text_font=text_font,
             text_font_style=text_font_style,
             text_line_height=text_line_height,
@@ -116,7 +122,7 @@ def add_text_layer(
     upper_transition_val = max_text_size - text_transition_width
     lower_transition_val = min_text_size + text_transition_width
     text_resize_callback = bokeh.models.callbacks.CustomJS(
-        args=dict(labels=labels),
+        args=dict(labels=labels, background_fill_color=background_fill_color),
         code="""
     const scale = cb_obj.end - cb_obj.start;
     const text_size = (%f / scale);
@@ -131,8 +137,10 @@ def add_text_layer(
     }
     if (alpha > 0) {
         labels.text_alpha = alpha;
+        labels.background_fill_color = background_fill_color;
     } else {
         labels.text_alpha = 0.0;
+        labels.background_fill_color = "#ffffff00";
     }
     labels.text_font_size = text_size + "pt";
     labels.change.emit();
@@ -243,11 +251,29 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     selection_fill_alpha: float (optional, default = 1.0)
         The alpha value to use for selected points in the scatterplot.
 
+    selection_line_color: str (optional, default = "black")
+        The line colour of selected points in the scatterplot.
+
+    selection_line_width: float (optional, default = 0.5)
+        The line width of selected points in the scatterplot.
+
+    selection_line_alpha: float (optional, default = 0.5)
+        The line alpha of selected points in the scatterplot.
+
     nonselection_fill_alpha: float (optional, default = 0.1)
         The alpha value to use for points that are not in an active selection in the scatterplot.
 
     nonselection_fill_color: str (optional, default = "gray")
         The colour to use to fill points that are not in an active selection in the scatterplot.
+
+    nonselection_line_color: str (optional, default = None)
+        The outline color to use for points that are not in an active selection in the scatterplot.
+
+    nonselection_line_width: float (optional, default = 0.0)
+        The outline line weight for points that are not in an active selection in the scatterplot.
+
+    nonselection_line_alpha: float (optional, default = 0.0)
+        The outline alpha for points that are not in an active selection in the scatterplot.
 
     background_fill_color: str (optional, default = "#FFFFFF")
         The colour to use for the background of the scatterplot.
@@ -330,8 +356,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         hover_line_width: float = 2,
         tooltip_template: str = """<div>@hover_text</div>""",
         selection_fill_alpha: float = 1.0,
+        selection_line_color: str = "label",
+        selection_line_width: float = 0.5,
+        selection_line_alpha: float = 0.5,
         nonselection_fill_alpha: float = 0.1,
         nonselection_fill_color: str = "gray",
+        nonselection_line_color: Optional[str] = None,
+        nonselection_line_width: float = 0.0,
+        nonselection_line_alpha: float = 0.0,
         background_fill_color: str = "#ffffff",
         border_fill_color: str = "whitesmoke",
         toolbar_location: str = "above",
@@ -340,6 +372,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         title_location: str = "above",
         show_legend: bool = True,
         legend_location: str = "outside",
+        sizing_mode="fixed",
         name: str = "Plot",
     ):
         super().__init__(name=name)
@@ -418,6 +451,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             tools=tools,
             title=title,
             title_location=title_location,
+            sizing_mode=sizing_mode,
         )
         self.plot.toolbar.active_scroll = self.plot.select_one(
             bokeh.models.WheelZoomTool
@@ -434,8 +468,14 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             hover_line_color=hover_line_color,
             hover_line_width=hover_line_width,
             selection_fill_alpha=selection_fill_alpha,
+            selection_line_color=selection_line_color,
+            selection_line_width=selection_line_width,
+            selection_line_alpha=selection_line_alpha,
             nonselection_fill_alpha=nonselection_fill_alpha,
             nonselection_fill_color=nonselection_fill_color,
+            nonselection_line_color=nonselection_line_color,
+            nonselection_line_width=nonselection_line_width,
+            nonselection_line_alpha=nonselection_line_alpha,
         )
         if show_legend:
             self._legend = bokeh.models.Legend(
@@ -507,7 +547,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.plot.ygrid.grid_line_color = None
         self.plot.xaxis.bounds = (0, 0)
         self.plot.yaxis.bounds = (0, 0)
-        self.pane = pn.pane.Bokeh(self.plot)
+        self.pane = pn.pane.Bokeh(self.plot, sizing_mode=sizing_mode)
 
         self.show_legend = show_legend
         self.color_by_vector = pd.Series([], dtype=object)
@@ -718,6 +758,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         text_font_style: str = "normal",
         text_line_height: float = 0.9,
         text_alpha: float = 1.0,
+        background_fill_color: str = "#eeeeee22",
+        padding = 0,
+        border_radius=5,
         max_text_size: float = 64.0,
         min_text_size: float = 2.0,
         text_transition_width: float = 16.0,
@@ -792,6 +835,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 angle=angle,
                 text_color=text_color,
                 text_outline_color=text_outline_color,
+                background_fill_color=background_fill_color,
+                padding=padding,
+                border_radius=border_radius,
                 text_font=text_font,
                 text_font_style=text_font_style,
                 text_line_height=text_line_height,
