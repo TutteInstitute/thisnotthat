@@ -31,7 +31,8 @@ def add_text_layer(
     text_color: str = "#444444",
     text_outline_color: str = "#dddddd",
     background_fill_color: str = "#eeeeee22",
-    padding = 0,
+    padding: int = 0,
+    border_radius: int = 5,
     text_font: Dict[str, str] = {"value": "helvetica"},
     text_font_style: str = "normal",
     text_line_height: float = 0.9,
@@ -100,6 +101,7 @@ def add_text_layer(
             text_outline_color=text_outline_color,
             background_fill_color=background_fill_color,
             padding=padding,
+            border_radius=border_radius,
             text_font=text_font,
             text_font_style=text_font_style,
             text_line_height=text_line_height,
@@ -137,6 +139,7 @@ def add_text_layer(
         labels.text_alpha = alpha;
     } else {
         labels.text_alpha = 0.0;
+        labels.background_fill_color = "#ffffff00";
     }
     labels.text_font_size = text_size + "pt";
     labels.change.emit();
@@ -756,6 +759,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         text_alpha: float = 1.0,
         background_fill_color: str = "#eeeeee22",
         padding = 0,
+        border_radius=5,
         max_text_size: float = 64.0,
         min_text_size: float = 2.0,
         text_transition_width: float = 16.0,
@@ -832,6 +836,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 text_outline_color=text_outline_color,
                 background_fill_color=background_fill_color,
                 padding=padding,
+                border_radius=border_radius,
                 text_font=text_font,
                 text_font_style=text_font_style,
                 text_line_height=text_line_height,
