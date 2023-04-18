@@ -122,7 +122,7 @@ def add_text_layer(
     upper_transition_val = max_text_size - text_transition_width
     lower_transition_val = min_text_size + text_transition_width
     text_resize_callback = bokeh.models.callbacks.CustomJS(
-        args=dict(labels=labels),
+        args=dict(labels=labels, background_fill_color=background_fill_color),
         code="""
     const scale = cb_obj.end - cb_obj.start;
     const text_size = (%f / scale);
@@ -137,6 +137,7 @@ def add_text_layer(
     }
     if (alpha > 0) {
         labels.text_alpha = alpha;
+        labels.background_fill_color = background_fill_color;
     } else {
         labels.text_alpha = 0.0;
         labels.background_fill_color = "#ffffff00";
