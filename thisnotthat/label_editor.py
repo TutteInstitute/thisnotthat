@@ -230,7 +230,7 @@ class LegendWidget(pn.reactive.Reactive):
                         button_type="default",
                         width=self.label_height,
                         height=self.label_height,
-                        margin=[0, 2],
+                        margin=(0, 2),
                     ),
                 )
                 legend_items.append(legend_item)

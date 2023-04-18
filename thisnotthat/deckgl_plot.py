@@ -179,7 +179,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                     "height": "64px",
                     "text-align": "right",
                 },
-                margin=[5, 0],
+                margin=(5, 0),
             ),
             self.select_method,
         )
@@ -207,7 +207,7 @@ class DeckglPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 "height": "64px",
                 "text-align": "left",
             },
-            margin=[5, 0],
+            margin=(5, 0),
         )
         self.points["data"] = self.dataframe
         self.deck_pane.param.trigger("object")
