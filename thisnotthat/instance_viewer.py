@@ -70,7 +70,7 @@ class InformationPane(pn.reactive.Reactive):
         disable_math: bool = False,
         extensions: List[str] = ["extra", "smarty", "codehilite"],
         style: dict = {},
-        margin: List[int] = [5, 5],
+        margin: Tuple[int] = (5, 5),
         sizing_mode: str = "stretch_height",
         throttle = 200,
         name: str = "Information",
