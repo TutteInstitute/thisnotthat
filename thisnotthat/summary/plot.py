@@ -349,3 +349,74 @@ class JointWordCloudSummarizer:
         fig.axis.visible = False
         fig.grid.visible = False
         return fig
+
+
+class TimeSeriesSummarizer:
+    def __init__(
+        self,
+        data,
+        time_column="time_first",
+        count_column="num_events",
+        freq="6H",
+        fixed_time_range=True,
+    ):
+        """
+        A summarizer that takes a data frame with a time column and a count column and generates a bokeh time series
+        plot of the selected data.  This is designed to be passed to a PlotSummaryPane.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            Must include columns with titles specified by time_column and count_column
+        time_column: str
+            The column name of the time column from the data frame specified by data.
+        count_column: str
+            The column name of the time column from the data frame specified by data (you might need to generate a
+            column of all ones if you don't have counts)
+        freq : str / frequency object (defaults='6H')
+            This will groupby the specified frequency if the target selection (via key or level) is a datetime-like
+            object.  For full specification of available frequencies,
+            please see `here <https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#offset-aliases>`_.
+        fixed_time_range: bool (default=True)
+            A boolean indicating if the range of the time series plot should be fixed or vary based on the selection.
+            If it is True then the bounds of the time series plots are chosen to be the min and max of data[time_column]
+        """
+        self.data = data
+        self.time_column = time_column
+        self.count_column = count_column
+        self.freq = freq
+        self.fixed_time_range = fixed_time_range
+
+    def summarize(self, selected):
+        """
+        A function necessary for all summarizers.  It takes a set indices specified by selected and returns a bokeh plot to
+        be displayed.
+        """
+        df = pd.DataFrame(
+            self.data.iloc[selected]
+            .groupby(pd.Grouper(key=self.time_column, freq=self.freq))[
+                self.count_column
+            ]
+            .sum()
+        )
+        if self.fixed_time_range:
+            fixed_df = pd.DataFrame(
+                0,
+                index=pd.date_range(
+                    self.data[self.time_column].min(),
+                    self.data[self.time_column].max(),
+                    freq=self.freq,
+                ),
+                columns=[self.count_column],
+            )
+            df = df.combine_first(fixed_df)
+        df = df.reset_index()
+        df.columns = [self.time_column, self.count_column]
+
+        source = bpl.ColumnDataSource(df)
+        fig = bpl.figure(
+            x_axis_type="datetime",
+            title=f"first = {df[self.time_column].min()}, last = {df[self.time_column].max()}",
+        )
+        fig.vbar(x=self.time_column, top=self.count_column, width=10, source=source)
+        return fig
