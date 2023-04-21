@@ -5,6 +5,7 @@ import pandas as pd
 import panel as pn
 import param
 from pynndescent import NNDescent
+import time
 
 
 class DataFrameSummarizer(Protocol):
@@ -39,6 +40,11 @@ class DataSummaryPane(pn.reactive.Reactive):
     height
     sizing_mode
         Geometry of the displayed frame. See Panel documentation.
+
+    throttle: int
+        The number of milliseconds between checking for selection changes for updating. If the plot
+        construction process is long you can increase the throttle value to prevent multiple redraws
+        that take a long time to occur.
 
     name
         Name of the pane.
@@ -83,11 +89,14 @@ class DataSummaryPane(pn.reactive.Reactive):
         width: Optional[int] = None,
         height: Optional[int] = None,
         sizing_mode: str = "stretch_both",
+        throttle: int = 200,
         name: str = "Summary",
     ) -> None:
         super().__init__(name=name)
         self.summarizer = summarizer
         self.no_selection = no_selection
+        self.throttle = throttle
+        self._last_update = time.perf_counter() * 1000.0
         self._base_selection = []
         self.table = pn.pane.DataFrame(
             self.no_selection(), sizing_mode=sizing_mode, width=width, height=height
@@ -99,11 +108,13 @@ class DataSummaryPane(pn.reactive.Reactive):
 
     @param.depends("selected", watch=True)
     def _update_selected(self) -> None:
-        self.table.object = (
-            self.summarizer.summarize(self.selected)
-            if self.selected
-            else self.no_selection()
-        )
+        if time.perf_counter() * 1000.0 - self._last_update > self.throttle:
+            self.table.object = (
+                self.summarizer.summarize(self.selected)
+                if self.selected
+                else self.no_selection()
+            )
+            self._last_update = time.perf_counter() * 1000.0
 
     def link_to_plot(self, plot):
         """
