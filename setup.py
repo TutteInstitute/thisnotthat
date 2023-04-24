@@ -32,6 +32,7 @@ INSTALL_REQUIRES = [
     "scikit-learn",
     "umap-learn",
     "vectorizers",
+    "wordcloud",
 ]
 CLASSIFIERS = ['Intended Audience :: Science/Research',
                'Intended Audience :: Developers',
