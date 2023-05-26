@@ -1,15 +1,20 @@
+# Trigger a build when there is a push to the main branch or a tag starts with release-
 trigger:
   branches:
     include:
     - main
+    - master
   tags:
     include:
     - release-*
 
+# Trigger a build when there is a pull request to the main branch
+# Ignore PRs that are just updating the docs
 pr:
   branches:
     include:
     - main
+    - master
     exclude:
     - doc/*
     - README.rst
