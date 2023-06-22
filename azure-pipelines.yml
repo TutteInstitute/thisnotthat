@@ -1,15 +1,20 @@
+# Trigger a build when there is a push to the main branch or a tag starts with release-
 trigger:
   branches:
     include:
     - main
+    - master
   tags:
     include:
     - release-*
 
+# Trigger a build when there is a pull request to the main branch
+# Ignore PRs that are just updating the docs
 pr:
   branches:
     include:
     - main
+    - master
     exclude:
     - doc/*
     - README.rst
@@ -65,7 +70,7 @@ stages:
           displayName: 'Install package'
 
         - script: |
-            pytest thisnotthat/tests --show-capture=no -v --disable-warnings --junitxml=junit/test-results.xml --cov=glasbey/ --cov-report=xml --cov-report=html
+            pytest thisnotthat/tests --show-capture=no -v --disable-warnings --junitxml=junit/test-results.xml --cov=thisnotthat/ --cov-report=xml --cov-report=html
           displayName: 'Run tests'
 
         - bash: |
@@ -83,7 +88,7 @@ stages:
 
   - stage: BuildPublishArtifact
     dependsOn: RunAllTests
-    condition: and(startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'), eq(variables.triggeredByPullRequest, false))
+    condition: and(succeeded(), startsWith(variables['Build.SourceBranch'], 'refs/tags/release-'), eq(variables.triggeredByPullRequest, false))
     jobs:
       - job: BuildArtifacts
         displayName: Build source dists and wheels    
