@@ -94,12 +94,12 @@ class LegendWidget(pn.reactive.Reactive):
         selectable: bool = False,
         color_picker_width: int = 50,
         color_picker_height: int = 50,
-        color_picker_margin: Sequence[int] = [1, 5],
+        color_picker_margin: tuple[int] = (1, 5),
         label_height: int = 50,
         label_width: int = 225,
         label_max_width: int = 225,
         label_min_width: int = 125,
-        label_margin: Sequence[int] = [0, 0],
+        label_margin: tuple[int] = (0, 0),
         name: str = "Editable Legend",
     ) -> None:
         super().__init__(name=name)
@@ -282,7 +282,87 @@ class LegendWidget(pn.reactive.Reactive):
                 bidirectional=True,
             )
 
+        
+class AddToLabelWidget(pn.reactive.Reactive):
+    """A widget for adding points to an existing label for use with an editable legend.
+    This combines a button and select widget with default options set, and an understanding
+    of data point selections and labels for connecting with plots and editable legends.
 
+    Parameters
+    ----------
+    labels: Array of shape (n_samples,)
+        The class labels vector giving the class label of each sample.
+
+    button_type: str (optional, default = "success")
+        The panel button type used. See the panel documentation for more details.
+
+    button_text: str (optional, default = "Add to Existing Label")
+        The text to display on the button.
+
+    total_width: int or None (optional, default = None)
+        The total width of the widget. If ``None`` then let the widget size itself.
+
+    name: str (optional, default = "Add to Existing Label")
+        The name of the pane. See panel documentation for more details.
+    """
+
+    labels = param.Series(default=pd.Series([], dtype="object"), doc="Labels")
+    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
+
+    def __init__(
+        self,
+        labels: npt.ArrayLike,
+        *,
+        button_type: str = "success",
+        button_text: str = "Add to Existing Label",
+        total_width: Optional[int] = None,
+        name: str = "Add to Existing Label",
+    ) -> None:
+        super().__init__(name=name)
+        self.labels = pd.Series(labels).copy()
+        self.options = list(self.labels.unique())
+        self.selector = pn.widgets.Select(
+            name='Select Label',
+            options=self.options,
+            width=total_width//2,
+            align='center'
+        )
+        self.button = pn.widgets.Button(
+            name=button_text, button_type=button_type, width=total_width//2, align=('center', 'end')
+        )
+        self.button.on_click(self._on_click)
+        self.button.disabled = True
+        self.selector.disabled = True
+        self.pane = pn.Row(
+            self.selector, self.button
+        )
+
+    def _on_click(self, event: param.parameterized.Event) -> None:
+        if len(self.selected) > 0:
+            new_labels = self.labels
+            new_labels.iloc[self.selected] = self.selector.value
+            self.labels = new_labels
+            self.selected = []
+
+    @param.depends("selected", watch=True)
+    def _toggle_active(self):
+        if len(self.selected) > 0:
+            self.button.disabled = False
+            self.selector.disabled = False
+        else:
+            self.button.disabled = True
+            self.selector.disabled = True
+
+    @param.depends("labels", watch=True)
+    def _set_options(self):
+        if hasattr(self, 'selector'):
+            self.options = list(self.labels.unique())
+            self.selector.options = self.options
+
+    def _get_model(self, *args, **kwds):
+        return self.pane._get_model(*args, **kwds)
+        
+        
 class LabelEditorWidget(pn.reactive.Reactive):
     """A pane for editing class labels, ideally intended to be linked with a PlotPane. The pane itself is composed of
     an editable legend, and a "new label" button. With the editable legend you can edit the names of class labels,
@@ -343,6 +423,16 @@ class LabelEditorWidget(pn.reactive.Reactive):
     newlabel_button_text: str (optional, default = "New Label")
         The text to display on the button.
 
+    add_to_label: bool (optional, default = False)
+        If set to ``True``, the widget for adding selected points to an existing label will be displayed.
+        If set to ``False``, the widget will be hidden.
+
+    add_to_label_button_type: str (optional, default = "success")
+        The panel button type used. See the panel documentation for more details.
+
+    add_to_label_button_text: str (optional, default = "Add to Existing Label")
+        The text to display on the button for adding to the label.
+
     title: str (optional, default = "#### Label Editor")
         A markdown title to be placed at the top of the pane.
 
@@ -370,14 +460,17 @@ class LabelEditorWidget(pn.reactive.Reactive):
         selectable_legend: bool = False,
         color_picker_width: int = 48,
         color_picker_height: int = 36,
-        color_picker_margin: Sequence[int] = [1, 5],
+        color_picker_margin: tuple[int] = (1, 5),
         label_height: int = 36,
         label_width: int = 225,
         label_max_width: int = 225,
         label_min_width: int = 125,
-        label_margin: Sequence[int] = [0, 0],
+        label_margin: tuple[int] = (0, 0),
         newlabel_button_type: str = "success",
         newlabel_button_text: str = "New Label",
+        add_to_label: bool = False,
+        add_to_label_button_type: str = "success",
+        add_to_label_button_text: str = "Add to Existing Label",
         title: str = "#### Label Editor",
         width: Optional[int] = None,
         height: Optional[int] = None,
@@ -407,12 +500,29 @@ class LabelEditorWidget(pn.reactive.Reactive):
         self.new_label_button = pn.widgets.Button(
             name=newlabel_button_text, button_type=newlabel_button_type, width=width
         )
+
+        self.add_to_label_widget = AddToLabelWidget(
+            labels=labels, button_type=add_to_label_button_type,
+            button_text=add_to_label_button_text,
+            total_width=label_width + color_picker_width,
+        )
         self.new_label_button.on_click(self._on_click)
         self.new_label_button.disabled = True
-        self.pane = pn.WidgetBox(
-            title, self.legend, self.new_label_button, width=width, height=height
-        )
 
+
+        self.add_to_label_widget.link(
+            self, labels="labels", selected="selected", bidirectional=True,
+        )
+        if add_to_label:
+            self.pane = pn.WidgetBox(
+                title, self.legend, self.new_label_button, self.add_to_label_widget, 
+                width=width, height=height
+            )
+        else:
+            self.pane = pn.WidgetBox(
+                title, self.legend, self.new_label_button, width=width, height=height
+            ) 
+        
     def _on_click(self, event: param.parameterized.Event) -> None:
         if len(self.selected) > 0:
             new_labels = self.labels.copy()
