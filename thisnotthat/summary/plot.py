@@ -387,7 +387,7 @@ class TimeSeriesSummarizer:
         self.freq = freq
         self.fixed_time_range = fixed_time_range
 
-    def summarize(self, selected):
+    def summarize(self, selected, width=600, height=600):
         """
         A function necessary for all summarizers.  It takes a set indices specified by selected and returns a bokeh plot to
         be displayed.
@@ -417,6 +417,8 @@ class TimeSeriesSummarizer:
         fig = bpl.figure(
             x_axis_type="datetime",
             title=f"first = {df[self.time_column].min()}, last = {df[self.time_column].max()}",
+            width=width,
+            height=height,
         )
         fig.vbar(x=self.time_column, top=self.count_column, width=10, source=source)
         return fig
