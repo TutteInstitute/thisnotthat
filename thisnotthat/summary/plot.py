@@ -128,10 +128,6 @@ class PlotSummaryPane(pn.reactive.Reactive):
 
     @param.depends("selected", watch=True)
     def _update_selected(self) -> None:
-        # self.pane[0] = pn.pane.Bokeh(
-        #     fig,
-        #     **self._geometry_pane
-        # )
         if time.perf_counter() * 1000.0 - self._last_update > self.throttle:
             self.summary_plot.object = (
                 self.summarizer.summarize(self.selected, **self._geometry_figure)
@@ -332,15 +328,11 @@ class JointWordCloudSummarizer:
         }
         fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
-            # font_path="arial",
             background_color=self.background_color,
             width=fig.width // 3,
             height=fig.height // 3,
             scale=4.0,
         ).generate_from_frequencies(self._word_dict)
-        # for (word, count), font_size, position, orientation, color in word_cloud.layout_:
-        #     fig.text(x=[0], y=[0], x_offset=3 * position[1], y_offset=-3 * position[0], text=[word], text_alpha=0.8, text_font={"value": "DroidSansMono"}, text_font_size=f"{font_size}px", text_color=color, angle=90 if orientation == "ROTATE_90" else 0, angle_units="deg")
-        #     print((word, count), font_size, position, orientation, color)
         pil_image = word_cloud.to_image()
         bokeh_image = bokeh_image_from_pil(pil_image)
         fig.image_rgba(
