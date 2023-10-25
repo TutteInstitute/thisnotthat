@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Optional, Protocol, Sequence
+from typing import Callable, Optional, Protocol, Sequence, Literal, Union
 
 import matplotlib.pyplot as plt
 from bokeh.layouts import LayoutDOM
@@ -29,7 +29,7 @@ def display_no_selection(width=600, height=600) -> LayoutDOM:
     return fig
 
 
-PlotNoSelection = Callable[..., LayoutDOM]
+PlotNoSelection = Union[Callable[..., LayoutDOM], Literal["plot-all"]]
 
 
 class PlotSummaryPane(pn.reactive.Reactive):
@@ -46,8 +46,12 @@ class PlotSummaryPane(pn.reactive.Reactive):
         ``thisnotthat.summary`` module contains a set of such summarizer classes.
 
     no_selection
-        Parameter-less function that returns a Bokeh displayable object that should come
-        up when no point is selected.
+        Either the string "plot-all", or a callable object. In the first case, it will make
+        the summary figure summarize all points when none is selected. In the second case,
+        this callable object should be a function taking a width and a height (and keeping
+        default values for these, as they are only submitted if they were explicitly defined
+        for this pane) that returns a Bokeh displayable object that should come up when no
+        point is selected.
 
     width
     height
@@ -105,7 +109,6 @@ class PlotSummaryPane(pn.reactive.Reactive):
     ) -> None:
         super().__init__(name=name)
         self.summarizer = summarizer
-        self.no_selection = no_selection
         self._base_selection = []
         self._geometry_figure = {
             name: param
@@ -118,6 +121,17 @@ class PlotSummaryPane(pn.reactive.Reactive):
             **self._geometry_figure,
             **{name: param for name, param in [("sizing_mode", sizing_mode)] if param},
         }
+
+        self._index_data_all = None
+        if no_selection == "plot-all":
+            def _plot_all(width=600, height=600):
+                if self._index_data_all is None:
+                    return display_no_selection(**self._geometry_figure)
+                return self.summarizer.summarize(self._index_data_all, **self._geometry_figure)
+            self.no_selection = _plot_all
+        else:
+            self.no_selection = no_selection
+
         self.summary_plot = pn.pane.Bokeh(
             self.no_selection(**self._geometry_figure), sizing_mode=sizing_mode, width=width, height=height
         )
@@ -127,12 +141,8 @@ class PlotSummaryPane(pn.reactive.Reactive):
         return self.pane._get_model(*args, **kwargs)
 
     @param.depends("selected", watch=True)
-    def _update_selected(self) -> None:
-        # self.pane[0] = pn.pane.Bokeh(
-        #     fig,
-        #     **self._geometry_pane
-        # )
-        if time.perf_counter() * 1000.0 - self._last_update > self.throttle:
+    def _update_selected(self, force=False) -> None:
+        if (time.perf_counter() * 1000.0 - self._last_update > self.throttle) or force:
             self.summary_plot.object = (
                 self.summarizer.summarize(self.selected, **self._geometry_figure)
                 if self.selected
@@ -155,6 +165,8 @@ class PlotSummaryPane(pn.reactive.Reactive):
         link:
             The link object.
         """
+        self._index_data_all = plot.dataframe.index.copy()
+        self._update_selected(force=True)
         return plot.link(self, selected="selected", bidirectional=False)
 
 
@@ -332,15 +344,11 @@ class JointWordCloudSummarizer:
         }
         fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
         word_cloud = WordCloud(
-            # font_path="arial",
             background_color=self.background_color,
             width=fig.width // 3,
             height=fig.height // 3,
             scale=4.0,
         ).generate_from_frequencies(self._word_dict)
-        # for (word, count), font_size, position, orientation, color in word_cloud.layout_:
-        #     fig.text(x=[0], y=[0], x_offset=3 * position[1], y_offset=-3 * position[0], text=[word], text_alpha=0.8, text_font={"value": "DroidSansMono"}, text_font_size=f"{font_size}px", text_color=color, angle=90 if orientation == "ROTATE_90" else 0, angle_units="deg")
-        #     print((word, count), font_size, position, orientation, color)
         pil_image = word_cloud.to_image()
         bokeh_image = bokeh_image_from_pil(pil_image)
         fig.image_rgba(
@@ -387,7 +395,7 @@ class TimeSeriesSummarizer:
         self.freq = freq
         self.fixed_time_range = fixed_time_range
 
-    def summarize(self, selected):
+    def summarize(self, selected, width=600, height=600):
         """
         A function necessary for all summarizers.  It takes a set indices specified by selected and returns a bokeh plot to
         be displayed.
@@ -417,6 +425,8 @@ class TimeSeriesSummarizer:
         fig = bpl.figure(
             x_axis_type="datetime",
             title=f"first = {df[self.time_column].min()}, last = {df[self.time_column].max()}",
+            width=width,
+            height=height,
         )
         fig.vbar(x=self.time_column, top=self.count_column, width=10, source=source)
         return fig

@@ -10,6 +10,7 @@ from .search import (
 from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
+from .selector import TimeSelectorWidget
 from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers
 from thisnotthat.summary.plot import PlotSummaryPane
 from thisnotthat.summary.dataframe import DataSummaryPane
@@ -40,4 +41,5 @@ __all__ = [
     "PlotSummaryPane",
     "SampleLabelLayers",
     "SparseMetadataLabelLayers",
+    "TimeSelectorWidget",
 ]
