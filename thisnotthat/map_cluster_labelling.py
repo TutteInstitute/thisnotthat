@@ -1435,7 +1435,7 @@ class SparseMetadataLabelLayers(object):
         with metadata that has a high number of features, and any given sample only has non-zero values for a small
         number of features. A prime example is a bag-of-words representation of a corpus of documents.
 
-    fetaure_name_dictionary: dict
+    feature_name_dictionary: dict
         A dictionary mapping column indices of the sparse matrix to feature names. For example, if the sparse matrix
         were the output of sklearn's ``CountVectorizer`` the dict would be
         ``{idx: word for word, idx in model.vocabulary_.items()}``.
