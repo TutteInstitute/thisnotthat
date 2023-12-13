@@ -49,6 +49,11 @@ Get the latest on `Read The Docs <https://thisnotthat.readthedocs.io/en/latest/>
 ----------
 Installing
 ----------
+**JUPYTER HUB WARNING:** attempting to use a TNT notebook in conjunction with a jupyter hub instance can result in broken linkages between the selections for your 
+various panel panes.  If you are running on jupyter hub server and can select points in one of your plots but it isn't updating any other plots then this
+is the likely culprit.  Fixing this requires that the same versions of the `Panel library`_ and `bokeh <https://pypi.org/project/bokeh/>`_ are installed in the main kernel that starts the jupyter hub server and the local kernel.
+If you are running on a groups jupyterhub server this may require you contacting the administrator and asking them to install your favorite versions of bokeh and panel before restarting
+their server.  I'd recommend you then record the version information for your team so that they can easily match the versions in their local kernels.  
 
 This Not That is built on top of Panel and Bokeh, so you will need these installed. In all you will need:
 

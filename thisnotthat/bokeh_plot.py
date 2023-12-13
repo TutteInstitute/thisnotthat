@@ -162,30 +162,30 @@ def add_text_layer(
 
 
 class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
-    """A Scatterplot pane for visualizing a map representation of data using Bokeh as the plot backend. The bokeh 
+    """A Scatterplot pane for visualizing a map representation of data using Bokeh as the plot backend. The bokeh
     backend provides a lot of versatility and interactivity options, including lasso-selection, in plot legends
     that update, and more. This plot makes use of bokeh's webgl backend, and can scale well into the tens of
-    thousands of points, but performance can be slower for larger datasets at which point the dek.gl backend may 
+    thousands of points, but performance can be slower for larger datasets at which point the dek.gl backend may
     become preferable.
 
     Parameters
     ----------
     data: Array of shape (n_samples, 2)
         The data of the map representation to be plotted, formatted as a numpy array of shape (n_samples, 2).
-        
+
     labels: Iterable of str of length n_samples or None (optional, default = None)
         If text class labels for data points is available it can be passed here, and used for colouring points,
         as well as potentially interacting with label editor tools. If ``None`` the data will be treated as "unlabelled"
         for the purpose of class labelling, and can then be added to via the label editor.
-        
+
     hover_text: Iterable of str of length n_samples or None (optional, default = None)
-        If a text item for each sample to use when hovering over points is available it can be passed here. If 
+        If a text item for each sample to use when hovering over points is available it can be passed here. If
         ``None`` then the ``labels`` will be used for any hover text.
-        
+
     marker_size: float, Iterable of float of length n_samples, or None (optional, default = None)
         Individual markers can be sized by passing a vector of sizes. If a single float value is passed then all
         markers will be sized at the given float value. If ``None`` a default marker size of 0.1 will be used.
-        
+
     label_color_mapping: dict or None (optional, default = None)
         If ``labels`` are provided this color_mapping will be used -- it should be a dictionary keyed by the class
         labels, with values giving hexstring colour specifications for the desired colour of the class label. If
@@ -381,12 +381,19 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if type(marker_size) in (int, float):
             marker_size = np.full(len(data), marker_size, dtype=np.float64)
 
+        self._base_hover_text = (
+            [str(x) for x in hover_text]
+            if hover_text is not None
+            else [str(x) for x in labels]
+        )
+        self._base_hover_is_labels = hover_text is None
+
         self.data_source = bokeh.models.ColumnDataSource(
             {
                 "x": np.asarray(data).T[0],
                 "y": np.asarray(data).T[1],
                 "label": labels,
-                "hover_text": hover_text if hover_text is not None else labels,
+                "hover_text": self._base_hover_text,
                 "size": marker_size
                 if marker_size is not None
                 else np.full(len(data), 0.1),
@@ -406,15 +413,15 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         else:
             self._base_marker_scale = marker_scale_factor
 
-        self._base_hover_text = hover_text if hover_text is not None else labels
-        self._base_hover_is_labels = hover_text is None
         if type(palette) is str:
             if palette_length is None:
                 if len(set(labels)) == 1 and labels[0] == "unlabelled":
                     palette_length = None
                 else:
                     palette_length = len(set(labels))
-            self._base_palette = get_palette(palette, length=palette_length, scrambled=palette_shuffle)
+            self._base_palette = get_palette(
+                palette, length=palette_length, scrambled=palette_shuffle
+            )
         else:
             self._base_palette = list(palette)
 
@@ -429,9 +436,13 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             )
             self.color_mapping = self._label_colormap["transform"]
             if palette_length is not None:
-                self.color_mapping.palette = glasbey.extend_palette(colors, palette_size=palette_length)
+                self.color_mapping.palette = glasbey.extend_palette(
+                    colors, palette_size=palette_length
+                )
             else:
-                self.color_mapping.palette = glasbey.extend_palette(colors, palette_size=256)
+                self.color_mapping.palette = glasbey.extend_palette(
+                    colors, palette_size=256
+                )
         else:
             self._label_colormap = bokeh.transform.factor_cmap(
                 "label", palette=self._base_palette, factors=list(set(labels))
@@ -488,14 +499,21 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 label_width=150,
             )
             self.plot.add_layout(
-                self._legend, "right" if legend_location == "outside" else "center",
+                self._legend,
+                "right" if legend_location == "outside" else "center",
             )
 
             self._color_by_legend_source = bokeh.models.ColumnDataSource(
-                {"x": np.zeros(8), "y": np.zeros(8), "color_by": np.linspace(0, 1, 8),}
+                {
+                    "x": np.zeros(8),
+                    "y": np.zeros(8),
+                    "color_by": np.linspace(0, 1, 8),
+                }
             )
             self._color_by_renderer = self.plot.square(
-                source=self._color_by_legend_source, line_width=0, visible=False,
+                source=self._color_by_legend_source,
+                line_width=0,
+                visible=False,
             )
             self._color_by_legend = bokeh.models.Legend(
                 items=[
@@ -590,7 +608,6 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     @param.depends("marker_size", watch=True)
     def _update_marker_size(self):
-
         if (
             self.max_point_size is None and self.min_point_size is None
         ) or self.plot.x_range.start is None:
@@ -680,7 +697,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 self._color_by_legend_source.data["color_by"] = [
                     np.round(x, decimals=2)
                     for x in np.linspace(
-                        self.color_by_vector.max(), self.color_by_vector.min(), 8,
+                        self.color_by_vector.max(),
+                        self.color_by_vector.min(),
+                        8,
                     )
                 ]
                 self._color_by_renderer.glyph.fill_color = colormap
@@ -759,7 +778,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         text_line_height: float = 0.9,
         text_alpha: float = 1.0,
         background_fill_color: str = "#eeeeee22",
-        padding = 0,
+        padding=0,
         border_radius=5,
         max_text_size: float = 64.0,
         min_text_size: float = 2.0,
@@ -830,7 +849,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             add_text_layer(
                 self.plot,
                 cluster_label_layer,
-                text_size_scale * text_layer_scale_factor ** i,
+                text_size_scale * text_layer_scale_factor**i,
                 layer_type=layer_type,
                 angle=angle,
                 text_color=text_color,

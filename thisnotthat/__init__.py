@@ -1,5 +1,5 @@
 from .bokeh_plot import BokehPlotPane
-from .label_editor import LegendWidget, LabelEditorWidget
+from .label_editor import LegendWidget, LabelEditorWidget, TagWidget
 from .data_viewer import DataPane, SimpleDataPane
 from .search import (
     SearchWidget,
@@ -10,6 +10,7 @@ from .search import (
 from .instance_viewer import InformationPane
 from .deckgl_plot import DeckglPlotPane
 from .plot_controls import PlotControlWidget
+from .selector import TimeSelectorWidget
 from .map_cluster_labelling import JointVectorLabelLayers, MetadataLabelLayers
 from thisnotthat.summary.plot import PlotSummaryPane
 from thisnotthat.summary.dataframe import DataSummaryPane
@@ -25,6 +26,7 @@ __all__ = [
     "DeckglPlotPane",
     "LegendWidget",
     "LabelEditorWidget",
+    "TagWidget",
     "DataPane",
     "SimpleDataPane",
     "SearchWidget",
@@ -39,4 +41,5 @@ __all__ = [
     "PlotSummaryPane",
     "SampleLabelLayers",
     "SparseMetadataLabelLayers",
+    "TimeSelectorWidget",
 ]
