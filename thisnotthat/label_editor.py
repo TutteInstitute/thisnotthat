@@ -243,6 +243,7 @@ class LegendWidget(pn.reactive.Reactive):
                         height=self.label_height,
                         margin=(0, 2),
                     ),
+                    sizing_mode="stretch_width",
                 )
                 legend_items.append(legend_item)
                 legend_item[0].param.watch(
@@ -511,7 +512,8 @@ class LabelEditorWidget(pn.reactive.Reactive):
         )
         self.new_label_count = 1
         self.new_label_button = pn.widgets.Button(
-            name=newlabel_button_text, button_type=newlabel_button_type, width=width
+            name=newlabel_button_text, button_type=newlabel_button_type, width=width,
+
         )
 
         self.add_to_label_widget = AddToLabelWidget(
@@ -537,6 +539,7 @@ class LabelEditorWidget(pn.reactive.Reactive):
                 self.add_to_label_widget,
                 width=width,
                 height=height,
+                sizing_mode=stretch_height
             )
         else:
             self.pane = pn.WidgetBox(
