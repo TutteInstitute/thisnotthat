@@ -342,7 +342,7 @@ class JointWordCloudSummarizer:
             word: freq
             for word, freq in zip(self.labels[result_indices[0]], np.exp(-result_dists[0]))
         }
-        fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height)
+        fig = bpl.figure(title=f"Word Cloud Summary of Labels", width=width, height=height, toolbar_location=None)
         word_cloud = WordCloud(
             background_color=self.background_color,
             width=fig.width // 3,
