@@ -698,7 +698,12 @@ class TagWidget(pn.reactive.Reactive):
     def _rebuild_pane(self) -> None:
         legend_tags = set([])
         rows = []
-
+        
+        # Reset selections
+        self.selected = []
+        self.selected_tags = set()
+        self.deselected_tags = set()
+        
         # Need to make these look better if we want to add them
         # rows.append(pn.pane.Markdown('#### Tag'))
         # rows.append(pn.pane.Markdown('#### Select'))
