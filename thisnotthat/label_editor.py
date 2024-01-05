@@ -117,25 +117,25 @@ class LegendWidget(pn.reactive.Reactive):
             palette_length = 256
 
         if palette is None:
-            self.label_color_palette = get_palette(
+            self._base_palette = get_palette(
                 "glasbey_category10", length=palette_length, scrambled=palette_shuffle
             )
         elif type(palette) is str:
-            self.label_color_palette = get_palette(
+            self._base_palette = get_palette(
                 palette, length=palette_length, scrambled=palette_shuffle
             )
         else:
             if palette_length > len(palette):
-                self.label_color_palette = extend_palette(
+                self._base_palette = extend_palette(
                     palette, palette_size=palette_length
                 )
             else:
-                self.label_color_palette = palette[:palette_length]
+                self._base_palette = palette[:palette_length]
 
             if palette_shuffle:
-                self.label_color_palette = [
-                    self.label_color_palette[x]
-                    for x in _palette_index(len(self.label_color_palette))
+                self._base_palette = [
+                    self._base_palette[x]
+                    for x in _palette_index(len(self._base_palette))
                 ]
 
         self.labels = label_series
@@ -217,10 +217,14 @@ class LegendWidget(pn.reactive.Reactive):
         self.label_set = set(self.labels.unique())
         legend_labels = set([])
         legend_items = []
+        label_color_palette = []
+        
         for idx, label in enumerate(self.label_color_factors):
             if label in self.label_set and label not in legend_labels:
                 legend_labels.add(label)
-                color = self.label_color_palette[idx]
+                color = self._base_palette[idx]
+                label_color_palette.append(color)
+                
                 legend_item = pn.Row(
                     pn.widgets.ColorPicker(
                         value=color,
@@ -257,8 +261,10 @@ class LegendWidget(pn.reactive.Reactive):
                     legend_item[2].on_click(self._toggle_select)
                 else:
                     legend_item[2].visible = False
+        self.label_color_palette = label_color_palette
         self.pane.clear()
         self.pane.extend(legend_items)
+        
 
     # Reactive requires this to make the model auto-display as requires
     def _get_model(self, *args, **kwds):
@@ -539,7 +545,7 @@ class LabelEditorWidget(pn.reactive.Reactive):
                 self.add_to_label_widget,
                 width=width,
                 height=height,
-                sizing_mode=stretch_height
+                sizing_mode="stretch_height"
             )
         else:
             self.pane = pn.WidgetBox(
@@ -552,9 +558,9 @@ class LabelEditorWidget(pn.reactive.Reactive):
             new_labels.iloc[self.selected] = f"new_label_{self.new_label_count}"
             self.labels = new_labels
             self.new_label_count += 1
-
-            # self.legend.labels = new_labels
-            # self.legend._rebuild_pane()
+            
+            self.legend.labels = new_labels
+            self.legend._rebuild_pane()
 
             self.selected = []
 
@@ -698,6 +704,11 @@ class TagWidget(pn.reactive.Reactive):
     def _rebuild_pane(self) -> None:
         legend_tags = set([])
         rows = []
+
+        # Reset selections
+        self.selected = []
+        self.selected_tags = set()
+        self.deselected_tags = set()
 
         # Need to make these look better if we want to add them
         # rows.append(pn.pane.Markdown('#### Tag'))
