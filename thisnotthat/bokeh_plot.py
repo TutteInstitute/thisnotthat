@@ -426,15 +426,20 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self._base_palette = list(palette)
 
         if label_color_mapping is not None:
-            factors = []
+            
+            factors = list(set(labels))
             colors = []
-            for label, color in label_color_mapping.items():
-                factors.append(label)
-                colors.append(color)
+            for factor, color in zip(factors, self._base_palette):
+                if factor in label_color_mapping:
+                    colors.append(label_color_mapping[factor])
+                else:
+                    colors.append(color)
+
             self._label_colormap = bokeh.transform.factor_cmap(
                 "label", palette=colors, factors=factors
             )
             self.color_mapping = self._label_colormap["transform"]
+
             if palette_length is not None:
                 self.color_mapping.palette = glasbey.extend_palette(
                     colors, palette_size=palette_length
