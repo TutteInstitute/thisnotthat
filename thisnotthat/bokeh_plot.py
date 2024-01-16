@@ -418,7 +418,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 if len(set(labels)) == 1 and labels[0] == "unlabelled":
                     palette_length = None
                 else:
-                    palette_length = max(len(set(labels)), 50)
+                    palette_length = max(len(set(labels)), 256)
             self._base_palette = get_palette(
                 palette, length=palette_length, scrambled=palette_shuffle
             )
