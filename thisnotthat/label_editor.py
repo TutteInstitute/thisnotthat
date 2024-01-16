@@ -218,7 +218,7 @@ class LegendWidget(pn.reactive.Reactive):
         legend_labels = set([])
         legend_items = []
         label_color_palette = []
-        
+
         for idx, label in enumerate(self.label_color_factors):
             if label in self.label_set and label not in legend_labels:
                 legend_labels.add(label)
@@ -283,6 +283,10 @@ class LegendWidget(pn.reactive.Reactive):
 
     def link_to_plot(self, plot):
         self.labels = plot.labels
+        
+        self.label_color_factors = plot.label_color_factors
+        self._base_palette = plot.label_color_palette
+        
         if self.selectable:
             self.link(plot, selected="selected", bidirectional=False)
             return self.link(
@@ -501,7 +505,7 @@ class LabelEditorWidget(pn.reactive.Reactive):
 
         if color_factors is None:
             color_factors = list(set(labels))
-
+            
         self.legend = LegendWidget(
             labels,
             factors=color_factors,
@@ -590,8 +594,10 @@ class LabelEditorWidget(pn.reactive.Reactive):
         self.labels = plot.labels
         self.label_color_factors = plot.label_color_factors
         self.label_color_palette = plot.label_color_palette
-        self.legend._rebuild_pane()
+        
         self.legend.link_to_plot(plot)
+        self.legend._rebuild_pane()
+
         return self.link(
             plot,
             labels="labels",
