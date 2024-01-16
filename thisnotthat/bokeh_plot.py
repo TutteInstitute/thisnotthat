@@ -433,8 +433,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if label_color_mapping is not None:
             factors = []
             colors = []
-            for factor, color in label_color_mapping.items():
-                factors.append(factor)
+            for label, color in label_color_mapping.items():
+                factors.append(label)
                 colors.append(color)
 
             # Add additional factors from labels as they may not be in the mapping
