@@ -418,22 +418,32 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 if len(set(labels)) == 1 and labels[0] == "unlabelled":
                     palette_length = None
                 else:
-                    palette_length = len(set(labels))
+                    palette_length = max(len(set(labels)), 50)
             self._base_palette = get_palette(
                 palette, length=palette_length, scrambled=palette_shuffle
             )
         else:
             self._base_palette = list(palette)
 
-        if label_color_mapping is not None:
+        if palette_length is not None:
+            if len(set(labels)) > palette_length:
+                raise ValueError(f"""There are {len(set(labels))} unique labels but the maximum palette length is {palette_length}. """
+                                  """Try setting a higher value via the palette_length parameter.""")            
             
-            factors = list(set(labels))
+        if label_color_mapping is not None:
+            factors = []
             colors = []
-            for factor, color in zip(factors, self._base_palette):
-                if factor in label_color_mapping:
-                    colors.append(label_color_mapping[factor])
-                else:
-                    colors.append(color)
+            for factor, color in label_color_mapping.items():
+                factors.append(factor)
+                colors.append(color)
+
+            # Add additional factors from labels as they may not be in the mapping
+            additional_factors = list(set(labels).difference(set(factors)))
+            factors.extend(additional_factors)
+
+            colors.extend(self._base_palette)
+            # Clip to palette_length or shorter
+            colors = colors[:palette_length]
 
             self._label_colormap = bokeh.transform.factor_cmap(
                 "label", palette=colors, factors=factors
@@ -441,9 +451,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             self.color_mapping = self._label_colormap["transform"]
 
             if palette_length is not None:
-                self.color_mapping.palette = glasbey.extend_palette(
-                    colors, palette_size=palette_length
-                )
+                if len(colors) < palette_length:
+                    self.color_mapping.palette = glasbey.extend_palette(
+                        colors, palette_size=palette_length
+                    )
             else:
                 self.color_mapping.palette = glasbey.extend_palette(
                     colors, palette_size=256
@@ -456,7 +467,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             # self.color_mapping.palette = [
             #     self.color_mapping.palette[x] for x in _palette_index(len(palette))
             # ]
-
+            
         self.plot = bokeh.plotting.figure(
             width=width,
             height=height,
