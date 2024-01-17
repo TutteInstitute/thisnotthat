@@ -74,7 +74,13 @@ We also highly recommend installing:
 * networkx
 * apricot-select
 
-Currently you can pip install directly from this repository:
+Currently you can pip install from PyPI:
+
+.. code:: bash
+
+    pip install thisnotthat
+
+Or directly from this repository:
 
 .. code:: bash
 
