@@ -536,7 +536,7 @@ class VectorSearchWidget(pn.reactive.Reactive):
         self.search_button.disabled = True
         self.search_button.on_click(self._run_query)
 
-        self.precomputed_search_vectors = np.array(precomputed_search_vectors)
+        self.precomputed_search_vectors = np.asarray(precomputed_search_vectors)
         
         if input_type == "text":
             self.search_box = pn.widgets.TextInput(
