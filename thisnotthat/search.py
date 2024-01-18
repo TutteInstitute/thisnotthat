@@ -500,7 +500,7 @@ class VectorSearchWidget(pn.reactive.Reactive):
     name: str (optional, default = "Search")
         The panel name of the pane. See panel documentation for more details.
     
-    vectors_to_query: ArrayLike
+    precomputed_search_vectors: ArrayLike
         An array of vectors to search for nearest neighbours. Must be in the same embedding space as ```vectors_to_query```.
     """
 
