@@ -499,6 +499,9 @@ class VectorSearchWidget(pn.reactive.Reactive):
 
     name: str (optional, default = "Search")
         The panel name of the pane. See panel documentation for more details.
+    
+    precomputed_search_vectors: ArrayLike
+        An array of vectors to search for nearest neighbours. Must be in the same embedding space as ```vectors_to_query```.
     """
 
     selected = param.List(default=[], doc="Indices of selected samples")
@@ -509,7 +512,7 @@ class VectorSearchWidget(pn.reactive.Reactive):
         embedder: Callable,
         title: str = "#### Search",
         vector_metric: str = "cosine",
-        input_type: Literal["text", "file"] = "text",
+        input_type: Literal["text", "file", "precomputed"] = "text",
         placeholder_text: str = "Enter search string ...",
         n_query_results: int = 20,
         max_query_results: int = 100,
@@ -518,6 +521,7 @@ class VectorSearchWidget(pn.reactive.Reactive):
         height: Optional[int] = None,
         sizing_mode: str = "stretch_width",
         name: str = "Search",
+        precomputed_search_vectors: npt.ArrayLike = None,
     ) -> None:
         super().__init__(name=name)
 
@@ -532,6 +536,8 @@ class VectorSearchWidget(pn.reactive.Reactive):
         self.search_button.disabled = True
         self.search_button.on_click(self._run_query)
 
+        self.precomputed_search_vectors = np.asarray(precomputed_search_vectors)
+        
         if input_type == "text":
             self.search_box = pn.widgets.TextInput(
                 placeholder=placeholder_text,
@@ -548,9 +554,24 @@ class VectorSearchWidget(pn.reactive.Reactive):
                 multiple=False,
             )
             self.search_box.param.watch(self._button_state, ["value"], onlychanged=True)
+        elif input_type == "precomputed":
+            self.search_box = pn.widgets.StaticText(
+                name="",
+                value="Search precomputed vectors",
+                align=("start", "center"),
+                sizing_mode=sizing_mode,
+            )
+            if (self.precomputed_search_vectors is None) or (len(self.precomputed_search_vectors) == 0):
+                raise ValueError("Input type is 'precomputed' but no precomputed_search_vectors were passed in ")
+            
+            self.search_box.param.watch(
+                self._button_state, ["value"], onlychanged=True
+            )
+                
+            self.search_button.disabled = False
         else:
             raise ValueError(
-                f"Invalid input type {input_type}. Should be one of 'text' or 'file'"
+                f"Invalid input type {input_type}. Should be one of 'text', 'file', or 'precomputed'"
             )
 
         self.n_results_slider = pn.widgets.DiscreteSlider(
@@ -587,7 +608,9 @@ class VectorSearchWidget(pn.reactive.Reactive):
                 query_vector = self._embedder(self.search_box.value.decode())
             else:
                 query_vector = self._embedder(self.search_box.value)
-
+        elif self._input_type == "precomputed":
+            query_vector = self.precomputed_search_vectors
+                
         if query_vector.ndim == 1:
             result_indices, result_dists = self._search_index.query(
                 [query_vector], k=self.n_results_slider.value
@@ -597,7 +620,7 @@ class VectorSearchWidget(pn.reactive.Reactive):
                 query_vector, k=self.n_results_slider.value
             )
 
-        self.selected = [int(x) for x in result_indices[0]]
+        self.selected = [int(x) for x in np.unique(result_indices)]
         self.search_button.disabled = True
 
     def _get_model(self, *args, **kwds):
