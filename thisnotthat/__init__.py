@@ -1,5 +1,5 @@
 from .bokeh_plot import BokehPlotPane
-from .label_editor import LegendWidget, LabelEditorWidget, TagWidget
+from .label_editor import LegendWidget, LabelEditorWidget, TagWidget, TagEditorWidget
 from .data_viewer import DataPane, SimpleDataPane
 from .search import (
     SearchWidget,
@@ -27,6 +27,7 @@ __all__ = [
     "LegendWidget",
     "LabelEditorWidget",
     "TagWidget",
+    "TagEditorWidget",
     "DataPane",
     "SimpleDataPane",
     "SearchWidget",

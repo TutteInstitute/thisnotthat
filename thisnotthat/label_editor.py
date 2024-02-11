@@ -630,67 +630,100 @@ class TagWidget(pn.reactive.Reactive):
     title: str (optional, default = "#### Tag Selector")
         A markdown string to display as the title of the widget.
 
-    scroll: bool (optional, default = True)
-        Enable a scrollbar on the widget if there are too many items
+    tag_to_int: dict (optional, default = {})
+        Dictionary that maps tag strings to integer ids
+
+    int_to_tag: dict (optional, default = {})
+        Dictionary that maps tag integer ids to strings
     """
 
-    selected = param.List([], item_type=int, doc="Indices of selected samples")
+    tags = param.Series(default=pd.Series([], dtype="object"), doc="Tags")
+    tag_set = param.List(default=[], item_type=str, doc="Unique set of tags")
+    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
+    tag_int_id = param.Integer(default=0, doc="One-up integer ID for mapping tags to strings")
+    tag_to_int = param.Dict(default={}, doc="Map tag strings to integers")
+    int_to_tag = param.Dict(default={}, doc="Map tag integers to strings")
 
     def __init__(
         self,
-        tags: npt.ArrayLike,
+        tags: npt.ArrayLike = None,
         *,
         checkbutton_height: int = 50,
         checkbutton_margin: tuple[int] = (0, 0),
         name: str = "Tags Legend",
         title: str = "#### Tag Selector",
-        scroll: Optional[bool] = True,
+        tag_to_int: dict = {},
+        int_to_tag: dict = {},
     ) -> None:
         super().__init__(name=name)
-        tag_series = pd.Series([set(t) for t in tags]).copy()
-        self.tag_set = sorted(list(set(functools.reduce(np.union1d, tags))))
-
-        self.tags_ = tag_series
+        self.tags = pd.Series([set(t) for t in tags]).copy()
+        self.int_to_tag = int_to_tag
+        self.tag_to_int = tag_to_int
+        self.get_tag_set()
+        
         self.checkbutton_height = checkbutton_height
         self.checkbutton_margin = checkbutton_margin
-
+        
         self.title = title
 
         self.selected_tags = set()
         self.deselected_tags = set()
-
+        
         self._internal_selection = False
 
-        self.pane = pn.WidgetBox(
-            self.title,
+        self.pane = pn.Column(
             sizing_mode="stretch_height",
-            scroll=scroll,
+            scroll=True,
         )
 
         self._rebuild_pane()
-
+        
+    
+    def get_tag_set(self) -> None:
+        if self.tags is not None:
+            tag_set = set()
+            tags_copy = self.tags.copy()
+            tags_copy.apply(lambda x: tag_set.update(x))
+            tag_set = [self.int_to_tag[t] for t in tag_set]
+            self.tag_set = sorted(list(tag_set), key=str.lower)
+        else:
+            self.tag_set = []        
+            
+    def _text_edit_callback(self, event: param.parameterized.Event) -> None:
+        # Rename tag with new value
+        tag_id = self.tag_to_int[event.old]
+        self.tag_to_int[event.new] = tag_id
+        self.int_to_tag[tag_id] = event.new
+        
+        # Remove old tag
+        self.tag_to_int.pop(event.old)
+        
+        # We need to updated the name of the associated checkbox
+        # There is probably a smarter way to to this than rebuilding the entire pane
+        self._rebuild_pane()
+            
     def _toggle_select(self, event) -> None:
         checkbutton = event.obj
         tag = checkbutton.name
-
+        
         # TODO: add warning if both Y & N are selected
         if "Y" in checkbutton.value:
-            self.selected_tags.add(tag)
+            self.selected_tags.add(self.tag_to_int[tag])
         elif "Y" not in checkbutton.value:
-            self.selected_tags.discard(tag)
+            self.selected_tags.discard(self.tag_to_int[tag])
 
         if "N" in checkbutton.value:
-            self.deselected_tags.add(tag)
+            self.deselected_tags.add(self.tag_to_int[tag])
         elif "N" not in checkbutton.value:
-            self.deselected_tags.discard(tag)
-
+            self.deselected_tags.discard(self.tag_to_int[tag])
+            
         # We want to match points which have a union of the selected tags
         # We then want to remove tags which contain any of the undesired tags
-        to_select = np.where([self.selected_tags.issubset(s) for s in self.tags_])[0]
+        to_select = np.where([self.selected_tags.issubset(s) for s in self.tags])[0]
         to_remove = np.where(
             [
                 True if self.deselected_tags.intersection(s) else False
-                for s in self.tags_
+                for s in self.tags
             ]
         )[0]
 
@@ -711,21 +744,18 @@ class TagWidget(pn.reactive.Reactive):
         legend_tags = set([])
         rows = []
 
+        self.get_tag_set()
+        
         # Reset selections
         self.selected = []
         self.selected_tags = set()
         self.deselected_tags = set()
 
-        # Need to make these look better if we want to add them
-        # rows.append(pn.pane.Markdown('#### Tag'))
-        # rows.append(pn.pane.Markdown('#### Select'))
 
         for idx, tag in enumerate(self.tag_set):
             if tag in self.tag_set and tag not in legend_tags:
                 legend_tags.add(tag)
-                text = pn.widgets.StaticText(
-                    name="", value=tag, align=("start", "center")
-                )
+                text = pn.widgets.TextInput(value=tag)
                 checkbutton_group = pn.widgets.CheckButtonGroup(
                     name=tag,
                     options=["Y", "N"],
@@ -739,18 +769,15 @@ class TagWidget(pn.reactive.Reactive):
                 watcher = checkbutton_group.param.watch(
                     self._toggle_select, ["value"], onlychanged=False
                 )
-                rows.append(text)
-                rows.append(checkbutton_group)
+                
+                text.param.watch(
+                    self._text_edit_callback, "value", onlychanged=True
+                )
+                
+                rows.append(pn.Row(text, checkbutton_group))
 
-        box = pn.GridBox(
-            *rows,
-            ncols=2,
-            align="center",
-            sizing_mode="stretch_height",
-        )
         self.pane.clear()
-        self.pane.append(pn.pane.Markdown(self.title))
-        self.pane.append(box)
+        self.pane.extend(rows)
 
     # Reactive requires this to make the model auto-display as requires
     def _get_model(self, *args, **kwds):
@@ -766,13 +793,211 @@ class TagWidget(pn.reactive.Reactive):
         return self.link(
             plot,
             selected="selected",
+            # tags="tags",
             bidirectional=True,
         )
 
-    def link_to_label_editor(self, label_editor):
-        self.link(label_editor, selected="selected", bidirectional=True)
+    def link_to_tag_editor(self, tag_editor):
         return self.link(
-            label_editor,
+            tag_editor,
             selected="selected",
+            tags="tags",
+            tag_set="tag_set",
+            tag_int_id="tag_int_id", 
+            tag_to_int="tag_to_int", 
+            int_to_tag="int_to_tag",
             bidirectional=True,
         )
+
+class TagEditorWidget(pn.reactive.Reactive):
+    """A pane for editing point tags, ideally intended to be linked with a PlotPane. The pane itself is composed of
+    an editable legend, and a "new tag" button. With the editable legend you can edit the names of point tags,
+    while having those changes reflected in the tags themselves. The "new tag" button is selection aware and 
+    can create a new tag based on the current selection. The editable legend is then updated accordingly.
+
+    Each data point can have multiple tags and this widget contains checkboxes to select (checking "Y") or 
+    deselect (checking "N") tags. Points are highlighted if they have all of the selected tags. Any point that 
+    contains a deselected tag is greyed out.
+
+    Parameters
+    ----------
+    tags: Array of shape (n_samples,)
+        A vector giving the tags associated with each sample.
+
+    label_height: int (optional, default = 50)
+        The height of the editable legend class name textboxes used for in the editable legend.
+
+    label_width: int (optional, default = 225)
+        The width of the editable legend class name textboxes used for in the editable legend.
+
+    label_max_width: int (optional, default = 225)
+        The maximum allowable  of the editable legend class name textboxes used for in the editable legend.
+
+    label_min_width: int (optional, default = 125)
+        The minimum allowable width  of the editable legend class name textboxes used for in the editable legend.
+
+    label_margin: List of int (optional, default = [0, 0]
+        The margin of the editable legend class name textboxes used for in the editable legend.
+
+    new_tag_button_type: str (optional, default = "success")
+        The panel button type used. See the panel documentation for more details.
+
+    new_tag_button_text: str (optional, default = "Tag Selected Points")
+        The text to display on the button.
+
+    title: str (optional, default = "#### Tag Editor")
+        A markdown title to be placed at the top of the pane.
+
+    width: int or None (optional, default = None)
+        The width of the pane, or, if ``None`` let the pane size itself.
+
+    height: int or None (optional, default = None)
+        The height of the pane, or, if ``None`` let the pane size itself.
+
+    name: str (optional, default = "Tag Editor")
+        The panel name of the pane. See panel documentation for more details.
+    """
+    tags = param.Series(default=pd.Series([], dtype="object"), doc="Tags")
+    tag_set = param.List(default=[], item_type=str, doc="Unique set of tags")
+    selected = param.List(default=[], item_type=int, doc="Indices of selected samples")
+    tag_int_id = param.Integer(default=0, doc="One-up integer ID for mapping tags to strings")
+    tag_to_int = param.Dict(default={}, doc="Map tag strings to integers")
+    int_to_tag = param.Dict(default={}, doc="Map tag integers to strings")
+
+    
+    def __init__(
+        self,
+        tags: npt.ArrayLike,
+        *,
+        selectable_legend: bool = False,
+        label_height: int = 36,
+        label_width: int = 225,
+        label_max_width: int = 225,
+        label_min_width: int = 125,
+        label_margin: tuple[int] = (0, 0),
+        new_tag_button_type: str = "success",
+        new_tag_button_text: str = "Tag Selected Points",
+        title: str = "#### Tag Editor",
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        name: str = "Tag Editor",
+    ) -> None:
+        super().__init__(name=name)
+        tag_series = pd.Series([set(t) for t in tags]).copy()
+        self.tag_set = self.get_initial_tag_set(tag_series)
+        self._update_tag_mapping()
+
+        self.tags = tag_series.apply(self._map_tags_to_int)
+
+        self.tag_widget = TagWidget(
+            self.tags,
+            tag_to_int=self.tag_to_int,
+            int_to_tag=self.int_to_tag,
+        )
+        self.tag_widget.link_to_tag_editor(self)
+        
+        self.default_dropdown_option = "Create New Tag"
+        self.options = [self.default_dropdown_option] + self.tag_set
+        
+        self.new_tag_count = 1
+        self.new_tag_button = pn.widgets.Button(name=new_tag_button_text, button_type=new_tag_button_type)
+        self.new_tag_button.on_click(self._on_click)
+        self.new_tag_button.disabled = True
+        
+        self.selector = pn.widgets.Select(
+            name="",
+            options=self.options,
+        )
+        self.selector.disabled = True
+
+        self.pane = pn.WidgetBox(
+            title,
+            self.tag_widget,
+            pn.Row(self.selector, self.new_tag_button),
+            width=width,
+            height=height,
+            sizing_mode="stretch_height"
+        )        
+
+    def get_initial_tag_set(self, tags):
+        if tags is not None:
+            tag_set = set()
+            tags_copy = tags.copy()
+            tags_copy.apply(lambda x: tag_set.update(x))
+            tag_set = sorted(list(tag_set), key=str.lower)
+        else:
+            tag_set = []      
+        
+        return tag_set
+    
+    @param.depends("tag_set", watch=True)
+    def _update_tag_mapping(self):
+        for tag in self.tag_set:
+            if tag not in self.tag_to_int:
+                self.tag_to_int[tag] = self.tag_int_id
+                self.tag_int_id += 1
+        self.int_to_tag = {id_:tag for tag, id_ in self.tag_to_int.items()}
+        
+    def _map_tags_to_int(self, tags):
+        return set([self.tag_to_int[t] for t in tags])
+        
+    def _add_tag(self, tags_for_point, tag_name):
+        if tags_for_point:
+            tags_for_point.add(tag_name)
+            return tags_for_point
+        else:
+            return tags_for_point
+
+    def _on_click(self, event: param.parameterized.Event) -> None:
+        if len(self.selected) > 0:
+            
+            if self.selector.value == self.default_dropdown_option:
+                tag_name = f"new_tag_{self.new_tag_count}"
+                self.new_tag_count += 1
+            else:
+                tag_name = self.selector.value
+            
+            self.tag_set.append(tag_name)
+            self._update_tag_mapping()
+
+            new_tags = self.tags.copy()
+            new_tags.iloc[self.selected].apply(lambda x: x.add(self.tag_to_int[tag_name]))
+
+            self.tags = new_tags
+            self.tag_widget._rebuild_pane()
+            self.selected = []
+
+    @param.depends("selected", watch=True)
+    def _toggle_active(self):
+        if len(self.selected) > 0:
+            self.new_tag_button.disabled = False
+            self.selector.disabled = False
+        else:
+            self.new_tag_button.disabled = True
+            self.selector.disabled = True
+            
+    def _get_model(self, *args, **kwds):
+        return self.pane._get_model(*args, **kwds)
+
+
+    def link_to_plot(self, plot):
+        
+        if self.tags.empty:
+            default_tags = [set() for _ in range(len(plot.dataframe))]
+            self.tags = pd.Series(default_tags, dtype=object)
+        
+        plot.tags = self.tags
+        plot.int_to_tag = self.int_to_tag
+        self.link(plot, tags="tags", int_to_tag="int_to_tag", bidirectional=True)
+        
+        self.tag_widget.link_to_plot(plot)
+        self.tag_widget._rebuild_pane()
+
+        return self.link(
+            plot,
+            selected="selected",
+            # tags="tags",
+            bidirectional=True,
+        )
+
+    
