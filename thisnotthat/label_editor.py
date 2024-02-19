@@ -12,6 +12,7 @@ from .utils import _palette_index
 from typing import *
 
 from bokeh.events import Reset
+import warnings
 
 
 class LegendWidget(pn.reactive.Reactive):
@@ -607,8 +608,178 @@ class LabelEditorWidget(pn.reactive.Reactive):
             bidirectional=True,
         )
 
-
 class TagWidget(pn.reactive.Reactive):
+    """An interactive legend to display tags and select points based on them when linked to a PlotPane. Each data point
+    can have multiple tags and this widget contains checkboxes to select (checking "Y") or deselect (checking "N") tags.
+    Points are highlighted if they have all of the selected tags. Any point that contains a deselected tag is greyed out.
+
+    Parameters
+    ----------
+    tags: Array of shape (n_samples,)
+        A vector giving the tags associated with each sample.
+
+    checkbutton_height: int (optional, default = 50)
+        The height of the selectable checkbutton.
+
+    checkbutton_margin: List of int (optional, default = [0, 0]
+        The margin of the of the selectable checkbutton.
+
+    name: str (optional, default = "Editable Legend")
+        The panel name of the pane. See the panel documentation for more details.
+
+    title: str (optional, default = "#### Tag Selector")
+        A markdown string to display as the title of the widget.
+
+    scroll: bool (optional, default = True)
+        Enable a scrollbar on the widget if there are too many items
+    """
+
+    selected = param.List([], item_type=int, doc="Indices of selected samples")
+
+    def __init__(
+        self,
+        tags: npt.ArrayLike,
+        *,
+        checkbutton_height: int = 50,
+        checkbutton_margin: tuple[int] = (0, 0),
+        name: str = "Tags Legend",
+        title: str = "#### Tag Selector",
+        scroll: Optional[bool] = True,
+    ) -> None:
+        super().__init__(name=name)
+        warnings.warn("TagWidget has been replaced by TagEditorWidget and will be deprecated in a future release", DeprecationWarning, 2)
+        tag_series = pd.Series([set(t) for t in tags]).copy()
+        self.tag_set = sorted(list(set(functools.reduce(np.union1d, tags))))
+
+        self.tags_ = tag_series
+        self.checkbutton_height = checkbutton_height
+        self.checkbutton_margin = checkbutton_margin
+
+        self.title = title
+
+        self.selected_tags = set()
+        self.deselected_tags = set()
+
+        self._internal_selection = False
+
+        self.pane = pn.WidgetBox(
+            self.title,
+            sizing_mode="stretch_height",
+            scroll=scroll,
+        )
+
+        self._rebuild_pane()
+
+    def _toggle_select(self, event) -> None:
+        checkbutton = event.obj
+        tag = checkbutton.name
+
+        # TODO: add warning if both Y & N are selected
+        if "Y" in checkbutton.value:
+            self.selected_tags.add(tag)
+        elif "Y" not in checkbutton.value:
+            self.selected_tags.discard(tag)
+
+        if "N" in checkbutton.value:
+            self.deselected_tags.add(tag)
+        elif "N" not in checkbutton.value:
+            self.deselected_tags.discard(tag)
+
+        # We want to match points which have a union of the selected tags
+        # We then want to remove tags which contain any of the undesired tags
+        to_select = np.where([self.selected_tags.issubset(s) for s in self.tags_])[0]
+        to_remove = np.where(
+            [
+                True if self.deselected_tags.intersection(s) else False
+                for s in self.tags_
+            ]
+        )[0]
+
+        new_selection = np.setdiff1d(to_select, to_remove).tolist()
+
+        # If no points match then grey out all the points
+        if self.selected_tags or self.deselected_tags:
+            if len(new_selection) == 0:
+                new_selection = [-1]
+        elif len(self.selected_tags) == 0 and len(self.deselected_tags) == 0:
+            new_selection = []
+
+        self._internal_selection = True
+        self.selected = new_selection
+        self._internal_selection = False
+
+    def _rebuild_pane(self) -> None:
+        legend_tags = set([])
+        rows = []
+
+        # Reset selections
+        self.selected = []
+        self.selected_tags = set()
+        self.deselected_tags = set()
+
+        # Need to make these look better if we want to add them
+        # rows.append(pn.pane.Markdown('#### Tag'))
+        # rows.append(pn.pane.Markdown('#### Select'))
+
+        for idx, tag in enumerate(self.tag_set):
+            if tag in self.tag_set and tag not in legend_tags:
+                legend_tags.add(tag)
+                text = pn.widgets.StaticText(
+                    name="", value=tag, align=("start", "center")
+                )
+                checkbutton_group = pn.widgets.CheckButtonGroup(
+                    name=tag,
+                    options=["Y", "N"],
+                    button_type="default",
+                    button_style="outline",
+                    align="center",
+                    height=self.checkbutton_height,
+                    margin=self.checkbutton_margin,
+                )
+
+                watcher = checkbutton_group.param.watch(
+                    self._toggle_select, ["value"], onlychanged=False
+                )
+                rows.append(text)
+                rows.append(checkbutton_group)
+
+        box = pn.GridBox(
+            *rows,
+            ncols=2,
+            align="center",
+            sizing_mode="stretch_height",
+        )
+        self.pane.clear()
+        self.pane.append(pn.pane.Markdown(self.title))
+        self.pane.append(box)
+
+    # Reactive requires this to make the model auto-display as requires
+    def _get_model(self, *args, **kwds):
+        return self.pane._get_model(*args, **kwds)
+
+    def _on_reset(self, event):
+        self._rebuild_pane()
+
+    def link_to_plot(self, plot):
+        self.link(plot, selected="selected", bidirectional=True)
+        # Reset selected tags when plot reset tool is used
+        plot.pane.object.on_event(Reset, self._on_reset)
+        return self.link(
+            plot,
+            selected="selected",
+            bidirectional=True,
+        )
+
+    def link_to_label_editor(self, label_editor):
+        self.link(label_editor, selected="selected", bidirectional=True)
+        return self.link(
+            label_editor,
+            selected="selected",
+            bidirectional=True,
+        )
+    
+
+class TagLegendWidget(pn.reactive.Reactive):
     """An interactive legend to display tags and select points based on them when linked to a PlotPane. Each data point
     can have multiple tags and this widget contains checkboxes to select (checking "Y") or deselect (checking "N") tags.
     Points are highlighted if they have all of the selected tags. Any point that contains a deselected tag is greyed out.
@@ -671,8 +842,10 @@ class TagWidget(pn.reactive.Reactive):
         
         self._internal_selection = False
 
-        self.pane = pn.Column(
+        self.pane = pn.WidgetBox(
             sizing_mode="stretch_height",
+            width_policy="max",
+            align=("end", "end"),
             scroll=True,
         )
 
@@ -755,13 +928,13 @@ class TagWidget(pn.reactive.Reactive):
         for idx, tag in enumerate(self.tag_set):
             if tag in self.tag_set and tag not in legend_tags:
                 legend_tags.add(tag)
-                text = pn.widgets.TextInput(value=tag)
+                text = pn.widgets.TextInput(value=tag, width_policy="max", align=("end", "end"))
                 checkbutton_group = pn.widgets.CheckButtonGroup(
                     name=tag,
                     options=["Y", "N"],
                     button_type="default",
                     button_style="outline",
-                    align="center",
+                    align=("center", "end"),
                     height=self.checkbutton_height,
                     margin=self.checkbutton_margin,
                 )
@@ -774,7 +947,7 @@ class TagWidget(pn.reactive.Reactive):
                     self._text_edit_callback, "value", onlychanged=True
                 )
                 
-                rows.append(pn.Row(text, checkbutton_group))
+                rows.append(pn.Row(text, checkbutton_group, width_policy="max", align=("end", "end")))
 
         self.pane.clear()
         self.pane.extend(rows)
@@ -793,7 +966,6 @@ class TagWidget(pn.reactive.Reactive):
         return self.link(
             plot,
             selected="selected",
-            # tags="tags",
             bidirectional=True,
         )
 
@@ -808,6 +980,7 @@ class TagWidget(pn.reactive.Reactive):
             int_to_tag="int_to_tag",
             bidirectional=True,
         )
+
 
 class TagEditorWidget(pn.reactive.Reactive):
     """A pane for editing point tags, ideally intended to be linked with a PlotPane. The pane itself is composed of
@@ -824,21 +997,6 @@ class TagEditorWidget(pn.reactive.Reactive):
     tags: Array of shape (n_samples,)
         A vector giving the tags associated with each sample.
 
-    label_height: int (optional, default = 50)
-        The height of the editable legend class name textboxes used for in the editable legend.
-
-    label_width: int (optional, default = 225)
-        The width of the editable legend class name textboxes used for in the editable legend.
-
-    label_max_width: int (optional, default = 225)
-        The maximum allowable  of the editable legend class name textboxes used for in the editable legend.
-
-    label_min_width: int (optional, default = 125)
-        The minimum allowable width  of the editable legend class name textboxes used for in the editable legend.
-
-    label_margin: List of int (optional, default = [0, 0]
-        The margin of the editable legend class name textboxes used for in the editable legend.
-
     new_tag_button_type: str (optional, default = "success")
         The panel button type used. See the panel documentation for more details.
 
@@ -848,11 +1006,17 @@ class TagEditorWidget(pn.reactive.Reactive):
     title: str (optional, default = "#### Tag Editor")
         A markdown title to be placed at the top of the pane.
 
-    width: int or None (optional, default = None)
-        The width of the pane, or, if ``None`` let the pane size itself.
+    min_width: int or None (optional, default = None)
+        The minimum width of the pane, or, if ``None`` let the pane size itself.
 
-    height: int or None (optional, default = None)
-        The height of the pane, or, if ``None`` let the pane size itself.
+    min_height: int or None (optional, default = None)
+        The minimum height of the pane, or, if ``None`` let the pane size itself.
+
+    max_width: int or None (optional, default = None)
+        The maximum width of the pane, or, if ``None`` let the pane size itself.
+
+    max_height: int or None (optional, default = None)
+        The maximum height of the pane, or, if ``None`` let the pane size itself.
 
     name: str (optional, default = "Tag Editor")
         The panel name of the pane. See panel documentation for more details.
@@ -869,54 +1033,53 @@ class TagEditorWidget(pn.reactive.Reactive):
         self,
         tags: npt.ArrayLike,
         *,
-        selectable_legend: bool = False,
-        label_height: int = 36,
-        label_width: int = 225,
-        label_max_width: int = 225,
-        label_min_width: int = 125,
-        label_margin: tuple[int] = (0, 0),
         new_tag_button_type: str = "success",
         new_tag_button_text: str = "Tag Selected Points",
         title: str = "#### Tag Editor",
-        width: Optional[int] = None,
-        height: Optional[int] = None,
+        min_width: Optional[int] = None,
+        min_height: Optional[int] = None,
+        max_width: Optional[int] = None,
+        max_height: Optional[int] = None,
         name: str = "Tag Editor",
     ) -> None:
         super().__init__(name=name)
         tag_series = pd.Series([set(t) for t in tags]).copy()
+
+        self.default_dropdown_option = "Create New Tag"
+        self.selector = pn.widgets.Select(
+            name="",
+            options=[self.default_dropdown_option],
+        )
+        self.selector.disabled = True
+
         self.tag_set = self.get_initial_tag_set(tag_series)
         self._update_tag_mapping()
 
         self.tags = tag_series.apply(self._map_tags_to_int)
 
-        self.tag_widget = TagWidget(
+        self.tag_widget = TagLegendWidget(
             self.tags,
             tag_to_int=self.tag_to_int,
             int_to_tag=self.int_to_tag,
         )
         self.tag_widget.link_to_tag_editor(self)
         
-        self.default_dropdown_option = "Create New Tag"
-        self.options = [self.default_dropdown_option] + self.tag_set
-        
         self.new_tag_count = 1
         self.new_tag_button = pn.widgets.Button(name=new_tag_button_text, button_type=new_tag_button_type)
         self.new_tag_button.on_click(self._on_click)
         self.new_tag_button.disabled = True
-        
-        self.selector = pn.widgets.Select(
-            name="",
-            options=self.options,
-        )
-        self.selector.disabled = True
 
         self.pane = pn.WidgetBox(
             title,
             self.tag_widget,
+            pn.layout.VSpacer(max_height=5),
             pn.Row(self.selector, self.new_tag_button),
-            width=width,
-            height=height,
-            sizing_mode="stretch_height"
+            min_width=min_width,
+            min_height=min_height,
+            max_width=max_width,
+            max_height=max_height,
+            align=("end", "end"),
+            sizing_mode="stretch_height",
         )        
 
     def get_initial_tag_set(self, tags):
@@ -937,6 +1100,11 @@ class TagEditorWidget(pn.reactive.Reactive):
                 self.tag_to_int[tag] = self.tag_int_id
                 self.tag_int_id += 1
         self.int_to_tag = {id_:tag for tag, id_ in self.tag_to_int.items()}
+
+    @param.depends("tag_set", watch=True)
+    def _update_selector_options(self):
+        options = [self.default_dropdown_option] + sorted(list(self.tag_set), key=str.lower)
+        self.selector.options = options
         
     def _map_tags_to_int(self, tags):
         return set([self.tag_to_int[t] for t in tags])
@@ -979,7 +1147,13 @@ class TagEditorWidget(pn.reactive.Reactive):
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
 
-
+    def map_int_to_tag(self, x):
+        return [self.int_to_tag[t] for t in x]
+    
+    def get_tags(self):
+        tags_copy = self.tags.copy()
+        return tags_copy.apply(self.map_int_to_tag)
+    
     def link_to_plot(self, plot):
         
         if self.tags.empty:

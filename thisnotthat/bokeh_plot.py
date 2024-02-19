@@ -894,7 +894,7 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
 
     def map_int_to_tag(self, x):
         return [self.int_to_tag[t] for t in x]
-            
+    
     @property
     def dataframe(self):
         result = pd.DataFrame(self.data_source.data)
