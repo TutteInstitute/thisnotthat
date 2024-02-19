@@ -328,7 +328,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
     )
     marker_size = param.List([], item_type=float, doc="Marker size")
     hover_text = param.List([], item_type=str, doc="Hover text")
-
+    tags = param.Series(doc="Tags")
+    int_to_tag = param.Dict(default={}, doc="Map tag integers to strings")
+    
     def _update_selected(self, attr, old, new) -> None:
         self.selected = self.data_source.selected.indices
 
@@ -379,8 +381,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         if labels is None:
             labels = ["unlabelled"] * len(data)
         if type(marker_size) in (int, float):
-            marker_size = np.full(len(data), marker_size, dtype=np.float64)
-
+            marker_size = np.full(len(data), marker_size, dtype=np.float64)  
+            
         self._base_hover_text = (
             [str(x) for x in hover_text]
             if hover_text is not None
@@ -590,6 +592,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.label_color_factors = list(self.color_mapping.factors)
         self.color_by_palette = list(self.color_mapping.palette)
 
+        default_tags = [set() for _ in range(len(data))]
+        self.tags = pd.Series(default_tags, dtype=object)
+        
+        
     # Reactive requires this to make the model auto-display as requires
     def _get_model(self, *args, **kwds):
         return self.pane._get_model(*args, **kwds)
@@ -604,6 +610,10 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
         self.color_mapping.factors = self.label_color_factors
         pn.io.push_notebook(self.pane)
 
+    @param.depends("tags", watch=True)
+    def _update_tags(self) -> None:
+        self.data_source.data["tags"] = self.tags.apply(list)
+        
     @param.depends("labels", watch=True)
     def _update_labels(self) -> None:
         self.data_source.data["label"] = self.labels  # self.dataframe["label"]
@@ -882,6 +892,9 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
                 text_transition_width=text_transition_width,
             )
 
+    def map_int_to_tag(self, x):
+        return [self.int_to_tag[t] for t in x]
+    
     @property
     def dataframe(self):
         result = pd.DataFrame(self.data_source.data)
@@ -889,4 +902,8 @@ class BokehPlotPane(pn.viewable.Viewer, pn.reactive.Reactive):
             result = result.drop(columns=["apparent_size", "color_by"])
         else:
             result = result.drop(columns=["apparent_size"])
+            
+        if self.int_to_tag and "tags" in result:
+            result["tags"] = result["tags"].apply(self.map_int_to_tag)
+            
         return result
