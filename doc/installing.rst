@@ -42,17 +42,21 @@ can be very beneficial.
 * apricot-select
 * networkx
 
-Installing via pip
+Installing
 ------------------
+To install the package from PyPI:
 
-Currently you can pip install directly from this repository:
+.. code:: bash
+
+    pip install thisnotthat
+
+To install the package from source:
 
 .. code:: bash
 
     pip install git+https://github.com/TutteInstitute/thisnotthat
 
-We hope to have a beta version of TNT on PyPI soon, and versions available on conda-forge sometime
-following that.
+We hope to have a version of TNT on conda-forge sometime soon.
 
 .. _Panel library: https://panel.holoviz.org/
 .. _numpy: https://numpy.org/
