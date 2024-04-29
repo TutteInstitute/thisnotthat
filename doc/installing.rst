@@ -45,14 +45,19 @@ can be very beneficial.
 Installing via pip
 ------------------
 
-Currently you can pip install directly from this repository:
+Currently you can pip install via PyPi 
+
+.. code:: bash
+
+    pip install thisnotthat
+
+or directly from this repository for the most up to date version.
 
 .. code:: bash
 
     pip install git+https://github.com/TutteInstitute/thisnotthat
 
-We hope to have a beta version of TNT on PyPI soon, and versions available on conda-forge sometime
-following that.
+We hope to have a beta version of TNT on conda-forge sometime in near future.
 
 .. _Panel library: https://panel.holoviz.org/
 .. _numpy: https://numpy.org/
