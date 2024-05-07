@@ -90,7 +90,7 @@ class InformationPane(pn.reactive.Reactive):
             disable_math=disable_math,
             extensions=extensions,
             sizing_mode=sizing_mode,
-            style=style,
+            styles=style,
         )
         self.pane = pn.Column(self.markdown, width=width, height=height, sizing_mode=sizing_mode, scroll=True)
 
