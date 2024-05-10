@@ -50,13 +50,16 @@ To install the package from PyPI:
 
     pip install thisnotthat
 
-To install the package from source:
+
+or directly from this repository for the most up to date version.
 
 .. code:: bash
 
     pip install git+https://github.com/TutteInstitute/thisnotthat
 
-We hope to have a version of TNT on conda-forge sometime soon.
+=======
+We hope to have a beta version of TNT on conda-forge sometime in near future.
+
 
 .. _Panel library: https://panel.holoviz.org/
 .. _numpy: https://numpy.org/
