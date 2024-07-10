@@ -3,7 +3,7 @@ panel
 param
 pandas
 matplotlib
-scikit-learn
+scikit-learn>=1.2.0
 numpy>=1.22
 umap-learn
 hdbscan

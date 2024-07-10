@@ -29,7 +29,7 @@ INSTALL_REQUIRES = [
     "pandas",
     "panel",
     "param",
-    "scikit-learn",
+    "scikit-learn>=1.2.0",
     "umap-learn",
     "vectorizers",
     "wordcloud",
