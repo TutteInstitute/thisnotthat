@@ -340,7 +340,7 @@ def build_cluster_layers(
 
         layer_metaclusters = AgglomerativeClustering(
             n_clusters=n_clusters,
-            affinity="euclidean",
+            metric="euclidean",
             linkage="complete",
         ).fit_predict(locations_for_clusters)
 
