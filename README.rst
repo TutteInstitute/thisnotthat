@@ -103,6 +103,36 @@ To contribute please `fork the project <https://github.com/TutteInstitute/thisno
 submit a pull request. We will do our best to work through any issues with
 you and get your code merged into the main branch.
 
+------------
+Development
+------------
+
+To create a development environment clone the repo and install the package in editable mode
+
+.. code:: bash
+
+    pip install -e .[tests]
+
+To run unit tests
+
+.. code:: bash
+
+    pytest thisnotthat/tests
+
+UI tests are done using `Playwright <https://playwright.dev/>`_ and build on `Panel's UI tests <https://panel.holoviz.org/how_to/test/uitests.html>`_. 
+They are not run by default and require the --ui flag. Note that this only runs the UI tests. You can install a browser for Playwright and use it to run tests:
+
+.. code:: bash
+
+    playwright install chromium
+    pytest thisnotthat/tests/ --ui --browser chromium -n 1
+
+or use an existing browser on your machine such as Chrome
+
+.. code:: bash
+
+    pytest thisnotthat/tests/ --ui --browser-channel chrome -n 1
+
 -------
 License
 -------
