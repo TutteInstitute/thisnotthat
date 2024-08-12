@@ -50,7 +50,12 @@ CLASSIFIERS = ['Intended Audience :: Science/Research',
 EXTRAS_REQUIRE = {
     'tests': [
         'pytest',
-        'pytest-cov'],
+        'pytest-cov',
+        'psutil',
+        'pytest-asyncio',
+        'pytest-rerunfailures',
+        'pytest-xdist',
+        'pytest-playwright'],
     'docs': [
         'sphinx',
         'sphinx-gallery',
